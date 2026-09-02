@@ -1,0 +1,38 @@
+# Pre-commit configuration for DailyFlow Kanban
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: lint
+        name: Lint
+        entry: npm run lint
+        language: system
+        pass_filenames: false
+
+      - id: prettier
+        name: Prettier
+        entry: npm run format:check
+        language: system
+        pass_filenames: false
+
+      - id: typecheck
+        name: TypeScript Check
+        entry: npm run typecheck
+        language: system
+        pass_filenames: false
+
+      - id: test
+        name: Tests
+        entry: npm run test:run
+        language: system
+        pass_filenames: false

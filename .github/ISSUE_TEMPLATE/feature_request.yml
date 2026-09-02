@@ -1,0 +1,54 @@
+name: '💡 Feature Request'
+description: 'Suggest an idea or enhancement for this project'
+title: '[Feature]: '
+labels: ['enhancement', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement! Please describe the use case clearly.
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: 'Problem or Use Case'
+      description: "Is your feature request related to a specific problem? (e.g. 'I'm always frustrated when...')"
+      placeholder: 'I need a way to...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 'Proposed Solution'
+      description: "Describe the solution or feature you'd like to see."
+      placeholder: 'Add an option or UI control that...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: 'Alternatives Considered'
+      description: 'Describe any alternative solutions or workarounds you have considered.'
+
+  - type: dropdown
+    id: contribution-intent
+    attributes:
+      label: 'Willingness to Contribute'
+      options:
+        - 'Yes, I can submit a PR with guidance'
+        - 'Yes, I can work on this independently'
+        - 'No, I am only requesting this feature'
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: feature-confirmations
+    attributes:
+      label: 'Pre-submission Checklist'
+      options:
+        - label: 'I have checked that this feature has not been requested previously.'
+          required: true
+        - label: 'I understand this feature may require discussion before being accepted.'
+          required: true

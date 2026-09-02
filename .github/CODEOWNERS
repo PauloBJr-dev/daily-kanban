@@ -1,0 +1,9 @@
+# Global owner
+*                                       @PauloBJr-dev
+
+# Infrastructure & CI/CD
+.github/                                @PauloBJr-dev
+.github/workflows/                      @PauloBJr-dev
+
+# Documentation
+*.md                                    @PauloBJr-dev
