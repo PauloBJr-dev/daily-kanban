@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Plus, Circle, Clock, PauseCircle, CheckCircle2, Trash2 } from 'lucide-react'
-import { Column as ColumnType, Task } from '../types/kanban'
+import type { Column as ColumnType, Task } from '../types/kanban'
 import { TaskCard } from './TaskCard'
 
 interface ColumnProps {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { PomodoroSession } from '../types/kanban'
+import type { PomodoroSession } from '../types/kanban'
 
 const DEFAULT_WORK_TIME = 25 * 60 // 25 minutes
 const DEFAULT_BREAK_TIME = 5 * 60 // 5 minutes
@@ -18,7 +18,7 @@ export function usePomodoro(
   })
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
+    let interval: ReturnType<typeof setInterval> | null = null
 
     if (session.isRunning) {
       interval = setInterval(() => {

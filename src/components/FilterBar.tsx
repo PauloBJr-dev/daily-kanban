@@ -1,6 +1,6 @@
 import React from 'react'
 import { Search, X, Tag } from 'lucide-react'
-import { FilterPriority, FilterScope, FilterState } from '../types/kanban'
+import type { FilterPriority, FilterScope, FilterState } from '../types/kanban'
 
 interface FilterBarProps {
   filters: FilterState

@@ -1,105 +1,300 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Header } from './components/Header'
+import { QuickStats } from './components/QuickStats'
+import { PomodoroWidget } from './components/PomodoroWidget'
+import { FilterBar } from './components/FilterBar'
+import { Board } from './components/Board'
+import { TaskModal } from './components/TaskModal'
+import { ConfirmDialog } from './components/ConfirmDialog'
+import { useKanban } from './hooks/useKanban'
+import { usePomodoro } from './hooks/usePomodoro'
+import type { Task } from './types/kanban'
 
-function App() {
-  const [count, setCount] = useState(0)
+export const App: React.FC = () => {
+  const {
+    columns,
+    tasks,
+    allTasksCount,
+    filters,
+    setFilters,
+    allTags,
+    stats,
+    addTask,
+    updateTask,
+    deleteTask,
+    moveTask,
+    toggleSubtask,
+    addColumn,
+    deleteColumn,
+    exportData,
+    importData,
+    resetToSeed,
+  } = useKanban()
+
+  // Theme Management (Dark / Light)
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dailyflow_theme')
+      if (saved) return saved === 'dark'
+      if (typeof window.matchMedia === 'function') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches
+      }
+    }
+    return false
+  })
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('dailyflow_theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('dailyflow_theme', 'light')
+    }
+  }, [isDark])
+
+  const toggleTheme = useCallback(() => {
+    setIsDark((prev) => !prev)
+  }, [])
+
+  // Pomodoro Integration
+  const handleTaskMinuteLogged = useCallback(
+    (taskId: string, minutes: number) => {
+      const task = tasks.find((t) => t.id === taskId)
+      const currentMins = task?.pomodoroMinutesSpent || 0
+      updateTask(taskId, { pomodoroMinutesSpent: currentMins + minutes })
+    },
+    [tasks, updateTask]
+  )
+
+  const {
+    session,
+    startFocus,
+    pauseFocus,
+    resumeFocus,
+    resetTimer,
+    switchMode,
+    clearFocusedTask,
+    formatTime,
+  } = usePomodoro(handleTaskMinuteLogged)
+
+  const handlePomodoroPlayPause = useCallback(() => {
+    if (session.isRunning) {
+      pauseFocus()
+    } else {
+      resumeFocus()
+    }
+  }, [session.isRunning, pauseFocus, resumeFocus])
+
+  // Modals state
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [newTaskColumnId, setNewTaskColumnId] = useState<string | undefined>(undefined)
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    confirmText?: string
+    isDanger?: boolean
+    onConfirm: () => void
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  })
+
+  // Task creation and editing handlers
+  const handleOpenNewTask = useCallback(
+    (columnId?: string) => {
+      setSelectedTask(null)
+      setNewTaskColumnId(columnId || columns[0]?.id)
+      setIsTaskModalOpen(true)
+    },
+    [columns]
+  )
+
+  const handleOpenEditTask = useCallback((task: Task) => {
+    setSelectedTask(task)
+    setIsTaskModalOpen(true)
+  }, [])
+
+  const handleSaveTask = useCallback(
+    (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>, taskId?: string) => {
+      if (taskId) {
+        updateTask(taskId, taskData)
+      } else {
+        addTask(taskData)
+      }
+    },
+    [addTask, updateTask]
+  )
+
+  // Confirmation handlers
+  const requestDeleteTask = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId)
+      setConfirmState({
+        isOpen: true,
+        title: 'Excluir Tarefa',
+        message: `Tem certeza que deseja excluir a tarefa "${task?.title || 'selecionada'}"? Esta ação não pode ser desfeita.`,
+        confirmText: 'Excluir Tarefa',
+        isDanger: true,
+        onConfirm: () => {
+          if (session.taskId === taskId) {
+            clearFocusedTask()
+          }
+          deleteTask(taskId)
+        },
+      })
+    },
+    [tasks, session.taskId, clearFocusedTask, deleteTask]
+  )
+
+  const requestDeleteColumn = useCallback(
+    (columnId: string) => {
+      const col = columns.find((c) => c.id === columnId)
+      const tasksInCol = tasks.filter((t) => t.columnId === columnId).length
+      setConfirmState({
+        isOpen: true,
+        title: 'Excluir Coluna',
+        message: `Tem certeza que deseja excluir a coluna "${col?.title || ''}" e suas ${tasksInCol} tarefa(s)?`,
+        confirmText: 'Excluir Coluna',
+        isDanger: true,
+        onConfirm: () => deleteColumn(columnId),
+      })
+    },
+    [columns, tasks, deleteColumn]
+  )
+
+  const requestResetData = useCallback(() => {
+    setConfirmState({
+      isOpen: true,
+      title: 'Restaurar Dados Padrão',
+      message:
+        'Todas as tarefas e colunas atuais serão substituídas pelo conjunto de demonstração inicial.',
+      confirmText: 'Restaurar',
+      isDanger: false,
+      onConfirm: () => {
+        resetToSeed()
+        clearFocusedTask()
+      },
+    })
+  }, [resetToSeed, clearFocusedTask])
+
+  // JSON Import handler
+  const handleImport = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target?.result as string)
+          const success = importData(parsed)
+          if (!success) {
+            alert('Arquivo JSON inválido ou incompatível.')
+          }
+        } catch {
+          alert('Erro ao ler arquivo JSON.')
+        }
+      }
+      reader.readAsText(file)
+      e.target.value = ''
+    },
+    [importData]
+  )
+
+  const handleFilterChange = useCallback(
+    (updates: Partial<typeof filters>) => {
+      setFilters((prev) => ({ ...prev, ...updates }))
+    },
+    [setFilters]
+  )
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+      {/* Header */}
+      <Header
+        onNewTask={() => handleOpenNewTask()}
+        onExport={exportData}
+        onImport={handleImport}
+        onReset={requestResetData}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        stats={{
+          completedCount: stats.completedCount,
+          total: stats.total,
+          completionRate: stats.completionRate,
+        }}
+      />
 
-      <div className="ticks"></div>
+      {/* Main Content with generous visual breathing room */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
+        {/* Quick Stats Grid */}
+        <QuickStats stats={stats} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {/* Pomodoro Focus Banner */}
+        <PomodoroWidget
+          session={session}
+          onPlayPause={handlePomodoroPlayPause}
+          onReset={resetTimer}
+          onSwitchMode={switchMode}
+          onClearTask={clearFocusedTask}
+          formatTime={formatTime}
+        />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        {/* Filter and Search Bar */}
+        <FilterBar
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          allTags={allTags}
+          totalFiltered={tasks.length}
+          allTasksCount={allTasksCount}
+        />
+
+        {/* Kanban Board */}
+        <section aria-label="Quadro Kanban" className="pt-2">
+          <Board
+            columns={columns}
+            tasks={tasks}
+            onNewTaskInColumn={handleOpenNewTask}
+            onEditTask={handleOpenEditTask}
+            onDeleteTask={requestDeleteTask}
+            onMoveTask={moveTask}
+            onToggleSubtask={toggleSubtask}
+            onStartFocus={startFocus}
+            onAddColumn={addColumn}
+            onDeleteColumn={requestDeleteColumn}
+            focusedTaskId={session.taskId}
+          />
+        </section>
+      </main>
+
+      {/* Task Creation / Editing Modal */}
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onSave={handleSaveTask}
+        onDelete={requestDeleteTask}
+        task={selectedTask}
+        columns={columns}
+        initialColumnId={newTaskColumnId}
+        availableTags={allTags}
+      />
+
+      {/* Minimalist Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        isDanger={confirmState.isDanger}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
+    </div>
   )
 }
 

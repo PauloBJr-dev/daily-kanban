@@ -1,6 +1,6 @@
 import React from 'react'
 import { Play, Pause, RotateCcw, Flame, Coffee, X } from 'lucide-react'
-import { PomodoroSession } from '../types/kanban'
+import type { PomodoroSession } from '../types/kanban'
 
 interface PomodoroWidgetProps {
   session: PomodoroSession

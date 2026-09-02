@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { storageService } from '../services/storageService'
 import { INITIAL_DATA } from '../services/seedData'
-import { KanbanData } from '../types/kanban'
+import type { KanbanData } from '../types/kanban'
 
 describe('storageService', () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import confetti from 'canvas-confetti'
-import { Column, FilterState, KanbanData, Subtask, Task } from '../types/kanban'
+import type { Column, FilterState, KanbanData, Subtask, Task } from '../types/kanban'
 import { storageService } from '../services/storageService'
 import { INITIAL_DATA } from '../services/seedData'
 
