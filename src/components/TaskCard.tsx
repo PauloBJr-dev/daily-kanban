@@ -10,7 +10,7 @@ import {
   Edit2,
   Calendar,
 } from 'lucide-react'
-import { Column, Priority, Task } from '../types/kanban'
+import type { Column, Priority, Task } from '../types/kanban'
 
 interface TaskCardProps {
   task: Task
@@ -169,6 +169,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 e.stopPropagation()
                 setShowMenu(!showMenu)
               }}
+              title="Mais opções"
+              aria-label="Mais opções"
               className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               <MoreHorizontal className="w-3.5 h-3.5" />

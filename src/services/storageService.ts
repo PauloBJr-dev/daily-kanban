@@ -1,4 +1,4 @@
-import { KanbanData } from '../types/kanban'
+import type { KanbanData } from '../types/kanban'
 import { INITIAL_DATA } from './seedData'
 
 const STORAGE_KEY = 'dailyflow_kanban_data_v1'
