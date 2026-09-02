@@ -142,7 +142,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 onStartFocus(task.id, task.title)
               }}
               title="Iniciar Pomodoro nesta tarefa"
-              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors"
+              aria-label={`Iniciar Pomodoro para: ${task.title}`}
+              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
             >
               <Play className="w-3.5 h-3.5" />
             </button>
@@ -156,7 +157,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 onMove(task.id, nextColumn.id)
               }}
               title={`Avançar para ${nextColumn.title}`}
-              className="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors"
+              aria-label={`Avançar tarefa para ${nextColumn.title}`}
+              className="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 cursor-pointer"
             >
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -170,8 +172,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 setShowMenu(!showMenu)
               }}
               title="Mais opções"
-              aria-label="Mais opções"
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              aria-label={`Mais opções para: ${task.title}`}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
             >
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
@@ -186,7 +188,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     setShowMenu(false)
                     onEdit(task)
                   }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                  aria-label="Editar tarefa"
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 focus-visible:outline-none focus-visible:bg-slate-100 dark:focus-visible:bg-slate-700 cursor-pointer"
                 >
                   <Edit2 className="w-3.5 h-3.5 text-slate-400" />
                   Editar
@@ -196,7 +199,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                     setShowMenu(false)
                     onDelete(task.id)
                   }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600"
+                  aria-label="Excluir tarefa"
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 focus-visible:outline-none focus-visible:bg-rose-50 dark:focus-visible:bg-rose-950/40 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Excluir
@@ -210,7 +214,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       {/* Task Title */}
       <h3
         onClick={() => onEdit(task)}
-        className={`text-sm font-medium leading-snug cursor-pointer transition-colors ${
+        tabIndex={0}
+        role="button"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onEdit(task)
+          }
+        }}
+        aria-label={`Editar tarefa: ${task.title}`}
+        className={`text-sm font-medium leading-snug cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded-md ${
           isDone
             ? 'line-through text-slate-400 dark:text-slate-500'
             : 'text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400'

@@ -47,7 +47,8 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
             <div className="flex gap-1 text-[11px]">
               <button
                 onClick={() => onSwitchMode('work')}
-                className={`px-2 py-0.5 rounded-md transition-colors ${
+                aria-label="Ativar modo de foco de 25 minutos"
+                className={`px-2 py-0.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer ${
                   isWork
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -57,7 +58,8 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
               </button>
               <button
                 onClick={() => onSwitchMode('break')}
-                className={`px-2 py-0.5 rounded-md transition-colors ${
+                aria-label="Ativar modo de pausa de 5 minutos"
+                className={`px-2 py-0.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer ${
                   !isWork
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -82,7 +84,8 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
               <button
                 onClick={onClearTask}
                 title="Desvincular tarefa"
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                aria-label="Desvincular tarefa do timer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -112,12 +115,13 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
         <div className="flex items-center gap-1.5">
           <button
             onClick={onPlayPause}
-            className={`p-2.5 rounded-xl font-medium transition-all active:scale-95 shadow-xs ${
+            aria-label={session.isRunning ? 'Pausar cronômetro (P)' : 'Iniciar foco (P)'}
+            title={session.isRunning ? 'Pausar (P)' : 'Iniciar Foco (P)'}
+            className={`p-2.5 rounded-xl font-medium transition-all active:scale-95 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 cursor-pointer ${
               session.isRunning
                 ? 'bg-amber-500 hover:bg-amber-600 text-white'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
-            title={session.isRunning ? 'Pausar' : 'Iniciar Foco'}
           >
             {session.isRunning ? (
               <Pause className="w-4 h-4" />
@@ -127,8 +131,9 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
           </button>
           <button
             onClick={onReset}
-            className="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+            aria-label="Reiniciar cronômetro"
             title="Reiniciar tempo"
+            className="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

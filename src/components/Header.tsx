@@ -1,11 +1,21 @@
 import React from 'react'
-import { Plus, Download, Upload, RotateCcw, Sun, Moon, CheckCircle2 } from 'lucide-react'
+import {
+  Plus,
+  Download,
+  Upload,
+  RotateCcw,
+  Sun,
+  Moon,
+  CheckCircle2,
+  Keyboard,
+} from 'lucide-react'
 
 interface HeaderProps {
   onNewTask: () => void
   onExport: () => void
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void
   onReset: () => void
+  onOpenShortcuts?: () => void
   isDark: boolean
   onToggleTheme: () => void
   stats: {
@@ -20,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   onExport,
   onImport,
   onReset,
+  onOpenShortcuts,
   isDark,
   onToggleTheme,
   stats,
@@ -71,19 +82,21 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
-          {/* Export / Import / Reset / Theme */}
+          {/* Export / Import / Reset / Shortcuts / Theme */}
           <div className="hidden sm:flex items-center gap-1 border-r border-slate-200 dark:border-slate-800 pr-2">
             <button
               onClick={onExport}
               title="Exportar backup em JSON"
-              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label="Exportar backup em JSON"
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
             >
               <Download className="w-4 h-4" />
             </button>
 
             <label
               title="Importar dados JSON"
-              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Importar dados JSON"
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-within:ring-2 focus-within:ring-indigo-500/50 cursor-pointer"
             >
               <Upload className="w-4 h-4" />
               <input type="file" accept=".json" onChange={onImport} className="hidden" />
@@ -92,15 +105,32 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onReset}
               title="Restaurar dados de demonstração"
-              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label="Restaurar dados de demonstração"
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
 
+            {/* Shortcuts Help Button */}
+            {onOpenShortcuts && (
+              <button
+                onClick={onOpenShortcuts}
+                title="Atalhos de teclado (?)"
+                aria-label="Atalhos de teclado"
+                className="flex items-center gap-1 p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+              >
+                <Keyboard className="w-4 h-4" />
+                <kbd className="hidden lg:inline-flex items-center justify-center px-1 text-[10px] font-mono font-medium rounded border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                  ?
+                </kbd>
+              </button>
+            )}
+
             <button
               onClick={onToggleTheme}
               title={isDark ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
-              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
             >
               {isDark ? (
                 <Sun className="w-4 h-4 text-amber-400" />
@@ -113,10 +143,14 @@ export const Header: React.FC<HeaderProps> = ({
           {/* New Task Button */}
           <button
             onClick={onNewTask}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl shadow-sm shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-95"
+            aria-label="Criar nova tarefa"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl shadow-sm shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Nova Tarefa</span>
+            <kbd className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono bg-indigo-700 text-indigo-100 rounded-md border border-indigo-500/40">
+              N
+            </kbd>
           </button>
         </div>
       </div>
