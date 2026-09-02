@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Header } from './components/Header'
 import { QuickStats } from './components/QuickStats'
 import { PomodoroWidget } from './components/PomodoroWidget'
@@ -6,8 +6,10 @@ import { FilterBar } from './components/FilterBar'
 import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { ShortcutsModal } from './components/ShortcutsModal'
 import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import type { Task } from './types/kanban'
 
 export const App: React.FC = () => {
@@ -88,8 +90,12 @@ export const App: React.FC = () => {
 
   // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [newTaskColumnId, setNewTaskColumnId] = useState<string | undefined>(undefined)
+
+  // Ref for global quick search focus
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean
@@ -114,6 +120,26 @@ export const App: React.FC = () => {
     },
     [columns]
   )
+
+  const handleFocusSearch = useCallback(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
+      searchInputRef.current.select()
+    }
+  }, [])
+
+  const handleOpenShortcuts = useCallback(() => {
+    setIsShortcutsModalOpen((prev) => !prev)
+  }, [])
+
+  // Register Global Keyboard Navigation Shortcuts
+  useGlobalShortcuts({
+    onNewTask: () => handleOpenNewTask(),
+    onFocusSearch: handleFocusSearch,
+    onTogglePomodoro: handlePomodoroPlayPause,
+    onOpenShortcuts: handleOpenShortcuts,
+    enabled: !isTaskModalOpen && !confirmState.isOpen,
+  })
 
   const handleOpenEditTask = useCallback((task: Task) => {
     setSelectedTask(task)
@@ -221,6 +247,7 @@ export const App: React.FC = () => {
         onExport={exportData}
         onImport={handleImport}
         onReset={requestResetData}
+        onOpenShortcuts={handleOpenShortcuts}
         isDark={isDark}
         onToggleTheme={toggleTheme}
         stats={{
@@ -252,6 +279,7 @@ export const App: React.FC = () => {
           allTags={allTags}
           totalFiltered={tasks.length}
           allTasksCount={allTasksCount}
+          searchInputRef={searchInputRef}
         />
 
         {/* Kanban Board */}
@@ -282,6 +310,12 @@ export const App: React.FC = () => {
         columns={columns}
         initialColumnId={newTaskColumnId}
         availableTags={allTags}
+      />
+
+      {/* Shortcuts Guide Modal */}
+      <ShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
       />
 
       {/* Minimalist Confirmation Dialog */}
