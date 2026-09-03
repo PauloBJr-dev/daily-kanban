@@ -189,4 +189,42 @@ describe('usePomodoro hook', () => {
     expect(saved.workDuration).toBe(45 * 60)
     expect(saved.breakDuration).toBe(15 * 60)
   })
+
+  it('mantém precisão absoluta e avança corretamente quando há salto de tempo em segundo plano (background timer jump)', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => {
+      result.current.startFocus('task-1', 'Tarefa em Background')
+    })
+
+    expect(result.current.session.timeLeft).toBe(25 * 60)
+
+    // Simula que a aba ficou em segundo plano por 3 minutos (180 segundos)
+    act(() => {
+      vi.advanceTimersByTime(3 * 60 * 1000)
+    })
+
+    expect(result.current.session.timeLeft).toBe(22 * 60)
+    expect(document.title).toBe('(22:00) 🎯 Foco | DailyFlow')
+  })
+
+  it('conclui o ciclo e dispara notificações ao receber evento visibilitychange se o tempo expirou com tela bloqueada ou aba inativa', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => {
+      result.current.startFocus('task-1', 'Tarefa Longa')
+    })
+
+    // Simula que o tempo passou completamente em segundo plano (26 minutos)
+    act(() => {
+      vi.advanceTimersByTime(26 * 60 * 1000)
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(soundService.playWorkCompleteSound).toHaveBeenCalledTimes(1)
+    expect(notificationService.notify).toHaveBeenCalledTimes(1)
+    expect(document.title).toBe('⏰ Foco Concluído! | DailyFlow')
+    expect(result.current.session.mode).toBe('break')
+    expect(result.current.session.isRunning).toBe(false)
+  })
 })
