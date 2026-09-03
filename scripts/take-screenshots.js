@@ -82,6 +82,46 @@ async function run() {
     if (focusedCard) {
       await saveElementScreenshot(focusedCard, 'card-focus-state.png')
     }
+
+    // 4b. Pomodoro Settings Modal
+    console.log('Abrindo Modal de Configurações do Pomodoro...')
+    const pomodoroSettingsBtn = await page.$('button[aria-label="Configurar tempos do Pomodoro"]')
+    if (pomodoroSettingsBtn) {
+      await pomodoroSettingsBtn.click()
+      await new Promise((r) => setTimeout(r, 500))
+      await saveScreenshot(page, 'pomodoro-settings-modal.png')
+      await page.keyboard.press('Escape')
+      await new Promise((r) => setTimeout(r, 400))
+    }
+
+    // 4c. Toast Notification Feedback (via creating or pinning a task)
+    console.log('Criando uma tarefa para registrar o Toast de Feedback...')
+    const newTaskBtn = await page.$('button[title*="Nova Tarefa (N)"]')
+    if (newTaskBtn) {
+      await newTaskBtn.click()
+      await new Promise((r) => setTimeout(r, 500))
+      const taskInput = await page.$('input[placeholder*="Revisar layout"]')
+      if (taskInput) {
+        await taskInput.type('Revisão de Entrega do Projeto')
+        const submitTaskBtn = await page.$('button[type="submit"]')
+        if (submitTaskBtn) {
+          await submitTaskBtn.click()
+          await new Promise((r) => setTimeout(r, 600))
+          await saveScreenshot(page, 'toast-notification-feedback.png')
+        }
+      }
+    }
+
+    // 4d. Safety Confirmation Dialog with keyword
+    console.log('Abrindo Diálogo de Confirmação com palavra de segurança...')
+    const resetBtn = await page.$('button[title*="Restaurar dados"]')
+    if (resetBtn) {
+      await resetBtn.click()
+      await new Promise((r) => setTimeout(r, 500))
+      await saveScreenshot(page, 'safety-keyword-confirmation.png')
+      await page.keyboard.press('Escape')
+      await new Promise((r) => setTimeout(r, 400))
+    }
   }
 
   // 5. Dark Mode Full Page Screenshot
