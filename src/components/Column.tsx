@@ -168,7 +168,7 @@ export const Column: React.FC<ColumnProps> = ({
       </div>
 
       {/* Task Cards Container */}
-      <div className="flex-1 flex flex-col gap-3 min-h-[140px] overflow-y-auto pr-0.5">
+      <div className="flex-1 flex flex-col gap-3 min-h-[140px] overflow-y-auto p-1.5">
         {tasks.map((task) => (
           <TaskCard
             key={task.id}

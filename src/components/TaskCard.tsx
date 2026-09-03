@@ -104,14 +104,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={`group relative p-4 rounded-2xl bg-white dark:bg-slate-800 border transition-all duration-200 select-none cursor-grab active:cursor-grabbing ${
+      className={`group relative p-4 rounded-2xl bg-white dark:bg-slate-800 transition-all duration-150 select-none cursor-grab active:cursor-grabbing ${
         isDragging
-          ? 'opacity-40 scale-95 border-indigo-400 shadow-none'
-          : 'border-slate-200/70 dark:border-slate-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_18px_rgba(0,0,0,0.06)] hover:-translate-y-0.5'
-      } ${
-        isFocused
-          ? 'ring-2 ring-indigo-500/80 border-transparent shadow-indigo-100 dark:shadow-none'
-          : ''
+          ? 'opacity-40 scale-95 border-2 border-indigo-400 shadow-none'
+          : isFocused
+            ? 'border-2 border-indigo-500 dark:border-indigo-400 shadow-xs'
+            : 'border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 shadow-xs'
       } ${isDone ? 'opacity-75 hover:opacity-100' : ''}`}
     >
       {/* Top row: Priority badge + Quick actions */}
