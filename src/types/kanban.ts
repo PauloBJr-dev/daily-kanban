@@ -52,4 +52,5 @@ export interface PomodoroSession {
   mode: 'work' | 'break'
   workDuration: number // in seconds (default 25 * 60)
   breakDuration: number // in seconds (default 5 * 60)
+  isSoundEnabled?: boolean
 }
