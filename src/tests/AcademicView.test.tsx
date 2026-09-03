@@ -120,4 +120,113 @@ describe('AcademicView', () => {
       screen.getByText('Teorema Fundamental do Cálculo e Aplicações de Derivadas')
     ).toBeInTheDocument()
   })
+
+  it('alterna entre o modo de grade e o modo studio via seletor', () => {
+    render(<AcademicView />)
+
+    // Initially in grid mode
+    const statsSection = screen.getByRole('region', {
+      name: 'Estatísticas Acadêmicas',
+    })
+    expect(statsSection).toBeInTheDocument()
+
+    // Switch to Studio mode
+    const studioBtn = screen.getByRole('button', { name: 'Modo Studio' })
+    fireEvent.click(studioBtn)
+
+    // Studio is rendered (Editor and Caderno sidebar)
+    expect(screen.getByLabelText('Editor do estúdio')).toBeInTheDocument()
+    expect(screen.getByText('Caderno')).toBeInTheDocument()
+    // Stats section should not be in document in Studio mode
+    expect(
+      screen.queryByRole('region', { name: 'Estatísticas Acadêmicas' })
+    ).not.toBeInTheDocument()
+
+    // Switch back to Grade mode
+    const gridBtn = screen.getByRole('button', { name: 'Modo Grade' })
+    fireEvent.click(gridBtn)
+
+    expect(
+      screen.getByRole('region', { name: 'Estatísticas Acadêmicas' })
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('Editor do estúdio')).not.toBeInTheDocument()
+  })
+
+  it('ao clicar em um card de nota na grade, transiciona diretamente para o Modo Studio com a nota selecionada', () => {
+    render(<AcademicView />)
+
+    const noteTitle = screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra')
+    fireEvent.click(noteTitle)
+
+    // Should now be in Studio mode
+    expect(screen.getByLabelText('Editor do estúdio')).toBeInTheDocument()
+    const titleInput = screen.getByLabelText('Título da anotação')
+    expect(titleInput).toHaveValue('Árvores Balanceadas: AVL e Rubro-Negra')
+  })
+
+  it('retorna para a grade ao clicar no botão Voltar para Grade dentro do Studio', () => {
+    render(<AcademicView />)
+
+    // Click on a note to open studio
+    const noteTitle = screen.getByText(
+      'Teorema Fundamental do Cálculo e Aplicações de Derivadas'
+    )
+    fireEvent.click(noteTitle)
+
+    expect(screen.getByLabelText('Editor do estúdio')).toBeInTheDocument()
+
+    // Click on back to grid button in studio
+    const backBtn = screen.getByRole('button', { name: 'Voltar para Grade' })
+    fireEvent.click(backBtn)
+
+    // Should return to grid
+    expect(
+      screen.getByRole('region', { name: 'Estatísticas Acadêmicas' })
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('Editor do estúdio')).not.toBeInTheDocument()
+  })
+
+  it('ao acionar nova anotação em Modo Studio, cria e seleciona diretamente no editor sem abrir modal', () => {
+    render(<AcademicView />)
+
+    // Switch to Studio mode
+    const studioBtn = screen.getByRole('button', { name: 'Modo Studio' })
+    fireEvent.click(studioBtn)
+
+    // Click "Nova Anotação" in header
+    const newNoteBtn = screen.getByRole('button', { name: 'Criar nova anotação' })
+    fireEvent.click(newNoteBtn)
+
+    // No modal dialog opened
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    // The editor now has the new note
+    const titleInput = screen.getByLabelText('Título da anotação')
+    expect(titleInput).toHaveValue('Nova Anotação')
+  })
+
+  it('suporta o Modo Zen ocultando o cabeçalho do caderno e restaurando com Escape', () => {
+    render(<AcademicView />)
+
+    // Switch to Studio mode
+    fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
+
+    // Caderno Acadêmico title is present
+    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+
+    // Enter Zen Mode
+    const zenBtn = screen.getByLabelText('Modo Zen')
+    fireEvent.click(zenBtn)
+
+    // Header is hidden
+    expect(screen.queryByText('Caderno Acadêmico')).not.toBeInTheDocument()
+    expect(screen.queryByText('Caderno')).not.toBeInTheDocument() // Sidebar hidden in Zen mode
+
+    // Exit Zen Mode with Escape
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    // Header and sidebar restored
+    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    expect(screen.getByText('Caderno')).toBeInTheDocument()
+  })
 })
