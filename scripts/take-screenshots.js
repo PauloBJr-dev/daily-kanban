@@ -85,7 +85,9 @@ async function run() {
 
     // 4b. Pomodoro Settings Modal
     console.log('Abrindo Modal de Configurações do Pomodoro...')
-    const pomodoroSettingsBtn = await page.$('button[aria-label="Configurar tempos do Pomodoro"]')
+    const pomodoroSettingsBtn = await page.$(
+      'button[aria-label="Configurar tempos do Pomodoro"]'
+    )
     if (pomodoroSettingsBtn) {
       await pomodoroSettingsBtn.click()
       await new Promise((r) => setTimeout(r, 500))
