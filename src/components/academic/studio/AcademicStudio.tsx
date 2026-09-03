@@ -53,7 +53,12 @@ export const AcademicStudio: React.FC<AcademicStudioProps> = ({
   // Studio UI states
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | 'all'>('all')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return false
+    }
+    return true
+  })
   const [internalZenMode, setInternalZenMode] = useState(false)
   const isZenMode = propIsZenMode !== undefined ? propIsZenMode : internalZenMode
 

@@ -82,7 +82,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -91,10 +91,13 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
         role="dialog"
         aria-modal="true"
         aria-labelledby="pomodoro-settings-title"
-        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden"
+        className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-xl border-t sm:border border-slate-200/80 dark:border-slate-800 overflow-hidden max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-150"
       >
+        {/* Mobile Pull Indicator */}
+        <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 sm:hidden" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
           <h2
             id="pomodoro-settings-title"
             className="text-base font-semibold text-slate-900 dark:text-slate-100"
