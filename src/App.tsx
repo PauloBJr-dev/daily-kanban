@@ -7,6 +7,7 @@ import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ShortcutsModal } from './components/ShortcutsModal'
+import { AcademicView, type AcademicViewHandle } from './components/academic'
 import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
@@ -88,6 +89,24 @@ export const App: React.FC = () => {
     }
   }, [session.isRunning, pauseFocus, resumeFocus])
 
+  // Active view navigation ('kanban' | 'academic')
+  const [activeView, setActiveView] = useState<'kanban' | 'academic'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dailyflow_active_view')
+      if (saved === 'kanban' || saved === 'academic') {
+        return saved
+      }
+    }
+    return 'kanban'
+  })
+
+  const handleViewChange = useCallback((view: 'kanban' | 'academic') => {
+    setActiveView(view)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dailyflow_active_view', view)
+    }
+  }, [])
+
   // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
@@ -96,6 +115,7 @@ export const App: React.FC = () => {
 
   // Ref for global quick search focus
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const academicViewRef = useRef<AcademicViewHandle>(null)
 
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean
@@ -121,12 +141,20 @@ export const App: React.FC = () => {
     [columns]
   )
 
-  const handleFocusSearch = useCallback(() => {
-    if (searchInputRef.current) {
-      searchInputRef.current.focus()
-      searchInputRef.current.select()
-    }
+  const handleOpenNewNote = useCallback(() => {
+    academicViewRef.current?.openNewNote()
   }, [])
+
+  const handleFocusSearch = useCallback(() => {
+    if (activeView === 'kanban') {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus()
+        searchInputRef.current.select()
+      }
+    } else {
+      academicViewRef.current?.focusSearch()
+    }
+  }, [activeView])
 
   const handleOpenShortcuts = useCallback(() => {
     setIsShortcutsModalOpen((prev) => !prev)
@@ -134,7 +162,13 @@ export const App: React.FC = () => {
 
   // Register Global Keyboard Navigation Shortcuts
   useGlobalShortcuts({
-    onNewTask: () => handleOpenNewTask(),
+    onNewTask: () => {
+      if (activeView === 'kanban') {
+        handleOpenNewTask()
+      } else {
+        handleOpenNewNote()
+      }
+    },
     onFocusSearch: handleFocusSearch,
     onTogglePomodoro: handlePomodoroPlayPause,
     onOpenShortcuts: handleOpenShortcuts,
@@ -243,7 +277,10 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       {/* Header */}
       <Header
+        activeView={activeView}
+        onViewChange={handleViewChange}
         onNewTask={() => handleOpenNewTask()}
+        onNewNote={handleOpenNewNote}
         onExport={exportData}
         onImport={handleImport}
         onReset={requestResetData}
@@ -259,45 +296,52 @@ export const App: React.FC = () => {
 
       {/* Main Content with generous visual breathing room */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
-        {/* Quick Stats Grid */}
-        <QuickStats stats={stats} />
+        {activeView === 'kanban' ? (
+          <>
+            {/* Quick Stats Grid */}
+            <QuickStats stats={stats} />
 
-        {/* Pomodoro Focus Banner */}
-        <PomodoroWidget
-          session={session}
-          onPlayPause={handlePomodoroPlayPause}
-          onReset={resetTimer}
-          onSwitchMode={switchMode}
-          onClearTask={clearFocusedTask}
-          formatTime={formatTime}
-        />
+            {/* Pomodoro Focus Banner */}
+            <PomodoroWidget
+              session={session}
+              onPlayPause={handlePomodoroPlayPause}
+              onReset={resetTimer}
+              onSwitchMode={switchMode}
+              onClearTask={clearFocusedTask}
+              formatTime={formatTime}
+            />
 
-        {/* Filter and Search Bar */}
-        <FilterBar
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          allTags={allTags}
-          totalFiltered={tasks.length}
-          allTasksCount={allTasksCount}
-          searchInputRef={searchInputRef}
-        />
+            {/* Filter and Search Bar */}
+            <FilterBar
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              allTags={allTags}
+              totalFiltered={tasks.length}
+              allTasksCount={allTasksCount}
+              searchInputRef={searchInputRef}
+            />
 
-        {/* Kanban Board */}
-        <section aria-label="Quadro Kanban" className="pt-2">
-          <Board
-            columns={columns}
-            tasks={tasks}
-            onNewTaskInColumn={handleOpenNewTask}
-            onEditTask={handleOpenEditTask}
-            onDeleteTask={requestDeleteTask}
-            onMoveTask={moveTask}
-            onToggleSubtask={toggleSubtask}
-            onStartFocus={startFocus}
-            onAddColumn={addColumn}
-            onDeleteColumn={requestDeleteColumn}
-            focusedTaskId={session.taskId}
-          />
-        </section>
+            {/* Kanban Board */}
+            <section aria-label="Quadro Kanban" className="pt-2">
+              <Board
+                columns={columns}
+                tasks={tasks}
+                onNewTaskInColumn={handleOpenNewTask}
+                onEditTask={handleOpenEditTask}
+                onDeleteTask={requestDeleteTask}
+                onMoveTask={moveTask}
+                onToggleSubtask={toggleSubtask}
+                onStartFocus={startFocus}
+                onAddColumn={addColumn}
+                onDeleteColumn={requestDeleteColumn}
+                focusedTaskId={session.taskId}
+              />
+            </section>
+          </>
+        ) : (
+          /* Academic Workspace */
+          <AcademicView ref={academicViewRef} />
+        )}
       </main>
 
       {/* Task Creation / Editing Modal */}
