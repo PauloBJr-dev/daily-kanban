@@ -132,14 +132,33 @@ async function run() {
     await new Promise((r) => setTimeout(r, 600))
     await saveScreenshot(page, 'academic-light-mode.png')
 
-    // Subject Manager Modal in Light Mode
-    const subjectsBtn = await page.$('button[title="Gerenciar disciplinas cadastradas"]')
-    if (subjectsBtn) {
-      await subjectsBtn.click()
-      await new Promise((r) => setTimeout(r, 500))
-      await saveScreenshot(page, 'academic-subjects-modal-light.png')
-      await page.keyboard.press('Escape')
-      await new Promise((r) => setTimeout(r, 400))
+    // 9. Studio Mode in Light Mode
+    console.log('Alternando para Modo Studio (Light Mode)...')
+    const studioBtn = await page.$('button[aria-label="Modo Studio"]')
+    if (studioBtn) {
+      await studioBtn.click()
+      await new Promise((r) => setTimeout(r, 600))
+      await saveScreenshot(page, 'academic-studio-light.png')
+
+      // 10. Studio Mode in Dark Mode
+      console.log('Alternando para Modo Studio (Dark Mode)...')
+      await page.evaluate(() => {
+        document.documentElement.classList.add('dark')
+        localStorage.setItem('dailyflow_theme', 'dark')
+      })
+      await new Promise((r) => setTimeout(r, 600))
+      await saveScreenshot(page, 'academic-studio-dark.png')
+
+      // 11. Zen Mode (Focus Fullscreen)
+      console.log('Ativando Modo Zen no Studio...')
+      const zenBtn = await page.$('button[aria-label="Ativar Modo Zen"]')
+      if (zenBtn) {
+        await zenBtn.click()
+        await new Promise((r) => setTimeout(r, 600))
+        await saveScreenshot(page, 'academic-studio-zen.png')
+        await page.keyboard.press('Escape')
+        await new Promise((r) => setTimeout(r, 400))
+      }
     }
   }
 
