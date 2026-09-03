@@ -69,7 +69,7 @@ describe('SubjectManagerModal', () => {
     })
   })
 
-  it('abre confirmação ao clicar em excluir e executa onDeleteSubject', () => {
+  it('abre confirmação ao clicar em excluir e exige palavra de segurança quando houver notas', () => {
     const onDeleteSubject = vi.fn()
     render(<SubjectManagerModal {...defaultProps} onDeleteSubject={onDeleteSubject} />)
 
@@ -78,10 +78,39 @@ describe('SubjectManagerModal', () => {
 
     expect(screen.getByText('Excluir Disciplina?')).toBeInTheDocument()
 
-    // Confirm deletion
+    // Confirm button should initially be disabled because it requires "EXCLUIR"
     const confirmBtn = screen.getByRole('button', { name: 'Excluir Disciplina' })
+    expect(confirmBtn).toBeDisabled()
+
+    // Type the confirmation word
+    const input = screen.getByPlaceholderText('Digite "EXCLUIR"')
+    fireEvent.change(input, { target: { value: 'EXCLUIR' } })
+
+    expect(confirmBtn).not.toBeDisabled()
     fireEvent.click(confirmBtn)
 
     expect(onDeleteSubject).toHaveBeenCalledWith('sub-1')
+  })
+
+  it('permite excluir disciplina sem notas sem exigir palavra de confirmação', () => {
+    const onDeleteSubject = vi.fn()
+    render(
+      <SubjectManagerModal
+        {...defaultProps}
+        notesCountBySubject={{ 'sub-1': 3, 'sub-2': 0 }}
+        onDeleteSubject={onDeleteSubject}
+      />
+    )
+
+    const deleteBtn = screen.getByLabelText('Excluir disciplina Física I')
+    fireEvent.click(deleteBtn)
+
+    expect(screen.getByText('Excluir Disciplina?')).toBeInTheDocument()
+
+    const confirmBtn = screen.getByRole('button', { name: 'Excluir Disciplina' })
+    expect(confirmBtn).not.toBeDisabled()
+    fireEvent.click(confirmBtn)
+
+    expect(onDeleteSubject).toHaveBeenCalledWith('sub-2')
   })
 })
