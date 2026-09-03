@@ -192,7 +192,9 @@ describe('App Integration', () => {
     fireEvent.click(screen.getByText('Nova Tarefa'))
     expect(screen.getByText('Criar Tarefa')).toBeInTheDocument()
 
-    const titleInput = screen.getByPlaceholderText('Ex: Revisar layout da nova landing page')
+    const titleInput = screen.getByPlaceholderText(
+      'Ex: Revisar layout da nova landing page'
+    )
     fireEvent.change(titleInput, { target: { value: 'Nova Tarefa de Teste Toast' } })
 
     const submitBtn = screen.getByRole('button', { name: 'Criar Tarefa' })
