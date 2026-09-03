@@ -75,6 +75,16 @@ export function useAcademicNotes() {
     }))
   }, [])
 
+  const restoreNote = useCallback((noteToRestore: AcademicNote) => {
+    setData((prev) => {
+      if (prev.notes.some((n) => n.id === noteToRestore.id)) return prev
+      return {
+        ...prev,
+        notes: [noteToRestore, ...prev.notes],
+      }
+    })
+  }, [])
+
   const togglePinNote = useCallback((noteId: string) => {
     const now = new Date().toISOString()
     setData((prev) => {
@@ -243,6 +253,7 @@ export function useAcademicNotes() {
     addNote,
     updateNote,
     deleteNote,
+    restoreNote,
     togglePinNote,
     addSubject,
     updateSubject,

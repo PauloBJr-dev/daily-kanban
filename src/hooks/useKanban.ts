@@ -74,6 +74,16 @@ export function useKanban() {
     }))
   }, [])
 
+  const restoreTask = useCallback((taskToRestore: Task) => {
+    setData((prev) => {
+      if (prev.tasks.some((t) => t.id === taskToRestore.id)) return prev
+      return {
+        ...prev,
+        tasks: [taskToRestore, ...prev.tasks],
+      }
+    })
+  }, [])
+
   const moveTask = useCallback(
     (taskId: string, targetColumnId: string, targetIndex?: number) => {
       setData((prev) => {
@@ -311,6 +321,7 @@ export function useKanban() {
     addTask,
     updateTask,
     deleteTask,
+    restoreTask,
     moveTask,
     toggleSubtask,
     addSubtask,

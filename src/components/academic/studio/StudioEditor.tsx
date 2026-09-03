@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   LayoutGrid,
   PanelLeft,
@@ -15,6 +15,7 @@ import {
 import type { AcademicNote, StudyStatus, Subject } from '../../../types/academic'
 import { getSubjectColor } from '../academicColors'
 import { ConfirmDialog } from '../../ConfirmDialog'
+import { useToast } from '../../../hooks/useToast'
 
 export interface StudioEditorProps {
   note: AcademicNote | null
@@ -75,6 +76,21 @@ export const StudioEditor: React.FC<StudioEditorProps> = ({
   const [isAddingTag, setIsAddingTag] = useState(false)
   const [newTagInput, setNewTagInput] = useState('')
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
+  const toast = useToast()
+
+  // Support Ctrl+S / Cmd+S to explicitly trigger save feedback
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (note) {
+          toast.success('Anotação salva com sucesso')
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [note, toast])
 
   // Reading statistics
   const noteContent = note?.content
@@ -419,10 +435,17 @@ export const StudioEditor: React.FC<StudioEditorProps> = ({
           <span>~{readingTimeMinutes} min de leitura</span>
         </div>
 
-        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+        <button
+          type="button"
+          onClick={() => {
+            if (note) toast.success('Anotação salva com sucesso')
+          }}
+          title="Salvar anotação (Ctrl+S)"
+          className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium hover:opacity-80 transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md px-1"
+        >
           <Check className="w-3.5 h-3.5" />
           <span>Salvo no navegador</span>
-        </div>
+        </button>
       </footer>
 
       {/* Delete Confirmation Modal */}

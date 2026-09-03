@@ -12,6 +12,7 @@ import {
   PanelsTopLeft,
 } from 'lucide-react'
 import { useAcademicNotes } from '../../hooks/useAcademicNotes'
+import { useToast } from '../../hooks/useToast'
 import { AcademicStats } from './AcademicStats'
 import { AcademicFilterBar } from './AcademicFilterBar'
 import { NoteCard } from './NoteCard'
@@ -52,6 +53,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       addNote,
       updateNote,
       deleteNote,
+      restoreNote,
       togglePinNote,
       addSubject,
       deleteSubject,
@@ -59,6 +61,8 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       importAcademicData,
       resetToSeed,
     } = useAcademicNotes()
+
+    const toast = useToast()
 
     // Zen Mode (controlled / uncontrolled fallback)
     const [internalZenMode, setInternalZenMode] = useState(false)
@@ -130,6 +134,8 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       message: string
       confirmText?: string
       isDanger?: boolean
+      requireConfirmationWord?: string
+      isDoubleConfirm?: boolean
       onConfirm: () => void
     }>({
       isOpen: false,
@@ -171,9 +177,10 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
           isPinned: false,
         })
         setActiveStudioNoteId(newNote.id)
+        toast.success('Anotação criada com sucesso')
         return newNote
       },
-      [filters.subjectId, subjects, addNote]
+      [filters.subjectId, subjects, addNote, toast]
     )
 
     // Note management handlers
@@ -223,11 +230,13 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       ) => {
         if (noteId) {
           updateNote(noteId, notePayload)
+          toast.success('Anotação salva com sucesso')
         } else {
           addNote(notePayload)
+          toast.success('Anotação criada com sucesso')
         }
       },
-      [addNote, updateNote]
+      [addNote, updateNote, toast]
     )
 
     const requestDeleteNote = useCallback(
@@ -239,11 +248,73 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
           message: `Tem certeza que deseja excluir a anotação "${note?.title || 'selecionada'}"? Esta ação não pode ser desfeita.`,
           confirmText: 'Excluir Anotação',
           isDanger: true,
-          onConfirm: () => deleteNote(noteId),
+          onConfirm: () => {
+            deleteNote(noteId)
+            toast.info('Anotação excluída', {
+              action: {
+                label: 'Desfazer',
+                onClick: () => {
+                  if (note) restoreNote(note)
+                },
+              },
+            })
+          },
         })
       },
-      [allNotes, deleteNote]
+      [allNotes, deleteNote, restoreNote, toast]
     )
+
+    const handleStudioDeleteNote = useCallback(
+      (noteId: string) => {
+        const note = allNotes.find((n) => n.id === noteId)
+        deleteNote(noteId)
+        toast.info('Anotação excluída', {
+          action: {
+            label: 'Desfazer',
+            onClick: () => {
+              if (note) restoreNote(note)
+            },
+          },
+        })
+      },
+      [allNotes, deleteNote, restoreNote, toast]
+    )
+
+    const handleTogglePinNote = useCallback(
+      (noteId: string) => {
+        const note = allNotes.find((n) => n.id === noteId)
+        const willBePinned = !note?.isPinned
+        togglePinNote(noteId)
+        if (willBePinned) {
+          toast.success('Anotação fixada no topo')
+        } else {
+          toast.info('Anotação desafixada')
+        }
+      },
+      [allNotes, togglePinNote, toast]
+    )
+
+    const handleAddSubject = useCallback(
+      (subjectInput: Omit<Subject, 'id'>) => {
+        const newSub = addSubject(subjectInput)
+        toast.success('Disciplina criada com sucesso')
+        return newSub
+      },
+      [addSubject, toast]
+    )
+
+    const handleDeleteSubject = useCallback(
+      (subjectId: string) => {
+        deleteSubject(subjectId)
+        toast.info('Disciplina excluída')
+      },
+      [deleteSubject, toast]
+    )
+
+    const handleExportAcademicData = useCallback(() => {
+      exportAcademicData()
+      toast.success('Backup JSON exportado com sucesso')
+    }, [exportAcademicData, toast])
 
     const requestResetData = useCallback(() => {
       setConfirmState({
@@ -253,9 +324,13 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
           'Todas as anotações e disciplinas atuais serão substituídas pelo conjunto de demonstração acadêmico inicial.',
         confirmText: 'Restaurar',
         isDanger: false,
-        onConfirm: () => resetToSeed(),
+        requireConfirmationWord: 'RESTAURAR',
+        onConfirm: () => {
+          resetToSeed()
+          toast.info('Dados de demonstração restaurados')
+        },
       })
-    }, [resetToSeed])
+    }, [resetToSeed, toast])
 
     // Import JSON handler
     const handleImport = useCallback(
@@ -267,17 +342,19 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
           try {
             const parsed = JSON.parse(event.target?.result as string)
             const success = importAcademicData(parsed)
-            if (!success) {
-              alert('Arquivo JSON acadêmico inválido ou incompatível.')
+            if (success) {
+              toast.success('Dados importados com sucesso')
+            } else {
+              toast.error('Arquivo JSON acadêmico inválido ou incompatível.')
             }
           } catch {
-            alert('Erro ao processar o arquivo JSON.')
+            toast.error('Erro ao processar o arquivo JSON.')
           }
         }
         reader.readAsText(file)
         e.target.value = ''
       },
-      [importAcademicData]
+      [importAcademicData, toast]
     )
 
     const hasActiveFilters =
@@ -348,7 +425,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
               {/* Export JSON */}
               <button
                 type="button"
-                onClick={exportAcademicData}
+                onClick={handleExportAcademicData}
                 aria-label="Exportar anotações acadêmicas em JSON"
                 title="Exportar dados (JSON)"
                 className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
@@ -405,8 +482,8 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
             selectedNoteId={activeStudioNoteId}
             onSelectNote={setActiveStudioNoteId}
             onUpdateNote={updateNote}
-            onDeleteNote={deleteNote}
-            onTogglePin={togglePinNote}
+            onDeleteNote={handleStudioDeleteNote}
+            onTogglePin={handleTogglePinNote}
             onNewNote={handleStudioNewNote}
             onBackToGrid={() => handleLayoutModeChange('grid')}
             isZenMode={isZenMode}
@@ -512,7 +589,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                       viewMode="grid"
                       onEdit={handleOpenEditNote}
                       onDelete={requestDeleteNote}
-                      onTogglePin={togglePinNote}
+                      onTogglePin={handleTogglePinNote}
                       onSelectTag={(tag) => setFilters((prev) => ({ ...prev, tag }))}
                     />
                   ))}
@@ -527,7 +604,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                       viewMode="list"
                       onEdit={handleOpenEditNote}
                       onDelete={requestDeleteNote}
-                      onTogglePin={togglePinNote}
+                      onTogglePin={handleTogglePinNote}
                       onSelectTag={(tag) => setFilters((prev) => ({ ...prev, tag }))}
                     />
                   ))}
@@ -554,8 +631,8 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
           onClose={() => setIsSubjectModalOpen(false)}
           subjects={subjects}
           notesCountBySubject={notesCountBySubject}
-          onAddSubject={addSubject}
-          onDeleteSubject={deleteSubject}
+          onAddSubject={handleAddSubject}
+          onDeleteSubject={handleDeleteSubject}
         />
 
         {/* Confirmation Dialog */}
@@ -565,6 +642,8 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
           message={confirmState.message}
           confirmText={confirmState.confirmText}
           isDanger={confirmState.isDanger}
+          requireConfirmationWord={confirmState.requireConfirmationWord}
+          isDoubleConfirm={confirmState.isDoubleConfirm}
           onConfirm={confirmState.onConfirm}
           onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
         />

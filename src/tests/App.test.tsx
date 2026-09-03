@@ -178,4 +178,48 @@ describe('App Integration', () => {
     // Cabeçalho global restaurado
     expect(screen.getByText('DailyFlow')).toBeInTheDocument()
   })
+
+  it('renderiza o link de acessibilidade para pular para o conteúdo principal', () => {
+    render(<App />)
+    const skipLink = screen.getByText('Pular para o conteúdo')
+    expect(skipLink).toBeInTheDocument()
+    expect(skipLink).toHaveAttribute('href', '#main-content')
+  })
+
+  it('exibe toast ao criar uma nova tarefa', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByText('Nova Tarefa'))
+    expect(screen.getByText('Criar Tarefa')).toBeInTheDocument()
+
+    const titleInput = screen.getByPlaceholderText(
+      'Ex: Revisar layout da nova landing page'
+    )
+    fireEvent.change(titleInput, { target: { value: 'Nova Tarefa de Teste Toast' } })
+
+    const submitBtn = screen.getByRole('button', { name: 'Criar Tarefa' })
+    fireEvent.click(submitBtn)
+
+    expect(screen.getByText('Tarefa criada com sucesso')).toBeInTheDocument()
+  })
+
+  it('exibe confirmação com palavra de segurança "RESTAURAR" ao solicitar restauração padrão', () => {
+    render(<App />)
+
+    const resetBtn = screen.getByTitle('Restaurar dados de demonstração')
+    fireEvent.click(resetBtn)
+
+    expect(screen.getByText('Restaurar Dados Padrão')).toBeInTheDocument()
+
+    const confirmBtn = screen.getByRole('button', { name: 'Restaurar' })
+    expect(confirmBtn).toBeDisabled()
+
+    const input = screen.getByPlaceholderText('Digite "RESTAURAR"')
+    fireEvent.change(input, { target: { value: 'RESTAURAR' } })
+
+    expect(confirmBtn).not.toBeDisabled()
+    fireEvent.click(confirmBtn)
+
+    expect(screen.getByText('Dados de demonstração restaurados')).toBeInTheDocument()
+  })
 })

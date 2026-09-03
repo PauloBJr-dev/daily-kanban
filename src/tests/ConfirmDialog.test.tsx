@@ -71,4 +71,104 @@ describe('ConfirmDialog', () => {
     fireEvent.click(screen.getByText('Cancelar'))
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('exige digitação de palavra de segurança quando requireConfirmationWord for informada', () => {
+    const onConfirm = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <ConfirmDialog
+        isOpen={true}
+        title="Excluir Coluna Crítica"
+        message="Esta coluna contém tarefas ativas."
+        confirmText="Excluir Definitivamente"
+        requireConfirmationWord="EXCLUIR"
+        isDanger
+        onConfirm={onConfirm}
+        onClose={onClose}
+      />
+    )
+
+    const confirmButton = screen.getByRole('button', { name: 'Excluir Definitivamente' })
+    expect(confirmButton).toBeDisabled()
+
+    const input = screen.getByPlaceholderText('Digite "EXCLUIR"')
+    expect(input).toBeInTheDocument()
+
+    // Typing wrong text leaves button disabled
+    fireEvent.change(input, { target: { value: 'errado' } })
+    expect(confirmButton).toBeDisabled()
+    fireEvent.click(confirmButton)
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    // Typing exact confirmation word enables button
+    fireEvent.change(input, { target: { value: 'EXCLUIR' } })
+    expect(confirmButton).not.toBeDisabled()
+
+    fireEvent.click(confirmButton)
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('permite submissão via tecla Enter quando palavra de segurança está correta', () => {
+    const onConfirm = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <ConfirmDialog
+        isOpen={true}
+        title="Restaurar Banco"
+        message="Confirmação de restauração."
+        confirmText="Restaurar"
+        requireConfirmationWord="RESTAURAR"
+        onConfirm={onConfirm}
+        onClose={onClose}
+      />
+    )
+
+    const input = screen.getByPlaceholderText('Digite "RESTAURAR"')
+    fireEvent.change(input, { target: { value: 'RESTAURAR' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('gerencia fluxo em duas etapas quando isDoubleConfirm for true', () => {
+    const onConfirm = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <ConfirmDialog
+        isOpen={true}
+        title="Remover Projeto"
+        message="Aviso inicial de segurança."
+        confirmText="Excluir Tudo"
+        isDoubleConfirm={true}
+        isDanger={true}
+        onConfirm={onConfirm}
+        onClose={onClose}
+      />
+    )
+
+    // Step 1 check
+    expect(screen.getByText('Etapa 1 de 2: Verificação')).toBeInTheDocument()
+    const continueBtn = screen.getByRole('button', { name: 'Continuar para Confirmação' })
+    expect(continueBtn).toBeInTheDocument()
+
+    // Advance to Step 2
+    fireEvent.click(continueBtn)
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    // Step 2 check
+    expect(screen.getByText('Etapa 2 de 2: Definitivo')).toBeInTheDocument()
+    expect(screen.getByText('Confirmação Definitiva e Irreversível')).toBeInTheDocument()
+
+    // Final confirm in Step 2
+    const finalConfirmBtn = screen.getByRole('button', { name: 'Excluir Tudo' })
+    fireEvent.click(finalConfirmBtn)
+
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

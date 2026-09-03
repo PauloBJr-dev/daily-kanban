@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { X, Plus, Trash2, Layers, Check, AlertTriangle } from 'lucide-react'
+import { X, Plus, Trash2, Layers, Check } from 'lucide-react'
 import type { Subject } from '../../types/academic'
 import { SUBJECT_COLORS, getSubjectColor } from './academicColors'
+import { ConfirmDialog } from '../ConfirmDialog'
 
 interface SubjectManagerModalProps {
   isOpen: boolean
@@ -301,48 +302,18 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
 
         {/* Nested Delete Confirmation Dialog */}
         {subjectToDelete && (
-          <div
-            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100"
-            onClick={() => setSubjectToDelete(null)}
-          >
-            <div
-              className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl animate-in zoom-in-95 duration-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    Excluir Disciplina?
-                  </h4>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Tem certeza que deseja excluir <strong>{subjectToDelete.name}</strong>
-                    ? Todas as anotações associadas a esta disciplina também serão
-                    removidas permanentemente.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSubjectToDelete(null)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmDelete}
-                  className="px-3.5 py-1.5 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  Excluir Disciplina
-                </button>
-              </div>
-            </div>
-          </div>
+          <ConfirmDialog
+            isOpen={Boolean(subjectToDelete)}
+            title="Excluir Disciplina?"
+            message={`Tem certeza que deseja excluir "${subjectToDelete.name}"? Todas as anotações associadas a esta disciplina também serão removidas permanentemente.`}
+            confirmText="Excluir Disciplina"
+            isDanger
+            requireConfirmationWord={
+              (notesCountBySubject[subjectToDelete.id] || 0) > 0 ? 'EXCLUIR' : undefined
+            }
+            onConfirm={confirmDelete}
+            onClose={() => setSubjectToDelete(null)}
+          />
         )}
       </div>
     </div>

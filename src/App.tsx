@@ -7,13 +7,16 @@ import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ShortcutsModal } from './components/ShortcutsModal'
+import { ToastContainer } from './components/ToastContainer'
 import { AcademicView, type AcademicViewHandle } from './components/academic'
 import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
-import type { Task } from './types/kanban'
+import { ToastProvider, useToast } from './hooks/useToast'
+import type { Task, Column } from './types/kanban'
 
-export const App: React.FC = () => {
+export const AppContent: React.FC = () => {
+  const toast = useToast()
   const {
     columns,
     tasks,
@@ -25,6 +28,7 @@ export const App: React.FC = () => {
     addTask,
     updateTask,
     deleteTask,
+    restoreTask,
     moveTask,
     toggleSubtask,
     addColumn,
@@ -140,6 +144,8 @@ export const App: React.FC = () => {
     message: string
     confirmText?: string
     isDanger?: boolean
+    requireConfirmationWord?: string
+    isDoubleConfirm?: boolean
     onConfirm: () => void
   }>({
     isOpen: false,
@@ -201,11 +207,13 @@ export const App: React.FC = () => {
     (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>, taskId?: string) => {
       if (taskId) {
         updateTask(taskId, taskData)
+        toast.info('Tarefa atualizada')
       } else {
         addTask(taskData)
+        toast.success('Tarefa criada com sucesso')
       }
     },
-    [addTask, updateTask]
+    [addTask, updateTask, toast]
   )
 
   // Confirmation handlers
@@ -223,10 +231,38 @@ export const App: React.FC = () => {
             clearFocusedTask()
           }
           deleteTask(taskId)
+          toast.info('Tarefa excluída', {
+            action: {
+              label: 'Desfazer',
+              onClick: () => {
+                if (task) restoreTask(task)
+              },
+            },
+          })
         },
       })
     },
-    [tasks, session.taskId, clearFocusedTask, deleteTask]
+    [tasks, session.taskId, clearFocusedTask, deleteTask, restoreTask, toast]
+  )
+
+  const handleMoveTask = useCallback(
+    (taskId: string, targetColumnId: string, targetIndex?: number) => {
+      const task = tasks.find((t) => t.id === taskId)
+      const targetCol = columns.find((c) => c.id === targetColumnId)
+      moveTask(taskId, targetColumnId, targetIndex)
+      if (task && task.columnId !== targetColumnId) {
+        toast.info(`Tarefa movida para ${targetCol?.title || 'nova coluna'}`)
+      }
+    },
+    [tasks, columns, moveTask, toast]
+  )
+
+  const handleAddColumn = useCallback(
+    (title: string, colorTheme: Column['colorTheme']) => {
+      addColumn(title, colorTheme)
+      toast.success('Coluna criada com sucesso')
+    },
+    [addColumn, toast]
   )
 
   const requestDeleteColumn = useCallback(
@@ -239,10 +275,14 @@ export const App: React.FC = () => {
         message: `Tem certeza que deseja excluir a coluna "${col?.title || ''}" e suas ${tasksInCol} tarefa(s)?`,
         confirmText: 'Excluir Coluna',
         isDanger: true,
-        onConfirm: () => deleteColumn(columnId),
+        requireConfirmationWord: tasksInCol > 0 ? 'EXCLUIR' : undefined,
+        onConfirm: () => {
+          deleteColumn(columnId)
+          toast.info('Coluna excluída')
+        },
       })
     },
-    [columns, tasks, deleteColumn]
+    [columns, tasks, deleteColumn, toast]
   )
 
   const requestResetData = useCallback(() => {
@@ -253,12 +293,20 @@ export const App: React.FC = () => {
         'Todas as tarefas e colunas atuais serão substituídas pelo conjunto de demonstração inicial.',
       confirmText: 'Restaurar',
       isDanger: false,
+      requireConfirmationWord: 'RESTAURAR',
       onConfirm: () => {
         resetToSeed()
         clearFocusedTask()
+        toast.info('Dados de demonstração restaurados')
       },
     })
-  }, [resetToSeed, clearFocusedTask])
+  }, [resetToSeed, clearFocusedTask, toast])
+
+  // JSON Export handler
+  const handleExport = useCallback(() => {
+    exportData()
+    toast.success('Backup JSON exportado com sucesso')
+  }, [exportData, toast])
 
   // JSON Import handler
   const handleImport = useCallback(
@@ -270,17 +318,19 @@ export const App: React.FC = () => {
         try {
           const parsed = JSON.parse(event.target?.result as string)
           const success = importData(parsed)
-          if (!success) {
-            alert('Arquivo JSON inválido ou incompatível.')
+          if (success) {
+            toast.success('Dados importados com sucesso')
+          } else {
+            toast.error('Arquivo JSON inválido ou incompatível.')
           }
         } catch {
-          alert('Erro ao ler arquivo JSON.')
+          toast.error('Erro ao ler arquivo JSON.')
         }
       }
       reader.readAsText(file)
       e.target.value = ''
     },
-    [importData]
+    [importData, toast]
   )
 
   const handleFilterChange = useCallback(
@@ -292,6 +342,14 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+      {/* Skip to Main Content Link for A11y */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:font-medium focus:text-sm focus:rounded-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
+      >
+        Pular para o conteúdo
+      </a>
+
       {/* Header (Hidden in Zen Mode) */}
       {!isZenMode && (
         <Header
@@ -299,7 +357,7 @@ export const App: React.FC = () => {
           onViewChange={handleViewChange}
           onNewTask={() => handleOpenNewTask()}
           onNewNote={handleOpenNewNote}
-          onExport={exportData}
+          onExport={handleExport}
           onImport={handleImport}
           onReset={requestResetData}
           onOpenShortcuts={handleOpenShortcuts}
@@ -315,6 +373,7 @@ export const App: React.FC = () => {
 
       {/* Main Content with generous visual breathing room */}
       <main
+        id="main-content"
         className={
           isZenMode
             ? 'flex-1 w-full p-0 overflow-hidden'
@@ -356,10 +415,10 @@ export const App: React.FC = () => {
                 onNewTaskInColumn={handleOpenNewTask}
                 onEditTask={handleOpenEditTask}
                 onDeleteTask={requestDeleteTask}
-                onMoveTask={moveTask}
+                onMoveTask={handleMoveTask}
                 onToggleSubtask={toggleSubtask}
                 onStartFocus={startFocus}
-                onAddColumn={addColumn}
+                onAddColumn={handleAddColumn}
                 onDeleteColumn={requestDeleteColumn}
                 focusedTaskId={session.taskId}
               />
@@ -400,10 +459,23 @@ export const App: React.FC = () => {
         message={confirmState.message}
         confirmText={confirmState.confirmText}
         isDanger={confirmState.isDanger}
+        requireConfirmationWord={confirmState.requireConfirmationWord}
+        isDoubleConfirm={confirmState.isDoubleConfirm}
         onConfirm={confirmState.onConfirm}
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Toast Notification Container */}
+      <ToastContainer />
     </div>
+  )
+}
+
+export const App: React.FC = () => {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   )
 }
 
