@@ -9,6 +9,9 @@ const targetDirs = [
   path.resolve(
     'C:/Users/conta/.gemini/antigravity/brain/3ba77cf6-280a-4bad-8ffd-6a80addb9ccf/screenshots'
   ),
+  path.resolve(
+    'C:/Users/conta/.gemini/antigravity/brain/daebad54-c542-400d-9bfc-6c6952033c69/screenshots'
+  ),
 ]
 
 for (const dir of targetDirs) {
@@ -97,6 +100,47 @@ async function run() {
     await darkFirstCard.hover()
     await new Promise((r) => setTimeout(r, 400))
     await saveElementScreenshot(darkFirstCard, 'card-hover-dark-state.png')
+  }
+
+  // 7. Academic Workspace in Dark Mode
+  console.log('Alternando para Espaço Acadêmico (Modo Escuro)...')
+  const tabButtons = await page.$$('nav[role="tablist"] button')
+  if (tabButtons && tabButtons.length > 1) {
+    await tabButtons[1].click()
+    await new Promise((r) => setTimeout(r, 600))
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await new Promise((r) => setTimeout(r, 300))
+    await saveScreenshot(page, 'academic-dark-mode.png')
+
+    // Note Modal in Dark Mode
+    const newNoteBtn = await page.$('button[title="Criar nova anotação"]')
+    if (newNoteBtn) {
+      await newNoteBtn.click()
+      await new Promise((r) => setTimeout(r, 500))
+      await saveScreenshot(page, 'academic-note-modal-dark.png')
+      await page.keyboard.press('Escape')
+      await new Promise((r) => setTimeout(r, 400))
+    }
+
+    // 8. Academic Workspace in Light Mode
+    console.log('Alternando para Modo Claro no Espaço Acadêmico...')
+    await page.evaluate(() => {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('dailyflow_theme', 'light')
+      window.scrollTo(0, 0)
+    })
+    await new Promise((r) => setTimeout(r, 600))
+    await saveScreenshot(page, 'academic-light-mode.png')
+
+    // Subject Manager Modal in Light Mode
+    const subjectsBtn = await page.$('button[title="Gerenciar disciplinas cadastradas"]')
+    if (subjectsBtn) {
+      await subjectsBtn.click()
+      await new Promise((r) => setTimeout(r, 500))
+      await saveScreenshot(page, 'academic-subjects-modal-light.png')
+      await page.keyboard.press('Escape')
+      await new Promise((r) => setTimeout(r, 400))
+    }
   }
 
   await browser.close()
