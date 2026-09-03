@@ -79,6 +79,8 @@ export const App: React.FC = () => {
     switchMode,
     clearFocusedTask,
     formatTime,
+    updateDurations,
+    toggleSound,
   } = usePomodoro(handleTaskMinuteLogged)
 
   const handlePomodoroPlayPause = useCallback(() => {
@@ -332,6 +334,8 @@ export const App: React.FC = () => {
               onSwitchMode={switchMode}
               onClearTask={clearFocusedTask}
               formatTime={formatTime}
+              onUpdateDurations={updateDurations}
+              onToggleSound={toggleSound}
             />
 
             {/* Filter and Search Bar */}
