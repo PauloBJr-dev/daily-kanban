@@ -100,12 +100,27 @@ export const App: React.FC = () => {
     return 'kanban'
   })
 
+  // Zen Mode (Immersive full-screen focus in academic studio)
+  const [isZenMode, setIsZenMode] = useState(false)
+
   const handleViewChange = useCallback((view: 'kanban' | 'academic') => {
     setActiveView(view)
+    setIsZenMode(false)
     if (typeof window !== 'undefined') {
       localStorage.setItem('dailyflow_active_view', view)
     }
   }, [])
+
+  // Restore header on Escape key when in Zen mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isZenMode) {
+        setIsZenMode(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isZenMode])
 
   // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
@@ -275,27 +290,35 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      {/* Header */}
-      <Header
-        activeView={activeView}
-        onViewChange={handleViewChange}
-        onNewTask={() => handleOpenNewTask()}
-        onNewNote={handleOpenNewNote}
-        onExport={exportData}
-        onImport={handleImport}
-        onReset={requestResetData}
-        onOpenShortcuts={handleOpenShortcuts}
-        isDark={isDark}
-        onToggleTheme={toggleTheme}
-        stats={{
-          completedCount: stats.completedCount,
-          total: stats.total,
-          completionRate: stats.completionRate,
-        }}
-      />
+      {/* Header (Hidden in Zen Mode) */}
+      {!isZenMode && (
+        <Header
+          activeView={activeView}
+          onViewChange={handleViewChange}
+          onNewTask={() => handleOpenNewTask()}
+          onNewNote={handleOpenNewNote}
+          onExport={exportData}
+          onImport={handleImport}
+          onReset={requestResetData}
+          onOpenShortcuts={handleOpenShortcuts}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          stats={{
+            completedCount: stats.completedCount,
+            total: stats.total,
+            completionRate: stats.completionRate,
+          }}
+        />
+      )}
 
       {/* Main Content with generous visual breathing room */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6">
+      <main
+        className={
+          isZenMode
+            ? 'flex-1 w-full p-0 overflow-hidden'
+            : 'flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6'
+        }
+      >
         {activeView === 'kanban' ? (
           <>
             {/* Quick Stats Grid */}
@@ -340,7 +363,11 @@ export const App: React.FC = () => {
           </>
         ) : (
           /* Academic Workspace */
-          <AcademicView ref={academicViewRef} />
+          <AcademicView
+            ref={academicViewRef}
+            isZenMode={isZenMode}
+            onZenModeChange={setIsZenMode}
+          />
         )}
       </main>
 

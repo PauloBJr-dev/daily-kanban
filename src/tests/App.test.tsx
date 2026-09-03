@@ -154,4 +154,28 @@ describe('App Integration', () => {
     expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
     expect(screen.queryByText('A Fazer')).not.toBeInTheDocument()
   })
+
+  it('alterna para o Modo Zen no Studio e oculta o cabeçalho global do App, restaurando com Escape', () => {
+    render(<App />)
+
+    // Muda para o modo acadêmico
+    fireEvent.click(screen.getByRole('tab', { name: /espaço acadêmico/i }))
+    expect(screen.getByText('DailyFlow')).toBeInTheDocument()
+
+    // Alterna para o Modo Studio
+    fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
+
+    // Ativa o Modo Zen
+    const zenBtn = screen.getByLabelText('Modo Zen')
+    fireEvent.click(zenBtn)
+
+    // Cabeçalho global do DailyFlow deve estar oculto
+    expect(screen.queryByText('DailyFlow')).not.toBeInTheDocument()
+
+    // Pressiona Escape para desativar o Modo Zen
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    // Cabeçalho global restaurado
+    expect(screen.getByText('DailyFlow')).toBeInTheDocument()
+  })
 })

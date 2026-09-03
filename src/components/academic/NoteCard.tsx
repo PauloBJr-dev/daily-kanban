@@ -97,7 +97,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   if (isListMode) {
     return (
       <div
-        className={`group relative rounded-2xl bg-white dark:bg-slate-900 border transition-all p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs hover:shadow-md ${
+        onClick={() => onEdit(note)}
+        className={`group relative rounded-2xl bg-white dark:bg-slate-900 border transition-all p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs hover:shadow-md cursor-pointer ${
           note.isPinned
             ? 'border-indigo-200/90 dark:border-indigo-800/80 ring-1 ring-indigo-500/10'
             : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
@@ -138,7 +139,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
           {/* Title */}
           <h3
-            onClick={() => onEdit(note)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(note)
+            }}
             className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer truncate"
           >
             {note.title}
@@ -156,7 +160,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 <button
                   key={tag}
                   type="button"
-                  onClick={() => onSelectTag?.(tag)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSelectTag?.(tag)
+                  }}
                   className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 transition-colors cursor-pointer"
                 >
                   #{tag}
@@ -187,7 +194,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => onTogglePin(note.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePin(note.id)
+              }}
               aria-label={note.isPinned ? 'Desafixar anotação' : 'Fixar anotação'}
               title={note.isPinned ? 'Desafixar' : 'Fixar no topo'}
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
@@ -205,7 +215,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
             <button
               type="button"
-              onClick={() => onEdit(note)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(note)
+              }}
               aria-label="Editar anotação"
               title="Editar anotação"
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
@@ -215,7 +228,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
             <button
               type="button"
-              onClick={() => onDelete(note.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(note.id)
+              }}
               aria-label="Excluir anotação"
               title="Excluir anotação"
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
@@ -231,7 +247,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
   // Grid Mode (Standard card layout)
   return (
     <div
-      className={`group relative rounded-2xl bg-white dark:bg-slate-900 border transition-all p-5 flex flex-col justify-between shadow-xs hover:shadow-md ${
+      onClick={() => onEdit(note)}
+      className={`group relative rounded-2xl bg-white dark:bg-slate-900 border transition-all p-5 flex flex-col justify-between shadow-xs hover:shadow-md cursor-pointer ${
         note.isPinned
           ? 'border-indigo-200 dark:border-indigo-800/80 ring-1 ring-indigo-500/10'
           : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
@@ -268,7 +285,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             {/* Pin button */}
             <button
               type="button"
-              onClick={() => onTogglePin(note.id)}
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePin(note.id)
+              }}
               aria-label={note.isPinned ? 'Desafixar anotação' : 'Fixar anotação'}
               title={note.isPinned ? 'Desafixar do topo' : 'Fixar no topo'}
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
@@ -288,7 +308,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowMenu((prev) => !prev)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowMenu((prev) => !prev)
+                }}
                 aria-label="Ações da anotação"
                 title="Mais opções"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
@@ -300,12 +323,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                 <>
                   <div
                     className="fixed inset-0 z-20"
-                    onClick={() => setShowMenu(false)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowMenu(false)
+                    }}
                   />
                   <div className="absolute right-0 top-full mt-1 w-36 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-lg py-1 z-30 animate-in fade-in zoom-in-95 duration-100">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         setShowMenu(false)
                         onEdit(note)
                       }}
@@ -316,7 +343,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         setShowMenu(false)
                         onTogglePin(note.id)
                       }}
@@ -328,7 +356,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         setShowMenu(false)
                         onDelete(note.id)
                       }}
@@ -346,7 +375,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
         {/* Title */}
         <h3
-          onClick={() => onEdit(note)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit(note)
+          }}
           className="text-base font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer leading-snug line-clamp-2"
         >
           {note.title}
@@ -367,7 +399,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               <button
                 key={tag}
                 type="button"
-                onClick={() => onSelectTag?.(tag)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSelectTag?.(tag)
+                }}
                 className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 transition-colors cursor-pointer"
               >
                 #{tag}

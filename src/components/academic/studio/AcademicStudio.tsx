@@ -15,6 +15,8 @@ export interface AcademicStudioProps {
   onNewNote?: () => void | AcademicNote
   onBackToGrid?: () => void
   className?: string
+  isZenMode?: boolean
+  onZenModeChange?: (isZen: boolean) => void
 }
 
 export const AcademicStudio: React.FC<AcademicStudioProps> = ({
@@ -28,6 +30,8 @@ export const AcademicStudio: React.FC<AcademicStudioProps> = ({
   onNewNote: propOnNewNote,
   onBackToGrid,
   className = '',
+  isZenMode: propIsZenMode,
+  onZenModeChange: propOnZenModeChange,
 }) => {
   // Hook data fallback when props are not provided
   const hookData = useAcademicNotes()
@@ -42,7 +46,7 @@ export const AcademicStudio: React.FC<AcademicStudioProps> = ({
 
   // Derived selected note ID: controlled prop has priority, else internal state, else first note
   const effectiveSelectedNoteId =
-    propSelectedNoteId !== undefined
+    propSelectedNoteId !== undefined && propSelectedNoteId !== null
       ? propSelectedNoteId
       : (internalSelectedNoteId ?? notes[0]?.id ?? null)
 
@@ -50,18 +54,34 @@ export const AcademicStudio: React.FC<AcademicStudioProps> = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | 'all'>('all')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isZenMode, setIsZenMode] = useState(false)
+  const [internalZenMode, setInternalZenMode] = useState(false)
+  const isZenMode = propIsZenMode !== undefined ? propIsZenMode : internalZenMode
+
+  const handleToggleZenMode = useCallback(() => {
+    const next = !isZenMode
+    if (propIsZenMode === undefined) {
+      setInternalZenMode(next)
+    }
+    propOnZenModeChange?.(next)
+  }, [isZenMode, propIsZenMode, propOnZenModeChange])
+
+  const handleExitZenMode = useCallback(() => {
+    if (propIsZenMode === undefined) {
+      setInternalZenMode(false)
+    }
+    propOnZenModeChange?.(false)
+  }, [propIsZenMode, propOnZenModeChange])
 
   // Exit Zen Mode on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isZenMode) {
-        setIsZenMode(false)
+        handleExitZenMode()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isZenMode])
+  }, [isZenMode, handleExitZenMode])
 
   // Active note with fallback to first note or null
   const activeNote = useMemo<AcademicNote | null>(() => {
@@ -147,7 +167,11 @@ export const AcademicStudio: React.FC<AcademicStudioProps> = ({
 
   return (
     <div
-      className={`flex h-[calc(100vh-8rem)] min-h-[600px] w-full rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm overflow-hidden ${className}`}
+      className={`flex ${
+        isZenMode
+          ? 'h-screen rounded-none border-0'
+          : 'h-[calc(100vh-8rem)] min-h-[600px] rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800'
+      } w-full bg-white dark:bg-slate-950 shadow-sm overflow-hidden ${className}`}
     >
       {/* Sidebar (Hidden in Zen Mode) */}
       {!isZenMode && (
@@ -174,7 +198,7 @@ export const AcademicStudio: React.FC<AcademicStudioProps> = ({
         onDeleteNote={handleDeleteNote}
         onTogglePin={handleTogglePin}
         isZenMode={isZenMode}
-        onToggleZenMode={() => setIsZenMode((prev) => !prev)}
+        onToggleZenMode={handleToggleZenMode}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         onBackToGrid={onBackToGrid}
