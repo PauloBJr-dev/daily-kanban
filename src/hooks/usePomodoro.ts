@@ -75,6 +75,7 @@ export function usePomodoro(
       : DEFAULT_DOCUMENT_TITLE
   )
   const completedTitleRef = useRef<string | null>(null)
+  const targetEndTimeRef = useRef<number | null>(null)
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -106,91 +107,211 @@ export function usePomodoro(
     }
   }, [])
 
-  // Cronômetro principal com tratamento de conclusão de ciclo
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null
+  // Função central para processar conclusão de ciclo (foco -> descanso ou descanso -> foco)
+  const handleCycleComplete = useCallback(() => {
+    targetEndTimeRef.current = null
+    setSession((prev) => {
+      const isWorkEnding = prev.mode === 'work'
+      const nextMode = isWorkEnding ? 'break' : 'work'
+      const nextTime = nextMode === 'work' ? prev.workDuration : prev.breakDuration
 
-    if (session.isRunning) {
-      interval = setInterval(() => {
-        setSession((prev) => {
-          if (prev.timeLeft <= 1) {
-            // Ciclo concluído
-            const isWorkEnding = prev.mode === 'work'
-            const nextMode = isWorkEnding ? 'break' : 'work'
-            const nextTime = nextMode === 'work' ? prev.workDuration : prev.breakDuration
-
-            if (isWorkEnding) {
-              if (prev.isSoundEnabled ?? true) {
-                playWorkCompleteSound()
-              }
-              notify('Tempo de Foco Concluído! 🎉', {
-                body: 'Excelente trabalho! Hora de fazer uma pausa de descanso.',
-                icon: '/vite.svg',
-              })
-              try {
-                confetti({
-                  particleCount: 60,
-                  spread: 70,
-                  origin: { y: 0.7 },
-                })
-              } catch {
-                // Silencia falhas caso canvas não esteja disponível
-              }
-              completedTitleRef.current = '⏰ Foco Concluído! | DailyFlow'
-              if (typeof document !== 'undefined') {
-                document.title = '⏰ Foco Concluído! | DailyFlow'
-              }
-
-              if (prev.taskId && onTaskMinuteLogged) {
-                onTaskMinuteLogged(prev.taskId, Math.round(prev.workDuration / 60))
-              }
-            } else {
-              if (prev.isSoundEnabled ?? true) {
-                playBreakCompleteSound()
-              }
-              notify('Intervalo Finalizado! ☕', {
-                body: 'Sua pausa terminou. Pronto para mais um ciclo de foco produtivo?',
-                icon: '/vite.svg',
-              })
-              completedTitleRef.current = '⏰ Pausa Finalizada! | DailyFlow'
-              if (typeof document !== 'undefined') {
-                document.title = '⏰ Pausa Finalizada! | DailyFlow'
-              }
-            }
-
-            return {
-              ...prev,
-              mode: nextMode,
-              timeLeft: nextTime,
-              isRunning: false,
-            }
-          }
-
-          return {
-            ...prev,
-            timeLeft: prev.timeLeft - 1,
-          }
+      if (isWorkEnding) {
+        if (prev.isSoundEnabled ?? true) {
+          playWorkCompleteSound()
+        }
+        notify('Tempo de Foco Concluído! 🎉', {
+          body: 'Excelente trabalho! Hora de fazer uma pausa de descanso.',
+          icon: '/vite.svg',
         })
+        try {
+          confetti({
+            particleCount: 60,
+            spread: 70,
+            origin: { y: 0.7 },
+          })
+        } catch {
+          // Silencia falhas caso canvas não esteja disponível
+        }
+        completedTitleRef.current = '⏰ Foco Concluído! | DailyFlow'
+        if (typeof document !== 'undefined') {
+          document.title = '⏰ Foco Concluído! | DailyFlow'
+        }
+
+        if (prev.taskId && onTaskMinuteLogged) {
+          onTaskMinuteLogged(prev.taskId, Math.round(prev.workDuration / 60))
+        }
+      } else {
+        if (prev.isSoundEnabled ?? true) {
+          playBreakCompleteSound()
+        }
+        notify('Intervalo Finalizado! ☕', {
+          body: 'Sua pausa terminou. Pronto para mais um ciclo de foco produtivo?',
+          icon: '/vite.svg',
+        })
+        completedTitleRef.current = '⏰ Pausa Finalizada! | DailyFlow'
+        if (typeof document !== 'undefined') {
+          document.title = '⏰ Pausa Finalizada! | DailyFlow'
+        }
+      }
+
+      return {
+        ...prev,
+        mode: nextMode,
+        timeLeft: nextTime,
+        isRunning: false,
+      }
+    })
+  }, [onTaskMinuteLogged])
+
+  // Ticker de alta precisão baseado em Date.now() delta
+  const tick = useCallback(() => {
+    if (!targetEndTimeRef.current) return
+
+    const now = Date.now()
+    const diffMs = targetEndTimeRef.current - now
+    const remainingSeconds = Math.max(0, Math.ceil(diffMs / 1000))
+
+    if (remainingSeconds <= 0) {
+      handleCycleComplete()
+    } else {
+      setSession((prev) => {
+        if (prev.timeLeft === remainingSeconds) return prev
+        return {
+          ...prev,
+          timeLeft: remainingSeconds,
+        }
+      })
+    }
+  }, [handleCycleComplete])
+
+  const timeLeftRef = useRef(session.timeLeft)
+  useEffect(() => {
+    timeLeftRef.current = session.timeLeft
+  }, [session.timeLeft])
+
+  // Cronômetro principal com Web Worker e fallback para setInterval
+  useEffect(() => {
+    if (!session.isRunning) {
+      targetEndTimeRef.current = null
+      return
+    }
+
+    // Inicializa targetEndTime se ainda não existir
+    if (!targetEndTimeRef.current) {
+      targetEndTimeRef.current = Date.now() + timeLeftRef.current * 1000
+    }
+
+    // Tenta inicializar Web Worker inline para evitar throttling agressivo em background
+    let workerTimer: {
+      start: () => void
+      stop: () => void
+      terminate: () => void
+    } | null = null
+    let fallbackInterval: ReturnType<typeof setInterval> | null = null
+
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        typeof Worker !== 'undefined' &&
+        typeof Blob !== 'undefined' &&
+        typeof URL !== 'undefined' &&
+        typeof URL.createObjectURL === 'function'
+      ) {
+        const workerBlob = new Blob(
+          [
+            `let timer = null;
+            self.onmessage = function(e) {
+              if (e.data === 'start') {
+                if (timer) clearInterval(timer);
+                timer = setInterval(() => self.postMessage('tick'), 1000);
+              } else if (e.data === 'stop') {
+                if (timer) clearInterval(timer);
+                timer = null;
+              }
+            };`,
+          ],
+          { type: 'application/javascript' }
+        )
+        const workerUrl = URL.createObjectURL(workerBlob)
+        const worker = new Worker(workerUrl)
+        worker.onmessage = (e) => {
+          if (e.data === 'tick') {
+            tick()
+          }
+        }
+        workerTimer = {
+          start: () => worker.postMessage('start'),
+          stop: () => worker.postMessage('stop'),
+          terminate: () => {
+            worker.terminate()
+            URL.revokeObjectURL(workerUrl)
+          },
+        }
+        workerTimer.start()
+      }
+    } catch {
+      workerTimer = null
+    }
+
+    // Fallback garantido via setInterval se Web Worker não estiver disponível (ex: jsdom / restrições de CSP)
+    if (!workerTimer) {
+      fallbackInterval = setInterval(() => {
+        tick()
       }, 1000)
     }
 
     return () => {
-      if (interval) clearInterval(interval)
+      if (workerTimer) {
+        workerTimer.stop()
+        workerTimer.terminate()
+      }
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval)
+      }
     }
-  }, [session.isRunning, onTaskMinuteLogged])
+  }, [session.isRunning, tick])
+
+  // Sincronização imediata ao reativar aba do navegador ou desbloquear a tela do celular
+  useEffect(() => {
+    const handleSyncOnResume = () => {
+      if (session.isRunning && targetEndTimeRef.current) {
+        tick()
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleSyncOnResume)
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleSyncOnResume)
+    }
+
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleSyncOnResume)
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleSyncOnResume)
+      }
+    }
+  }, [session.isRunning, tick])
 
   const startFocus = useCallback((taskId?: string, taskTitle?: string) => {
     completedTitleRef.current = null
-    setSession((prev) => ({
-      ...prev,
-      taskId: taskId ?? prev.taskId,
-      taskTitle: taskTitle ?? prev.taskTitle,
-      isRunning: true,
-      mode: 'work',
-    }))
+    setSession((prev) => {
+      targetEndTimeRef.current = Date.now() + prev.timeLeft * 1000
+      return {
+        ...prev,
+        taskId: taskId ?? prev.taskId,
+        taskTitle: taskTitle ?? prev.taskTitle,
+        isRunning: true,
+        mode: 'work',
+      }
+    })
   }, [])
 
   const pauseFocus = useCallback(() => {
+    targetEndTimeRef.current = null
     completedTitleRef.current = null
     if (typeof document !== 'undefined') {
       document.title = originalTitleRef.current
@@ -200,10 +321,14 @@ export function usePomodoro(
 
   const resumeFocus = useCallback(() => {
     completedTitleRef.current = null
-    setSession((prev) => ({ ...prev, isRunning: true }))
+    setSession((prev) => {
+      targetEndTimeRef.current = Date.now() + prev.timeLeft * 1000
+      return { ...prev, isRunning: true }
+    })
   }, [])
 
   const resetTimer = useCallback(() => {
+    targetEndTimeRef.current = null
     completedTitleRef.current = null
     if (typeof document !== 'undefined') {
       document.title = originalTitleRef.current
@@ -216,6 +341,7 @@ export function usePomodoro(
   }, [])
 
   const switchMode = useCallback((mode: 'work' | 'break') => {
+    targetEndTimeRef.current = null
     completedTitleRef.current = null
     if (typeof document !== 'undefined') {
       document.title = originalTitleRef.current
