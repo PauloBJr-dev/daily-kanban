@@ -8,11 +8,11 @@ interface AcademicStatsProps {
 
 export const AcademicStats: React.FC<AcademicStatsProps> = ({ stats }) => {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
       {/* 1. Total de Anotações */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex items-center justify-between">
+      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
             Total de Anotações
           </p>
           <div className="flex items-baseline gap-2 mt-1">

@@ -6,6 +6,7 @@ import {
   MoreHorizontal,
   Play,
   ArrowRight,
+  ArrowLeft,
   Trash2,
   Edit2,
   Calendar,
@@ -81,8 +82,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const currentPriority = priorityConfig[task.priority]
 
-  // Find next column for quick progression
+  // Find next and previous column for quick progression
   const currentColIndex = columns.findIndex((c) => c.id === task.columnId)
+  const prevColumn = currentColIndex > 0 ? columns[currentColIndex - 1] : null
   const nextColumn =
     currentColIndex !== -1 && currentColIndex < columns.length - 1
       ? columns[currentColIndex + 1]
@@ -323,6 +325,43 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Mobile Touch Quick Move Controls */}
+      {(prevColumn || nextColumn) && (
+        <div className="flex sm:hidden items-center justify-between pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+          {prevColumn ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onMove(task.id, prevColumn.id)
+              }}
+              className="flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-700/60 font-medium active:scale-95 transition-all cursor-pointer min-h-[36px]"
+              aria-label={`Mover para ${prevColumn.title}`}
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="truncate max-w-[110px]">Para: {prevColumn.title}</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          {nextColumn ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onMove(task.id, nextColumn.id)
+              }}
+              className="flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 font-medium active:scale-95 transition-all cursor-pointer min-h-[36px]"
+              aria-label={`Mover para ${nextColumn.title}`}
+            >
+              <span className="truncate max-w-[110px]">Para: {nextColumn.title}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : null}
+        </div>
+      )}
     </div>
   )
 }

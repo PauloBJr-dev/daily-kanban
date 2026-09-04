@@ -88,10 +88,43 @@ export const Board: React.FC<BoardProps> = ({
     setIsAddingColumn(false)
   }
 
+  const scrollToColumn = (columnId: string) => {
+    if (typeof document === 'undefined') return
+    const el = document.getElementById(`column-${columnId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    }
+  }
+
   return (
     <div className="w-full">
+      {/* Mobile Column Navigation Tabs */}
+      <div
+        role="tablist"
+        aria-label="Navegação rápida de colunas"
+        className="flex sm:hidden items-center gap-1.5 overflow-x-auto pb-2.5 mb-2 px-1 no-scrollbar"
+      >
+        {columns.map((col) => {
+          const colTasks = tasks.filter((t) => t.columnId === col.id)
+          return (
+            <button
+              key={col.id}
+              type="button"
+              onClick={() => scrollToColumn(col.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/60 text-xs font-medium shrink-0 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+              aria-label={`Ir para coluna ${col.title}`}
+            >
+              <span>Ir para {col.title}</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 font-semibold">
+                {colTasks.length}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Horizontal Scroll Columns Area */}
-      <div className="flex items-start gap-5 overflow-x-auto pb-6 pt-1 px-1 scroll-smooth">
+      <div className="flex items-start gap-4 sm:gap-5 overflow-x-auto pb-6 pt-1 px-1 scroll-smooth snap-x snap-mandatory">
         {columns.map((column) => {
           const colTasks = tasks.filter((t) => t.columnId === column.id)
           return (

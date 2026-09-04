@@ -117,12 +117,13 @@ export const Column: React.FC<ColumnProps> = ({
 
   return (
     <div
+      id={`column-${column.id}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       role="region"
       aria-label={`Coluna ${column.title}`}
-      className={`flex flex-col flex-1 min-w-[280px] max-w-sm rounded-3xl p-3.5 transition-all duration-200 ${
+      className={`flex flex-col shrink-0 w-[86vw] max-w-[340px] sm:w-80 sm:max-w-sm rounded-3xl p-3.5 snap-center transition-all duration-200 ${
         isDragOver
           ? `${currentTheme.dropHighlight} scale-[1.01]`
           : 'bg-slate-100/60 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/60'

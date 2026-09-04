@@ -161,7 +161,7 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
                 session.isRunning ? 'Pausar cronômetro (P)' : 'Iniciar foco (P)'
               }
               title={session.isRunning ? 'Pausar (P)' : 'Iniciar Foco (P)'}
-              className={`p-2.5 rounded-xl font-medium transition-all active:scale-95 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 cursor-pointer ${
+              className={`p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl font-medium transition-all active:scale-95 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 cursor-pointer ${
                 session.isRunning
                   ? 'bg-amber-500 hover:bg-amber-600 text-white'
                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
@@ -178,7 +178,7 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
               onClick={onReset}
               aria-label="Reiniciar cronômetro"
               title="Reiniciar tempo"
-              className="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -186,8 +186,8 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
               type="button"
               onClick={() => setIsSettingsOpen(true)}
               aria-label="Configurar tempos do Pomodoro"
-              title="Configurar tempos do Pomodoro"
-              className="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+              title="Configurações do Pomodoro"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
             >
               <Settings className="w-4 h-4" />
             </button>

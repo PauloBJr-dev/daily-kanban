@@ -357,7 +357,7 @@ export const StudioEditor: React.FC<StudioEditorProps> = ({
 
       {/* Writing Canvas (Obsidian/Notion Style) */}
       <div className="flex-1 overflow-y-auto flex flex-col">
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-6 flex-1 flex flex-col">
+        <div className="max-w-4xl mx-auto w-full px-3.5 sm:px-8 py-4 sm:py-6 flex-1 flex flex-col">
           {/* Document Title */}
           <input
             type="text"
@@ -365,7 +365,7 @@ export const StudioEditor: React.FC<StudioEditorProps> = ({
             onChange={(e) => onUpdateNote(note.id, { title: e.target.value })}
             placeholder="Título da anotação..."
             aria-label="Título da anotação"
-            className="text-2xl sm:text-3xl font-bold bg-transparent focus:outline-none w-full text-slate-900 dark:text-slate-100 placeholder:text-slate-400 tracking-tight mb-2"
+            className="text-xl sm:text-3xl font-bold bg-transparent focus:outline-none w-full text-slate-900 dark:text-slate-100 placeholder:text-slate-400 tracking-tight mb-2"
           />
 
           {/* Interactive Tags Row */}
