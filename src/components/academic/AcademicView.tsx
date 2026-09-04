@@ -385,19 +385,19 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
             </div>
 
             {/* Global Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
               {/* Layout Mode Selector: [ ⊞ Grade ] [ ◫ Studio ] */}
               <div
                 role="group"
                 aria-label="Modo de exibição acadêmico"
-                className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/60 shadow-xs mr-1"
+                className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/60 shadow-xs"
               >
                 <button
                   type="button"
                   onClick={() => handleLayoutModeChange('grid')}
                   aria-label="Modo Grade"
                   aria-pressed={layoutMode === 'grid'}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
                     layoutMode === 'grid'
                       ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -411,7 +411,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                   onClick={() => handleLayoutModeChange('studio')}
                   aria-label="Modo Studio"
                   aria-pressed={layoutMode === 'studio'}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
                     layoutMode === 'studio'
                       ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -422,54 +422,57 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                 </button>
               </div>
 
-              {/* Export JSON */}
-              <button
-                type="button"
-                onClick={handleExportAcademicData}
-                aria-label="Exportar anotações acadêmicas em JSON"
-                title="Exportar dados (JSON)"
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
-              >
-                <Download className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+                {/* Export JSON */}
+                <button
+                  type="button"
+                  onClick={handleExportAcademicData}
+                  aria-label="Exportar anotações acadêmicas em JSON"
+                  title="Exportar dados (JSON)"
+                  className="hidden sm:flex p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
 
-              {/* Import JSON */}
-              <label
-                aria-label="Importar anotações acadêmicas via arquivo JSON"
-                title="Importar dados (JSON)"
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
-              >
-                <Upload className="w-4 h-4" />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json"
-                  onChange={handleImport}
-                  className="hidden"
-                />
-              </label>
+                {/* Import JSON */}
+                <label
+                  aria-label="Importar anotações acadêmicas via arquivo JSON"
+                  title="Importar dados (JSON)"
+                  className="hidden sm:flex p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+                >
+                  <Upload className="w-4 h-4" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleImport}
+                    className="hidden"
+                  />
+                </label>
 
-              {/* Reset to seed */}
-              <button
-                type="button"
-                onClick={requestResetData}
-                aria-label="Restaurar dados acadêmicos iniciais"
-                title="Restaurar dados padrão"
-                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
+                {/* Reset to seed */}
+                <button
+                  type="button"
+                  onClick={requestResetData}
+                  aria-label="Restaurar dados acadêmicos iniciais"
+                  title="Restaurar dados padrão"
+                  className="hidden sm:flex p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
 
-              {/* Nova Anotação CTA */}
-              <button
-                type="button"
-                onClick={() => handleOpenNewNote()}
-                aria-label="Criar nova anotação"
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs shadow-indigo-200 dark:shadow-none transition-all active:scale-95 cursor-pointer ml-1"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Nova Anotação</span>
-              </button>
+                {/* Nova Anotação CTA */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenNewNote()}
+                  aria-label="Criar nova anotação"
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs shadow-indigo-200 dark:shadow-none transition-all active:scale-95 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                  <span className="hidden xs:inline">Nova Anotação</span>
+                  <span className="xs:hidden">Nova</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
