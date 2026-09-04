@@ -149,7 +149,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </button>
           )}
 
-          {/* Quick next column button */}
+          {/* Quick next column button (Desktop only, mobile uses bottom touch bar) */}
           {nextColumn && (
             <button
               onClick={(e) => {
@@ -158,7 +158,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               }}
               title={`Avançar para ${nextColumn.title}`}
               aria-label={`Avançar tarefa para ${nextColumn.title}`}
-              className="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 cursor-pointer"
+              className="hidden sm:flex p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 cursor-pointer"
             >
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -328,38 +328,44 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
       {/* Mobile Touch Quick Move Controls */}
       {(prevColumn || nextColumn) && (
-        <div className="flex sm:hidden items-center justify-between pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs">
-          {prevColumn ? (
+        <div
+          className={`sm:hidden pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs ${
+            prevColumn && nextColumn
+              ? 'grid grid-cols-2 gap-2'
+              : 'flex items-center justify-end'
+          }`}
+        >
+          {prevColumn && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onMove(task.id, prevColumn.id)
               }}
-              className="flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-700/60 font-medium active:scale-95 transition-all cursor-pointer min-h-[36px]"
+              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 font-medium active:scale-95 transition-all cursor-pointer min-h-[38px] overflow-hidden"
               aria-label={`Mover para ${prevColumn.title}`}
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="truncate max-w-[110px]">Para: {prevColumn.title}</span>
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">← {prevColumn.title}</span>
             </button>
-          ) : (
-            <div />
           )}
 
-          {nextColumn ? (
+          {nextColumn && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onMove(task.id, nextColumn.id)
               }}
-              className="flex items-center gap-1 py-1.5 px-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 font-medium active:scale-95 transition-all cursor-pointer min-h-[36px]"
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 font-medium active:scale-95 transition-all cursor-pointer min-h-[38px] overflow-hidden ${
+                !prevColumn ? 'w-full' : ''
+              }`}
               aria-label={`Mover para ${nextColumn.title}`}
             >
-              <span className="truncate max-w-[110px]">Para: {nextColumn.title}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span className="truncate">{nextColumn.title} →</span>
+              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </button>
-          ) : null}
+          )}
         </div>
       )}
     </div>

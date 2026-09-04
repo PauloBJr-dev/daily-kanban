@@ -88,7 +88,14 @@ export const Board: React.FC<BoardProps> = ({
     setIsAddingColumn(false)
   }
 
+  const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null)
+  const activeColumnId =
+    selectedColumnId && columns.some((c) => c.id === selectedColumnId)
+      ? selectedColumnId
+      : columns[0]?.id || ''
+
   const scrollToColumn = (columnId: string) => {
+    setSelectedColumnId(columnId)
     if (typeof document === 'undefined') return
     const el = document.getElementById(`column-${columnId}`)
     if (el) {
@@ -98,30 +105,38 @@ export const Board: React.FC<BoardProps> = ({
 
   return (
     <div className="w-full">
-      {/* Mobile Column Navigation Tabs */}
-      <div
-        role="tablist"
+      {/* Mobile Column Navigation Segmented Control */}
+      <nav
         aria-label="Navegação rápida de colunas"
-        className="flex sm:hidden items-center gap-1.5 overflow-x-auto pb-2.5 mb-2 px-1 no-scrollbar"
+        className={`grid gap-1.5 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 sm:hidden mb-3 w-full no-scrollbar ${
+          columns.length <= 3
+            ? 'grid-cols-3'
+            : 'grid-flow-col auto-cols-[minmax(110px,1fr)] overflow-x-auto'
+        }`}
       >
         {columns.map((col) => {
           const colTasks = tasks.filter((t) => t.columnId === col.id)
+          const isActive = col.id === activeColumnId
           return (
             <button
               key={col.id}
               type="button"
+              aria-current={isActive ? 'true' : undefined}
               onClick={() => scrollToColumn(col.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/60 text-xs font-medium shrink-0 active:scale-95 transition-all cursor-pointer min-h-[36px]"
+              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium active:scale-95 transition-all cursor-pointer min-h-[36px] overflow-hidden ${
+                isActive
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold shadow-xs ring-1 ring-slate-900/5 dark:ring-white/10'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
               aria-label={`Ir para coluna ${col.title}`}
             >
-              <span>Ir para {col.title}</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 font-semibold">
-                {colTasks.length}
+              <span className="truncate">
+                {col.title} ({colTasks.length})
               </span>
             </button>
           )
         })}
-      </div>
+      </nav>
 
       {/* Horizontal Scroll Columns Area */}
       <div className="flex items-start gap-4 sm:gap-5 overflow-x-auto pb-6 pt-1 px-1 scroll-smooth snap-x snap-mandatory">
