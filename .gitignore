@@ -44,3 +44,8 @@ Thumbs.db
 
 # Pre-commit cache
 .pre-commit-cache/
+
+# Supabase local temp & cache
+supabase/.temp/
+supabase/.branches/
+
