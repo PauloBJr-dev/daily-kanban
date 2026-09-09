@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Header } from './components/Header'
 import { QuickStats } from './components/QuickStats'
 import { PomodoroWidget } from './components/PomodoroWidget'
+import { PomodoroFullscreen } from './components/PomodoroFullscreen'
 import { FilterBar } from './components/FilterBar'
 import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
@@ -87,13 +88,24 @@ export const AppContent: React.FC = () => {
     toggleSound,
   } = usePomodoro(handleTaskMinuteLogged)
 
+  const [isPomodoroFullscreen, setIsPomodoroFullscreen] = useState(false)
+
   const handlePomodoroPlayPause = useCallback(() => {
     if (session.isRunning) {
       pauseFocus()
     } else {
       resumeFocus()
+      setIsPomodoroFullscreen(true)
     }
   }, [session.isRunning, pauseFocus, resumeFocus])
+
+  const handleStartFocus = useCallback(
+    (taskId: string, taskTitle: string) => {
+      startFocus(taskId, taskTitle)
+      setIsPomodoroFullscreen(true)
+    },
+    [startFocus]
+  )
 
   // Active view navigation ('kanban' | 'academic')
   const [activeView, setActiveView] = useState<'kanban' | 'academic'>(() => {
@@ -117,16 +129,20 @@ export const AppContent: React.FC = () => {
     }
   }, [])
 
-  // Restore header on Escape key when in Zen mode
+  // Restore header on Escape key when in Zen mode or minimize Pomodoro fullscreen
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isZenMode) {
-        setIsZenMode(false)
+      if (e.key === 'Escape') {
+        if (isPomodoroFullscreen) {
+          setIsPomodoroFullscreen(false)
+        } else if (isZenMode) {
+          setIsZenMode(false)
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isZenMode])
+  }, [isPomodoroFullscreen, isZenMode])
 
   // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
@@ -395,6 +411,7 @@ export const AppContent: React.FC = () => {
               formatTime={formatTime}
               onUpdateDurations={updateDurations}
               onToggleSound={toggleSound}
+              onOpenFullscreen={() => setIsPomodoroFullscreen(true)}
             />
 
             {/* Filter and Search Bar */}
@@ -417,7 +434,7 @@ export const AppContent: React.FC = () => {
                 onDeleteTask={requestDeleteTask}
                 onMoveTask={handleMoveTask}
                 onToggleSubtask={toggleSubtask}
-                onStartFocus={startFocus}
+                onStartFocus={handleStartFocus}
                 onAddColumn={handleAddColumn}
                 onDeleteColumn={requestDeleteColumn}
                 focusedTaskId={session.taskId}
@@ -433,6 +450,18 @@ export const AppContent: React.FC = () => {
           />
         )}
       </main>
+
+      {/* Fullscreen Pomodoro Timer */}
+      {isPomodoroFullscreen && (
+        <PomodoroFullscreen
+          session={session}
+          onPlayPause={handlePomodoroPlayPause}
+          onReset={resetTimer}
+          onSwitchMode={switchMode}
+          onClose={() => setIsPomodoroFullscreen(false)}
+          formatTime={formatTime}
+        />
+      )}
 
       {/* Task Creation / Editing Modal */}
       <TaskModal

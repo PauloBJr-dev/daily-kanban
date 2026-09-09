@@ -12,6 +12,7 @@ vi.mock('../services/soundService', () => ({
 
 vi.mock('../services/notificationService', () => ({
   notify: vi.fn(),
+  requestPermission: vi.fn(() => Promise.resolve('granted')),
   notificationService: {
     notify: vi.fn(),
     isSupported: vi.fn(() => true),
@@ -226,5 +227,45 @@ describe('usePomodoro hook', () => {
     expect(document.title).toBe('⏰ Foco Concluído! | DailyFlow')
     expect(result.current.session.mode).toBe('break')
     expect(result.current.session.isRunning).toBe(false)
+  })
+  it('atualiza o document.title com sinal visual ⚡ nos últimos 5 segundos de foco', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => {
+      result.current.startFocus('task-1', 'Tarefa Reta Final')
+    })
+
+    // Avança 24 minutos e 55 segundos (faltam 5 segundos)
+    act(() => {
+      vi.advanceTimersByTime((25 * 60 - 5) * 1000)
+    })
+
+    expect(result.current.session.timeLeft).toBe(5)
+    expect(document.title).toBe('⚡ (00:05) Quase lá! | DailyFlow')
+
+    // Avança mais 2 segundos (faltam 3 segundos)
+    act(() => {
+      vi.advanceTimersByTime(2000)
+    })
+
+    expect(result.current.session.timeLeft).toBe(3)
+    expect(document.title).toBe('⚡ (00:03) Quase lá! | DailyFlow')
+  })
+
+  it('solicita permissão de notificação proativamente ao iniciar foco se permissão for default', () => {
+    window.Notification = {
+      permission: 'default',
+      requestPermission: vi.fn(() =>
+        Promise.resolve('granted' as NotificationPermission)
+      ),
+    } as unknown as typeof Notification
+
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => {
+      result.current.startFocus('task-1', 'Tarefa Nova')
+    })
+
+    expect(notificationService.requestPermission).toHaveBeenCalled()
   })
 })

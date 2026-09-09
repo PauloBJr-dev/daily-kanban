@@ -57,22 +57,26 @@ describe('TaskModal', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('cria uma nova tarefa com título, tags e subtarefas preenchidas', () => {
+  it('cria uma nova tarefa com título e subtarefas preenchidas, sem campos de tags', () => {
     const onSave = vi.fn()
     const onClose = vi.fn()
     render(<TaskModal {...defaultProps} onSave={onSave} onClose={onClose} />)
 
-    // Fill title
+    // Verifica ausência de seção de tags
+    expect(screen.queryByText(/Etiquetas \(Tags\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/Nova tag/i)).not.toBeInTheDocument()
+
+    // Preenche o título
     const titleInput = screen.getByPlaceholderText(
       'Ex: Revisar layout da nova landing page'
     )
     fireEvent.change(titleInput, { target: { value: 'Escrever Testes' } })
 
-    // Select priority Alta
+    // Seleciona prioridade Alta
     const highPriorityBtn = screen.getByText('Alta')
     fireEvent.click(highPriorityBtn)
 
-    // Add subtask
+    // Adiciona subtarefa
     const subtaskInput = screen.getByPlaceholderText(
       'Adicionar item ao checklist... (Pressione Enter)'
     )
@@ -81,16 +85,15 @@ describe('TaskModal', () => {
     fireEvent.click(addSubtaskBtn)
 
     expect(screen.getByText('Testes Unitários')).toBeInTheDocument()
+    const subtaskCheckbox = screen.getByRole('checkbox', { name: 'Testes Unitários' })
+    expect(subtaskCheckbox).toBeInTheDocument()
+    expect(subtaskCheckbox).toHaveAttribute('aria-checked', 'false')
 
-    // Add tag
-    const tagInput = screen.getByPlaceholderText('Nova tag... (Enter)')
-    fireEvent.change(tagInput, { target: { value: 'QA' } })
-    const addTagBtn = screen.getByText('Inserir')
-    fireEvent.click(addTagBtn)
+    // Alterna estado da subtarefa
+    fireEvent.click(subtaskCheckbox)
+    expect(subtaskCheckbox).toHaveAttribute('aria-checked', 'true')
 
-    expect(screen.getByText('#QA')).toBeInTheDocument()
-
-    // Submit form
+    // Submete o formulário
     const submitBtn = screen.getByText('Criar Tarefa')
     fireEvent.click(submitBtn)
 
@@ -98,11 +101,11 @@ describe('TaskModal', () => {
       expect.objectContaining({
         title: 'Escrever Testes',
         priority: 'high',
-        tags: ['QA'],
+        tags: [],
         subtasks: expect.arrayContaining([
           expect.objectContaining({
             title: 'Testes Unitários',
-            completed: false,
+            completed: true,
           }),
         ]),
       }),
@@ -111,17 +114,44 @@ describe('TaskModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('renderiza em modo de edição com dados pré-preenchidos', () => {
-    render(<TaskModal {...defaultProps} task={existingTask} />)
+  it('renderiza em modo de edição com dados pré-preenchidos sem exibir tags e preservando-as ao salvar', () => {
+    const onSave = vi.fn()
+    render(<TaskModal {...defaultProps} task={existingTask} onSave={onSave} />)
 
     expect(screen.getByText('Editar Tarefa')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Desenhar Mockup UI')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Criar wireframe no Figma')).toBeInTheDocument()
-    expect(screen.getByText('#Design')).toBeInTheDocument()
-    expect(screen.getByText('#UI')).toBeInTheDocument()
+    expect(screen.queryByText('#Design')).not.toBeInTheDocument()
+    expect(screen.queryByText('#UI')).not.toBeInTheDocument()
     expect(screen.getByText('Paleta de Cores')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Paleta de Cores' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
     expect(screen.getByText(/25 minutos/)).toBeInTheDocument()
     expect(screen.getByText('Salvar Alterações')).toBeInTheDocument()
+
+    // Salvar e verificar retrocompatibilidade com tags salvas
+    const saveBtn = screen.getByText('Salvar Alterações')
+    fireEvent.click(saveBtn)
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Desenhar Mockup UI',
+        tags: ['Design', 'UI'],
+      }),
+      'task-100'
+    )
+  })
+
+  it('permite remover uma subtarefa ao clicar no botão de exclusão', () => {
+    render(<TaskModal {...defaultProps} task={existingTask} />)
+
+    expect(screen.getByText('Paleta de Cores')).toBeInTheDocument()
+    const removeBtn = screen.getByTitle('Remover subtarefa')
+    fireEvent.click(removeBtn)
+
+    expect(screen.queryByText('Paleta de Cores')).not.toBeInTheDocument()
   })
 
   it('chama onDelete quando botão de excluir tarefa é clicado', () => {

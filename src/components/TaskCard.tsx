@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Clock,
   CheckSquare,
@@ -10,6 +10,7 @@ import {
   Trash2,
   Edit2,
   Calendar,
+  Check,
 } from 'lucide-react'
 import type { Column, Priority, Task } from '../types/kanban'
 
@@ -34,14 +35,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onStartFocus,
   isFocused = false,
 }) => {
-  const [showMenu, setShowMenu] = React.useState(false)
-  const [isDragging, setIsDragging] = React.useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // Subtask progress
   const totalSubtasks = task.subtasks.length
   const completedSubtasks = task.subtasks.filter((st) => st.completed).length
   const subtaskProgress =
     totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0
+
+  // Subtasks visibility logic (max 4 initial, expand/collapse if > 4)
+  const hasMoreSubtasks = totalSubtasks > 4
+  const visibleSubtasks =
+    hasMoreSubtasks && !isExpanded ? task.subtasks.slice(0, 4) : task.subtasks
+  const remainingSubtasks = totalSubtasks - 4
 
   // Due date analysis
   const todayStr = new Date().toISOString().split('T')[0]
@@ -258,53 +266,66 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             />
           </div>
 
-          {/* Quick checkbox list if small */}
-          {totalSubtasks <= 3 && (
-            <div className="mt-2 space-y-1">
-              {task.subtasks.map((st) => (
-                <label
-                  key={st.id}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 cursor-pointer"
+          {/* Interactive subtasks list */}
+          <div className="mt-2 space-y-1.5">
+            {visibleSubtasks.map((st) => (
+              <div
+                key={st.id}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleSubtask(task.id, st.id)
+                }}
+                className="flex items-center gap-2 group/subtask cursor-pointer text-xs"
+              >
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={st.completed}
+                  aria-label={st.title}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleSubtask(task.id, st.id)
+                  }}
+                  className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer ${
+                    st.completed
+                      ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
+                      : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 bg-white dark:bg-slate-800'
+                  }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={st.completed}
-                    onChange={() => onToggleSubtask(task.id, st.id)}
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span
-                    className={
-                      st.completed
-                        ? 'line-through text-slate-400 dark:text-slate-500'
-                        : ''
-                    }
-                  >
-                    {st.title}
-                  </span>
-                </label>
-              ))}
-            </div>
+                  {st.completed && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                </button>
+                <span
+                  className={`text-slate-700 dark:text-slate-300 transition-colors select-none leading-snug break-words ${
+                    st.completed ? 'line-through text-slate-400 dark:text-slate-500' : ''
+                  }`}
+                >
+                  {st.title}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Show more/less button if more than 4 subtasks */}
+          {hasMoreSubtasks && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsExpanded(!isExpanded)
+              }}
+              className="mt-2 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+            >
+              {isExpanded
+                ? 'Ver menos'
+                : `Ver mais ${remainingSubtasks} ${remainingSubtasks === 1 ? 'subtarefa' : 'subtarefas'}`}
+            </button>
           )}
         </div>
       )}
 
-      {/* Footer: Tags & Due Date */}
-      <div className="mt-3 pt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        {/* Tags */}
-        <div className="flex flex-wrap items-center gap-1">
-          {task.tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300"
-            >
-              #{tag}
-            </span>
-          ))}
-        </div>
-
-        {/* Due Date Indicator */}
-        {task.dueDate && (
+      {/* Footer: Due Date */}
+      {task.dueDate && (
+        <div className="mt-3 pt-2 flex items-center justify-end text-xs">
           <div
             className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md ${
               isOverdue
@@ -323,8 +344,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             )}
             <span>{isOverdue ? 'Atrasado' : isToday ? 'Hoje' : task.dueDate}</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Mobile Touch Quick Move Controls */}
       {(prevColumn || nextColumn) && (
