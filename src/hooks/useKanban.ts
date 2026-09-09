@@ -3,6 +3,8 @@ import confetti from 'canvas-confetti'
 import type { Column, FilterState, KanbanData, Subtask, Task } from '../types/kanban'
 import { storageService } from '../services/storageService'
 import { INITIAL_DATA } from '../services/seedData'
+import { useAuth } from './useAuth'
+import { supabaseKanbanService } from '../services/supabaseKanbanService'
 
 /**
  * Calculates the Monday 00:00:00 to Sunday 23:59:59 date range according to ISO-8601 week cycle.
@@ -51,6 +53,9 @@ export function isTaskInDateRange(task: Task, start: Date, end: Date): boolean {
 }
 
 export function useKanban() {
+  const { user } = useAuth(false)
+  const userId = user?.id ?? null
+
   const [data, setData] = useState<KanbanData>(() => storageService.load())
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
@@ -60,10 +65,56 @@ export function useKanban() {
     weekScope: 'this_week',
   })
 
-  // Save to localStorage whenever data changes
+  // Synchronize with Supabase when user is authenticated
   useEffect(() => {
-    storageService.save(data)
-  }, [data])
+    let isMounted = true
+
+    async function syncData() {
+      if (!userId) {
+        return
+      }
+
+      try {
+        const cloudData = await supabaseKanbanService.fetchKanbanData(userId)
+        if (!isMounted) return
+
+        // Se o Supabase estiver vazio e houver dados locais, fazer upload automático dos dados locais
+        if (cloudData.columns.length === 0 && cloudData.tasks.length === 0) {
+          const localData = storageService.load()
+          if (localData.columns.length > 0 || localData.tasks.length > 0) {
+            await supabaseKanbanService.uploadLocalData(
+              userId,
+              localData.columns,
+              localData.tasks
+            )
+            setData(localData)
+            return
+          }
+        }
+
+        setData({
+          columns: cloudData.columns,
+          tasks: cloudData.tasks,
+          version: 1,
+        })
+      } catch (err) {
+        console.error('Erro ao carregar dados do Kanban do Supabase:', err)
+      }
+    }
+
+    void syncData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [userId])
+
+  // Save to localStorage in visitor mode
+  useEffect(() => {
+    if (!userId) {
+      storageService.save(data)
+    }
+  }, [data, userId])
 
   const triggerCelebration = useCallback(() => {
     try {
@@ -94,66 +145,101 @@ export function useKanban() {
         tasks: [newTask, ...prev.tasks],
       }))
 
+      if (userId) {
+        supabaseKanbanService.syncTask(userId, newTask).catch((err) => {
+          console.error('Erro ao sincronizar nova tarefa no Supabase:', err)
+        })
+      }
+
       return newTask
     },
-    []
+    [userId]
   )
 
-  const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
-    const now = new Date().toISOString()
-    setData((prev) => {
-      const taskIndex = prev.tasks.findIndex((t) => t.id === taskId)
-      if (taskIndex === -1) return prev
+  const updateTask = useCallback(
+    (taskId: string, updates: Partial<Task>) => {
+      const now = new Date().toISOString()
+      const currentTask = data.tasks.find((t) => t.id === taskId)
+      if (!currentTask) return
 
-      const currentTask = prev.tasks[taskIndex]
-      const updatedTask = { ...currentTask, ...updates, updatedAt: now }
+      const updatedTask: Task = { ...currentTask, ...updates, updatedAt: now }
 
-      const newTasks = [...prev.tasks]
-      newTasks[taskIndex] = updatedTask
-      return { ...prev, tasks: newTasks }
-    })
-  }, [])
-
-  const deleteTask = useCallback((taskId: string) => {
-    setData((prev) => ({
-      ...prev,
-      tasks: prev.tasks.filter((t) => t.id !== taskId),
-    }))
-  }, [])
-
-  const restoreTask = useCallback((taskToRestore: Task) => {
-    setData((prev) => {
-      if (prev.tasks.some((t) => t.id === taskToRestore.id)) return prev
-      return {
-        ...prev,
-        tasks: [taskToRestore, ...prev.tasks],
-      }
-    })
-  }, [])
-
-  const moveTask = useCallback(
-    (taskId: string, targetColumnId: string, targetIndex?: number) => {
       setData((prev) => {
         const taskIndex = prev.tasks.findIndex((t) => t.id === taskId)
         if (taskIndex === -1) return prev
 
-        const task = prev.tasks[taskIndex]
-        const isNowDone = targetColumnId === 'col-done' || targetColumnId.includes('done')
-        const wasDone = task.columnId === 'col-done' || task.columnId.includes('done')
+        const newTasks = [...prev.tasks]
+        newTasks[taskIndex] = updatedTask
+        return { ...prev, tasks: newTasks }
+      })
 
-        if (isNowDone && !wasDone) {
-          triggerCelebration()
+      if (userId) {
+        supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
+          console.error('Erro ao sincronizar atualização de tarefa no Supabase:', err)
+        })
+      }
+    },
+    [data.tasks, userId]
+  )
+
+  const deleteTask = useCallback(
+    (taskId: string) => {
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.filter((t) => t.id !== taskId),
+      }))
+
+      if (userId) {
+        supabaseKanbanService.deleteTask(taskId).catch((err) => {
+          console.error('Erro ao deletar tarefa no Supabase:', err)
+        })
+      }
+    },
+    [userId]
+  )
+
+  const restoreTask = useCallback(
+    (taskToRestore: Task) => {
+      setData((prev) => {
+        if (prev.tasks.some((t) => t.id === taskToRestore.id)) return prev
+        return {
+          ...prev,
+          tasks: [taskToRestore, ...prev.tasks],
         }
+      })
 
-        const updatedTask: Task = {
-          ...task,
-          columnId: targetColumnId,
-          completedAt: isNowDone
-            ? task.completedAt || new Date().toISOString()
-            : undefined,
-          updatedAt: new Date().toISOString(),
-        }
+      if (userId) {
+        supabaseKanbanService.syncTask(userId, taskToRestore).catch((err) => {
+          console.error('Erro ao sincronizar tarefa restaurada no Supabase:', err)
+        })
+      }
+    },
+    [userId]
+  )
 
+  const moveTask = useCallback(
+    (taskId: string, targetColumnId: string, targetIndex?: number) => {
+      const currentTask = data.tasks.find((t) => t.id === taskId)
+      if (!currentTask) return
+
+      const isNowDone = targetColumnId === 'col-done' || targetColumnId.includes('done')
+      const wasDone =
+        currentTask.columnId === 'col-done' || currentTask.columnId.includes('done')
+
+      if (isNowDone && !wasDone) {
+        triggerCelebration()
+      }
+
+      const updatedTask: Task = {
+        ...currentTask,
+        columnId: targetColumnId,
+        completedAt: isNowDone
+          ? currentTask.completedAt || new Date().toISOString()
+          : undefined,
+        updatedAt: new Date().toISOString(),
+      }
+
+      setData((prev) => {
         const remainingTasks = prev.tasks.filter((t) => t.id !== taskId)
 
         if (targetIndex !== undefined && targetIndex >= 0) {
@@ -170,107 +256,180 @@ export function useKanban() {
           tasks: [updatedTask, ...remainingTasks],
         }
       })
+
+      if (userId) {
+        supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
+          console.error('Erro ao mover tarefa no Supabase:', err)
+        })
+      }
     },
-    [triggerCelebration]
+    [data.tasks, userId, triggerCelebration]
   )
 
-  const toggleSubtask = useCallback((taskId: string, subtaskId: string) => {
-    setData((prev) => {
-      return {
-        ...prev,
-        tasks: prev.tasks.map((task) => {
-          if (task.id !== taskId) return task
-          const updatedSubtasks = task.subtasks.map((st) =>
-            st.id === subtaskId ? { ...st, completed: !st.completed } : st
-          )
-          return {
-            ...task,
-            subtasks: updatedSubtasks,
-            updatedAt: new Date().toISOString(),
-          }
-        }),
+  const toggleSubtask = useCallback(
+    (taskId: string, subtaskId: string) => {
+      const currentTask = data.tasks.find((t) => t.id === taskId)
+      if (!currentTask) return
+
+      const updatedSubtasks = currentTask.subtasks.map((st) =>
+        st.id === subtaskId ? { ...st, completed: !st.completed } : st
+      )
+      const updatedTask: Task = {
+        ...currentTask,
+        subtasks: updatedSubtasks,
+        updatedAt: new Date().toISOString(),
       }
-    })
-  }, [])
 
-  const addSubtask = useCallback((taskId: string, title: string) => {
-    if (!title.trim()) return
-    const newSubtask: Subtask = {
-      id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      title: title.trim(),
-      completed: false,
-    }
-
-    setData((prev) => ({
-      ...prev,
-      tasks: prev.tasks.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              subtasks: [...task.subtasks, newSubtask],
-              updatedAt: new Date().toISOString(),
-            }
-          : task
-      ),
-    }))
-  }, [])
-
-  const removeSubtask = useCallback((taskId: string, subtaskId: string) => {
-    setData((prev) => ({
-      ...prev,
-      tasks: prev.tasks.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              subtasks: task.subtasks.filter((st) => st.id !== subtaskId),
-              updatedAt: new Date().toISOString(),
-            }
-          : task
-      ),
-    }))
-  }, [])
-
-  const addColumn = useCallback((title: string, colorTheme: Column['colorTheme']) => {
-    if (!title.trim()) return
-    const newColumn: Column = {
-      id: `col-${Date.now()}`,
-      title: title.trim(),
-      order: 99,
-      colorTheme,
-    }
-    setData((prev) => ({
-      ...prev,
-      columns: [...prev.columns, newColumn],
-    }))
-  }, [])
-
-  const deleteColumn = useCallback((columnId: string) => {
-    setData((prev) => {
-      // Don't delete if it's the last remaining column
-      if (prev.columns.length <= 1) return prev
-      return {
+      setData((prev) => ({
         ...prev,
-        columns: prev.columns.filter((c) => c.id !== columnId),
-        tasks: prev.tasks.filter((t) => t.columnId !== columnId),
+        tasks: prev.tasks.map((task) => (task.id === taskId ? updatedTask : task)),
+      }))
+
+      if (userId) {
+        supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
+          console.error('Erro ao sincronizar subtarefa no Supabase:', err)
+        })
       }
-    })
-  }, [])
+    },
+    [data.tasks, userId]
+  )
+
+  const addSubtask = useCallback(
+    (taskId: string, title: string) => {
+      if (!title.trim()) return
+      const currentTask = data.tasks.find((t) => t.id === taskId)
+      if (!currentTask) return
+
+      const newSubtask: Subtask = {
+        id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        title: title.trim(),
+        completed: false,
+      }
+
+      const updatedTask: Task = {
+        ...currentTask,
+        subtasks: [...currentTask.subtasks, newSubtask],
+        updatedAt: new Date().toISOString(),
+      }
+
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((task) => (task.id === taskId ? updatedTask : task)),
+      }))
+
+      if (userId) {
+        supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
+          console.error('Erro ao adicionar subtarefa no Supabase:', err)
+        })
+      }
+    },
+    [data.tasks, userId]
+  )
+
+  const removeSubtask = useCallback(
+    (taskId: string, subtaskId: string) => {
+      const currentTask = data.tasks.find((t) => t.id === taskId)
+      if (!currentTask) return
+
+      const updatedTask: Task = {
+        ...currentTask,
+        subtasks: currentTask.subtasks.filter((st) => st.id !== subtaskId),
+        updatedAt: new Date().toISOString(),
+      }
+
+      setData((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((task) => (task.id === taskId ? updatedTask : task)),
+      }))
+
+      if (userId) {
+        supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
+          console.error('Erro ao remover subtarefa no Supabase:', err)
+        })
+      }
+    },
+    [data.tasks, userId]
+  )
+
+  const addColumn = useCallback(
+    (title: string, colorTheme: Column['colorTheme']) => {
+      if (!title.trim()) return
+      const newColumn: Column = {
+        id: `col-${Date.now()}`,
+        title: title.trim(),
+        order: 99,
+        colorTheme,
+      }
+      setData((prev) => {
+        const nextColumns = [...prev.columns, newColumn]
+        if (userId) {
+          supabaseKanbanService.syncColumns(userId, nextColumns).catch((err) => {
+            console.error('Erro ao sincronizar nova coluna no Supabase:', err)
+          })
+        }
+        return {
+          ...prev,
+          columns: nextColumns,
+        }
+      })
+    },
+    [userId]
+  )
+
+  const deleteColumn = useCallback(
+    (columnId: string) => {
+      setData((prev) => {
+        // Don't delete if it's the last remaining column
+        if (prev.columns.length <= 1) return prev
+
+        if (userId) {
+          supabaseKanbanService.deleteColumn(columnId).catch((err) => {
+            console.error('Erro ao deletar coluna no Supabase:', err)
+          })
+        }
+
+        return {
+          ...prev,
+          columns: prev.columns.filter((c) => c.id !== columnId),
+          tasks: prev.tasks.filter((t) => t.columnId !== columnId),
+        }
+      })
+    },
+    [userId]
+  )
 
   const exportData = useCallback(() => {
     storageService.exportJSON(data)
   }, [data])
 
-  const importData = useCallback((newData: KanbanData) => {
-    if (storageService.validateJSON(newData)) {
-      setData(newData)
-      return true
-    }
-    return false
-  }, [])
+  const importData = useCallback(
+    (newData: KanbanData) => {
+      if (storageService.validateJSON(newData)) {
+        setData(newData)
+        if (userId) {
+          supabaseKanbanService
+            .uploadLocalData(userId, newData.columns, newData.tasks)
+            .catch((err) => {
+              console.error('Erro ao sincronizar dados importados no Supabase:', err)
+            })
+        }
+        return true
+      }
+      return false
+    },
+    [userId]
+  )
 
   const resetToSeed = useCallback(() => {
     setData(INITIAL_DATA)
-  }, [])
+    if (userId) {
+      supabaseKanbanService
+        .uploadLocalData(userId, INITIAL_DATA.columns, INITIAL_DATA.tasks)
+        .catch((err) => {
+          console.error('Erro ao sincronizar dados resetados no Supabase:', err)
+        })
+    }
+  }, [userId])
 
   // All unique tags available in tasks
   const allTags = useMemo(() => {
