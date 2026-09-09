@@ -16,7 +16,11 @@ export class NotificationService {
    */
   getPermission(): NotificationPermission {
     if (!this.isSupported()) return 'denied'
-    return Notification.permission
+    try {
+      return Notification.permission
+    } catch {
+      return 'denied'
+    }
   }
 
   /**
@@ -46,11 +50,10 @@ export class NotificationService {
    * Emite uma notificação nativa caso haja permissão concedida.
    */
   notify(title: string, options?: NotificationOptions): Notification | null {
-    if (!this.isSupported() || this.getPermission() !== 'granted') {
-      return null
-    }
-
     try {
+      if (!this.isSupported() || this.getPermission() !== 'granted') {
+        return null
+      }
       const defaultOptions: NotificationOptions = {
         icon: '/vite.svg',
         badge: '/vite.svg',

@@ -222,4 +222,40 @@ describe('App Integration', () => {
 
     expect(screen.getByText('Dados de demonstração restaurados')).toBeInTheDocument()
   })
+
+  it('abre automaticamente em tela cheia ao iniciar foco em uma tarefa e fecha com Escape', () => {
+    render(<App />)
+
+    const focusButtons = screen.getAllByRole('button', { name: /iniciar pomodoro para/i })
+    fireEvent.click(focusButtons[0])
+
+    expect(
+      screen.getByRole('dialog', { name: /cronômetro pomodoro em tela cheia/i })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('fullscreen-timer-display')).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(
+      screen.queryByRole('dialog', { name: /cronômetro pomodoro em tela cheia/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it('abre o cronômetro em tela cheia ao clicar no botão de maximizar do widget e fecha no botão minimizar', () => {
+    render(<App />)
+
+    const maximizeBtn = screen.getByRole('button', { name: /expandir para tela cheia/i })
+    fireEvent.click(maximizeBtn)
+
+    expect(
+      screen.getByRole('dialog', { name: /cronômetro pomodoro em tela cheia/i })
+    ).toBeInTheDocument()
+
+    const minimizeBtn = screen.getByRole('button', { name: 'Minimizar (Esc)' })
+    fireEvent.click(minimizeBtn)
+
+    expect(
+      screen.queryByRole('dialog', { name: /cronômetro pomodoro em tela cheia/i })
+    ).not.toBeInTheDocument()
+  })
 })
