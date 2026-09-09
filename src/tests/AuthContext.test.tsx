@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../hooks/useAuth'
@@ -31,11 +31,13 @@ const mockSession: Session = {
 
 describe('AuthContext & useAuth', () => {
   beforeEach(() => {
+    localStorage.clear()
     vi.restoreAllMocks()
     vi.unstubAllEnvs()
   })
 
   afterEach(() => {
+    localStorage.clear()
     vi.restoreAllMocks()
     vi.unstubAllEnvs()
   })
@@ -72,9 +74,11 @@ describe('AuthContext & useAuth', () => {
     expect(result.current.session).toBeNull()
     expect(result.current.loading).toBe(false)
     expect(result.current.isConfigured).toBe(false)
+    expect(result.current.isGuestAcknowledged).toBe(false)
+    expect(result.current.isAuthModalOpen).toBe(false)
   })
 
-  it('retorna erro em signInWithGoogle quando supabase não está configurado', async () => {
+  it('controla abertura e fechamento do AuthModal via openAuthModal e closeAuthModal', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', '')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
 
@@ -82,15 +86,20 @@ describe('AuthContext & useAuth', () => {
       wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
     })
 
-    const res = await act(async () => {
-      return await result.current.signInWithGoogle()
-    })
+    expect(result.current.isAuthModalOpen).toBe(false)
 
-    expect(res.error).toBeInstanceOf(Error)
-    expect(res.error?.message).toContain('Supabase não configurado')
+    act(() => {
+      result.current.openAuthModal()
+    })
+    expect(result.current.isAuthModalOpen).toBe(true)
+
+    act(() => {
+      result.current.closeAuthModal()
+    })
+    expect(result.current.isAuthModalOpen).toBe(false)
   })
 
-  it('limpa o estado do usuário ao fazer signOut quando não configurado', async () => {
+  it('continueAsGuest define flag no localStorage e atualiza estado', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', '')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
 
@@ -98,62 +107,76 @@ describe('AuthContext & useAuth', () => {
       wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
     })
 
-    const res = await act(async () => {
-      return await result.current.signOut()
+    expect(result.current.isGuestAcknowledged).toBe(false)
+
+    act(() => {
+      result.current.continueAsGuest()
+    })
+
+    expect(result.current.isGuestAcknowledged).toBe(true)
+    expect(localStorage.getItem('organocat_guest_acknowledged')).toBe('true')
+  })
+
+  it('executa signUpWithPassword no modo local simulado persistindo no localStorage', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    })
+
+    let res: { error: Error | null } = { error: null }
+    await act(async () => {
+      res = await result.current.signUpWithPassword(
+        'Beatriz Costa',
+        'beatriz@example.com',
+        'minhasenha123'
+      )
     })
 
     expect(res.error).toBeNull()
-    expect(result.current.user).toBeNull()
-    expect(result.current.session).toBeNull()
+    expect(result.current.user).not.toBeNull()
+    expect(result.current.user?.email).toBe('beatriz@example.com')
+    expect(result.current.user?.user_metadata?.full_name).toBe('Beatriz Costa')
+    expect(result.current.isGuestAcknowledged).toBe(true)
+    expect(localStorage.getItem('organocat_local_user')).not.toBeNull()
+    expect(localStorage.getItem('organocat_local_session')).not.toBeNull()
   })
 
-  it('carrega sessão inicial e escuta mudanças de autenticação quando configurado', async () => {
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://test-app.supabase.co')
-    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'valid-anon-key-secret')
-
-    let authChangeCallback: ((event: string, session: Session | null) => void) | null =
-      null
-
-    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce({
-      data: { session: mockSession },
-      error: null,
-    })
-
-    vi.spyOn(supabase.auth, 'onAuthStateChange').mockImplementation(((callback: any) => {
-      authChangeCallback = callback
-      return {
-        data: {
-          subscription: {
-            unsubscribe: vi.fn(),
-          },
-        },
-      }
-    }) as any)
+  it('executa signInWithPassword no modo local simulado recuperando a conta criada', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
 
     const { result } = renderHook(() => useAuth(), {
       wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
     })
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
+    // Cadastra primeiro
+    await act(async () => {
+      await result.current.signUpWithPassword(
+        'Diego Alves',
+        'diego@example.com',
+        'senhaSegura123'
+      )
     })
 
-    expect(result.current.user).toEqual(mockUser)
-    expect(result.current.session).toEqual(mockSession)
-    expect(result.current.isConfigured).toBe(true)
-
-    // Simula logout disparado pelo listener onAuthStateChange
-    act(() => {
-      if (authChangeCallback) {
-        authChangeCallback('SIGNED_OUT', null)
-      }
+    // Desloga
+    await act(async () => {
+      await result.current.signOut()
     })
-
     expect(result.current.user).toBeNull()
-    expect(result.current.session).toBeNull()
+
+    // Faz login
+    let res: { error: Error | null } = { error: null }
+    await act(async () => {
+      res = await result.current.signInWithPassword('diego@example.com', 'senhaSegura123')
+    })
+
+    expect(res.error).toBeNull()
+    expect(result.current.user?.email).toBe('diego@example.com')
   })
 
-  it('executa signInWithGoogle com redirecionamento correto e trata sucesso', async () => {
+  it('executa signUpWithPassword com Supabase configurado', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://test-app.supabase.co')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'valid-anon-key-secret')
 
@@ -170,8 +193,11 @@ describe('AuthContext & useAuth', () => {
       },
     } as any)
 
-    const signInSpy = vi.spyOn(supabase.auth, 'signInWithOAuth').mockResolvedValueOnce({
-      data: { provider: 'google', url: 'https://oauth.google.com' },
+    const signUpSpy = vi.spyOn(supabase.auth, 'signUp').mockResolvedValueOnce({
+      data: {
+        user: mockUser,
+        session: mockSession,
+      },
       error: null,
     })
 
@@ -183,17 +209,78 @@ describe('AuthContext & useAuth', () => {
       expect(result.current.loading).toBe(false)
     })
 
-    const res = await act(async () => {
-      return await result.current.signInWithGoogle()
+    let res: { error: Error | null } = { error: null }
+    await act(async () => {
+      res = await result.current.signUpWithPassword(
+        'Ana Silva',
+        'ana.silva@example.com',
+        'senha123456'
+      )
     })
 
-    expect(signInSpy).toHaveBeenCalledWith({
-      provider: 'google',
+    expect(signUpSpy).toHaveBeenCalledWith({
+      email: 'ana.silva@example.com',
+      password: 'senha123456',
       options: {
-        redirectTo: window.location.origin,
+        data: {
+          full_name: 'Ana Silva',
+          name: 'Ana Silva',
+        },
       },
     })
     expect(res.error).toBeNull()
+    expect(result.current.user).toEqual(mockUser)
+  })
+
+  it('executa signInWithPassword com Supabase configurado', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://test-app.supabase.co')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'valid-anon-key-secret')
+
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    })
+
+    vi.spyOn(supabase.auth, 'onAuthStateChange').mockReturnValue({
+      data: {
+        subscription: {
+          unsubscribe: vi.fn(),
+        },
+      },
+    } as any)
+
+    const signInSpy = vi
+      .spyOn(supabase.auth, 'signInWithPassword')
+      .mockResolvedValueOnce({
+        data: {
+          user: mockUser,
+          session: mockSession,
+        },
+        error: null,
+      })
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    })
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    let res: { error: Error | null } = { error: null }
+    await act(async () => {
+      res = await result.current.signInWithPassword(
+        'ana.silva@example.com',
+        'senha123456'
+      )
+    })
+
+    expect(signInSpy).toHaveBeenCalledWith({
+      email: 'ana.silva@example.com',
+      password: 'senha123456',
+    })
+    expect(res.error).toBeNull()
+    expect(result.current.user).toEqual(mockUser)
   })
 
   it('executa signOut e limpa sessão e usuário no estado', async () => {

@@ -8,6 +8,7 @@ import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ShortcutsModal } from './components/ShortcutsModal'
+import { AuthModal } from './components/AuthModal'
 import { ToastContainer } from './components/ToastContainer'
 import { AcademicView, type AcademicViewHandle } from './components/academic'
 import { useKanban } from './hooks/useKanban'
@@ -15,10 +16,20 @@ import { usePomodoro } from './hooks/usePomodoro'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import { ToastProvider, useToast } from './hooks/useToast'
 import { AuthProvider } from './context/AuthContext'
+import { useAuth } from './hooks/useAuth'
 import type { Task, Column } from './types/kanban'
 
 export const AppContent: React.FC = () => {
   const toast = useToast()
+  const {
+    user,
+    loading: authLoading,
+    isGuestAcknowledged,
+    isAuthModalOpen,
+    openAuthModal,
+    closeAuthModal,
+  } = useAuth()
+
   const {
     columns,
     tasks,
@@ -68,6 +79,13 @@ export const AppContent: React.FC = () => {
   const toggleTheme = useCallback(() => {
     setIsDark((prev) => !prev)
   }, [])
+
+  // Abertura automática do AuthModal na primeira visita caso não esteja logado e não tenha reconhecido modo visitante
+  useEffect(() => {
+    if (!authLoading && !user && !isGuestAcknowledged) {
+      openAuthModal()
+    }
+  }, [authLoading, user, isGuestAcknowledged, openAuthModal])
 
   // Pomodoro Integration
   const handleTaskMinuteLogged = useCallback(
@@ -216,7 +234,7 @@ export const AppContent: React.FC = () => {
     onFocusSearch: handleFocusSearch,
     onTogglePomodoro: handlePomodoroPlayPause,
     onOpenShortcuts: handleOpenShortcuts,
-    enabled: !isTaskModalOpen && !confirmState.isOpen,
+    enabled: !isTaskModalOpen && !confirmState.isOpen && !isAuthModalOpen,
   })
 
   const handleOpenEditTask = useCallback((task: Task) => {
@@ -515,6 +533,9 @@ export const AppContent: React.FC = () => {
         onConfirm={confirmState.onConfirm}
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Authentication & Guest Notice Modal */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
 
       {/* Toast Notification Container */}
       <ToastContainer />

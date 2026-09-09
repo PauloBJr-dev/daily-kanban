@@ -249,6 +249,7 @@ describe('useGlobalShortcuts Hook', () => {
 describe('App Global Shortcuts Integration', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('organocat_guest_acknowledged', 'true')
   })
 
   it('abre o modal de Nova Tarefa ao pressionar "n" na tela', () => {

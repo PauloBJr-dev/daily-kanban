@@ -31,7 +31,14 @@ const mockAuthContextValue: AuthContextType = {
   session: null,
   loading: false,
   isConfigured: true,
+  isGuestAcknowledged: true,
+  isAuthModalOpen: false,
+  openAuthModal: vi.fn(),
+  closeAuthModal: vi.fn(),
   signInWithGoogle: vi.fn(),
+  signUpWithPassword: vi.fn(),
+  signInWithPassword: vi.fn(),
+  continueAsGuest: vi.fn(),
   signOut: vi.fn(),
 }
 

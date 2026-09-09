@@ -38,7 +38,7 @@ describe('usePomodoro hook', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.useFakeTimers()
-    document.title = 'DailyFlow Kanban'
+    document.title = 'OrganoCat Kanban'
     vi.clearAllMocks()
   })
 
@@ -82,19 +82,19 @@ describe('usePomodoro hook', () => {
       result.current.startFocus('task-1', 'Tarefa Teste')
     })
 
-    expect(document.title).toBe('(25:00) 🎯 Foco | DailyFlow')
+    expect(document.title).toBe('(25:00) 🎯 Foco | OrganoCat')
 
     act(() => {
       vi.advanceTimersByTime(1000)
     })
 
-    expect(document.title).toBe('(24:59) 🎯 Foco | DailyFlow')
+    expect(document.title).toBe('(24:59) 🎯 Foco | OrganoCat')
 
     act(() => {
       result.current.pauseFocus()
     })
 
-    expect(document.title).toBe('DailyFlow Kanban')
+    expect(document.title).toBe('OrganoCat Kanban')
   })
 
   it('atualiza o document.title em tempo real no modo pausa e restaura ao pausar ou reiniciar', () => {
@@ -105,13 +105,13 @@ describe('usePomodoro hook', () => {
       result.current.resumeFocus()
     })
 
-    expect(document.title).toBe('(05:00) ☕ Pausa | DailyFlow')
+    expect(document.title).toBe('(05:00) ☕ Pausa | OrganoCat')
 
     act(() => {
       result.current.resetTimer()
     })
 
-    expect(document.title).toBe('DailyFlow Kanban')
+    expect(document.title).toBe('OrganoCat Kanban')
   })
 
   it('ao concluir modo foco: emite som, notificação, confetti, atualiza título e computa minutos da tarefa', () => {
@@ -135,7 +135,7 @@ describe('usePomodoro hook', () => {
       })
     )
     expect(confetti).toHaveBeenCalledTimes(1)
-    expect(document.title).toBe('⏰ Foco Concluído! | DailyFlow')
+    expect(document.title).toBe('⏰ Foco Concluído! | OrganoCat')
     expect(onTaskMinuteLogged).toHaveBeenCalledWith('task-10', 25)
 
     // Modo deve ter mudado para descanso
@@ -164,7 +164,7 @@ describe('usePomodoro hook', () => {
         body: expect.stringContaining('pausa'),
       })
     )
-    expect(document.title).toBe('⏰ Pausa Finalizada! | DailyFlow')
+    expect(document.title).toBe('⏰ Pausa Finalizada! | OrganoCat')
     expect(result.current.session.mode).toBe('work')
   })
 
@@ -215,7 +215,7 @@ describe('usePomodoro hook', () => {
     })
 
     expect(result.current.session.timeLeft).toBe(22 * 60)
-    expect(document.title).toBe('(22:00) 🎯 Foco | DailyFlow')
+    expect(document.title).toBe('(22:00) 🎯 Foco | OrganoCat')
   })
 
   it('conclui o ciclo e dispara notificações ao receber evento visibilitychange se o tempo expirou com tela bloqueada ou aba inativa', () => {
@@ -233,7 +233,7 @@ describe('usePomodoro hook', () => {
 
     expect(soundService.playWorkCompleteSound).toHaveBeenCalledTimes(1)
     expect(notificationService.notify).toHaveBeenCalledTimes(1)
-    expect(document.title).toBe('⏰ Foco Concluído! | DailyFlow')
+    expect(document.title).toBe('⏰ Foco Concluído! | OrganoCat')
     expect(result.current.session.mode).toBe('break')
     expect(result.current.session.isRunning).toBe(false)
   })
@@ -250,7 +250,7 @@ describe('usePomodoro hook', () => {
     })
 
     expect(result.current.session.timeLeft).toBe(5)
-    expect(document.title).toBe('⚡ (00:05) Quase lá! | DailyFlow')
+    expect(document.title).toBe('⚡ (00:05) Quase lá! | OrganoCat')
 
     // Avança mais 2 segundos (faltam 3 segundos)
     act(() => {
@@ -258,7 +258,7 @@ describe('usePomodoro hook', () => {
     })
 
     expect(result.current.session.timeLeft).toBe(3)
-    expect(document.title).toBe('⚡ (00:03) Quase lá! | DailyFlow')
+    expect(document.title).toBe('⚡ (00:03) Quase lá! | OrganoCat')
   })
 
   it('solicita permissão de notificação proativamente ao iniciar foco se permissão for default', () => {

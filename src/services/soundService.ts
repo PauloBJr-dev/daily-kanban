@@ -1,7 +1,7 @@
 /**
- * Servi?o de ?udio sintetizado para o DailyFlow Pomodoro.
- * Utiliza a Web Audio API nativa sem downloads externos nem depend?ncias de rede.
- * Inclui s?ntese de ronrom de gato (Cat Purr) procedural com 3 varia??es ac?sticas.
+ * Serviço de áudio sintetizado para o OrganoCat Pomodoro.
+ * Utiliza a Web Audio API nativa sem downloads externos nem dependências de rede.
+ * Inclui síntese de ronrom de gato (Cat Purr) procedural com 3 variações acústicas.
  */
 
 import type { CatPurrType } from '../types/kanban'

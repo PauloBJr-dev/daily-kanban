@@ -8,6 +8,13 @@ const DEFAULT_GUEST_AUTH: AuthContextType = {
   isConfigured: false,
   signInWithGoogle: async () => ({ error: null }),
   signOut: async () => ({ error: null }),
+  signUpWithPassword: async () => ({ error: null }),
+  signInWithPassword: async () => ({ error: null }),
+  continueAsGuest: () => {},
+  isGuestAcknowledged: false,
+  isAuthModalOpen: false,
+  openAuthModal: () => {},
+  closeAuthModal: () => {},
 }
 
 export const useAuth = (throwOnMissing: boolean = true): AuthContextType => {
