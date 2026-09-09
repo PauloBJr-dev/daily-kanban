@@ -46,10 +46,12 @@ describe('Header Component', () => {
     expect(academicTab).toHaveAttribute('aria-selected', 'false')
   })
 
-  it('renderiza o menu de autenticação com botão Entrar com Google', () => {
+  it('renderiza o menu de autenticação com botão Entrar com Google', async () => {
     renderHeader()
 
-    expect(screen.getByRole('button', { name: /entrar com google/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /entrar com google/i })
+    ).toBeInTheDocument()
   })
 
   it('chama onViewChange ao clicar nas abas do switcher', () => {

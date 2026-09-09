@@ -7,13 +7,15 @@ describe('App Integration', () => {
     localStorage.clear()
   })
 
-  it('renderiza o cabeçalho, quick stats, pomodoro widget, filtros e colunas do quadro', () => {
+  it('renderiza o cabeçalho, quick stats, pomodoro widget, filtros e colunas do quadro', async () => {
     render(<App />)
 
     // Header
     expect(screen.getByText('DailyFlow')).toBeInTheDocument()
     expect(screen.getByText('Nova Tarefa')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /entrar com google/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /entrar com google/i })
+    ).toBeInTheDocument()
 
     // QuickStats
     expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()
