@@ -4,7 +4,6 @@ import {
   Plus,
   Trash2,
   Calendar,
-  Tag as TagIcon,
   CheckSquare,
   AlertCircle,
   Clock,
@@ -33,7 +32,6 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
   task,
   columns,
   initialColumnId,
-  availableTags = [],
 }) => {
   const [title, setTitle] = useState(task?.title || '')
   const [description, setDescription] = useState(task?.description || '')
@@ -42,12 +40,10 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
   )
   const [priority, setPriority] = useState<Priority>(task?.priority || 'medium')
   const [dueDate, setDueDate] = useState(task?.dueDate || '')
-  const [tags, setTags] = useState<string[]>(task?.tags ? [...task.tags] : [])
   const [subtasks, setSubtasks] = useState<Subtask[]>(
     task?.subtasks ? [...task.subtasks] : []
   )
 
-  const [tagInput, setTagInput] = useState('')
   const [subtaskInput, setSubtaskInput] = useState('')
   const [titleError, setTitleError] = useState(false)
 
@@ -85,20 +81,6 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
     setSubtasks((prev) => prev.filter((s) => s.id !== subId))
   }
 
-  // Tag handlers
-  const handleAddTag = (tagToAdd?: string) => {
-    const targetTag = (tagToAdd ?? tagInput).trim().replace(/^#/, '')
-    if (!targetTag) return
-    if (!tags.includes(targetTag)) {
-      setTags((prev) => [...prev, targetTag])
-    }
-    setTagInput('')
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags((prev) => prev.filter((t) => t !== tagToRemove))
-  }
-
   // Quick date shortcuts
   const setDateToday = () => {
     const today = new Date().toISOString().split('T')[0]
@@ -126,7 +108,7 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
       description: description.trim() || undefined,
       columnId,
       priority,
-      tags,
+      tags: task?.tags || [],
       dueDate: dueDate || undefined,
       subtasks,
       completedAt: isDone ? task?.completedAt || new Date().toISOString() : undefined,
@@ -173,9 +155,6 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
       dotColor: 'bg-rose-500',
     },
   ]
-
-  // Suggested tags that aren't already added
-  const suggestedTags = availableTags.filter((t) => !tags.includes(t)).slice(0, 5)
 
   // Subtask progress
   const completedCount = subtasks.filter((s) => s.completed).length
@@ -413,15 +392,31 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
                     key={st.id}
                     className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-colors group"
                   >
-                    <label className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={st.completed}
-                        onChange={() => handleToggleSubtask(st.id)}
-                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
+                    <div
+                      onClick={() => handleToggleSubtask(st.id)}
+                      className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer select-none"
+                    >
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={st.completed}
+                        aria-label={st.title}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleSubtask(st.id)
+                        }}
+                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer ${
+                          st.completed
+                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
+                            : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 bg-white dark:bg-slate-800'
+                        }`}
+                      >
+                        {st.completed && (
+                          <Check className="w-3 h-3 text-white stroke-[3]" />
+                        )}
+                      </button>
                       <span
-                        className={`text-xs text-slate-800 dark:text-slate-200 truncate ${
+                        className={`text-xs text-slate-700 dark:text-slate-300 truncate transition-colors ${
                           st.completed
                             ? 'line-through text-slate-400 dark:text-slate-500'
                             : ''
@@ -429,7 +424,7 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
                       >
                         {st.title}
                       </span>
-                    </label>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveSubtask(st.id)}
@@ -468,83 +463,6 @@ const TaskModalDialog: React.FC<TaskModalProps> = ({
                 <span>Adicionar</span>
               </button>
             </div>
-          </div>
-
-          {/* Tags Section */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-              <TagIcon className="w-3.5 h-3.5" />
-              <span>Etiquetas (Tags)</span>
-            </label>
-
-            {/* Selected Tags Chips */}
-            <div className="flex flex-wrap items-center gap-1.5 mb-2">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/50"
-                >
-                  #{tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="hover:text-indigo-950 dark:hover:text-white transition-colors cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              {tags.length === 0 && (
-                <span className="text-xs text-slate-400 italic">
-                  Nenhuma etiqueta adicionada.
-                </span>
-              )}
-            </div>
-
-            {/* Add Tag Input & Suggested Tags */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="Nova tag... (Enter)"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => handleAddTag()}
-                disabled={!tagInput.trim()}
-                className="px-3 py-2 text-xs font-medium rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Inserir</span>
-              </button>
-            </div>
-
-            {/* Suggestions */}
-            {suggestedTags.length > 0 && (
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap text-xs text-slate-400">
-                <span>Sugestões:</span>
-                {suggestedTags.map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => handleAddTag(st)}
-                    className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer"
-                  >
-                    +{st}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Pomodoro info if existing */}
