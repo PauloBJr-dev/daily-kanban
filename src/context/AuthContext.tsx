@@ -1,4 +1,5 @@
-﻿import React, { createContext, useEffect, useState, useMemo, useCallback } from 'react'
+/* eslint-disable react/only-export-components */
+import React, { createContext, useEffect, useState, useMemo, useCallback } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
@@ -73,7 +74,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined
+      const redirectTo =
+        typeof window !== 'undefined' ? window.location.origin : undefined
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
