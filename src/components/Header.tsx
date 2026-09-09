@@ -12,6 +12,7 @@ import {
   GraduationCap,
   BookOpen,
 } from 'lucide-react'
+import { UserMenu } from './UserMenu'
 
 interface HeaderProps {
   onNewTask: () => void
@@ -135,6 +136,9 @@ export const Header: React.FC<HeaderProps> = ({
               <Moon className="w-4 h-4" />
             )}
           </button>
+
+          {/* User Menu (Desktop and Mobile) */}
+          <UserMenu />
 
           {/* Main Action Button (New Task / New Note) */}
           {activeView === 'academic' ? (

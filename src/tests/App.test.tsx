@@ -13,6 +13,7 @@ describe('App Integration', () => {
     // Header
     expect(screen.getByText('DailyFlow')).toBeInTheDocument()
     expect(screen.getByText('Nova Tarefa')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /entrar com google/i })).toBeInTheDocument()
 
     // QuickStats
     expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()

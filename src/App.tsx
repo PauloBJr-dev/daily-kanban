@@ -14,6 +14,7 @@ import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import { ToastProvider, useToast } from './hooks/useToast'
+import { AuthProvider } from './context/AuthContext'
 import type { Task, Column } from './types/kanban'
 
 export const AppContent: React.FC = () => {
@@ -502,9 +503,11 @@ export const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
+    <AuthProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </AuthProvider>
   )
 }
 
