@@ -36,12 +36,14 @@ export interface KanbanData {
 
 export type FilterPriority = 'all' | Priority
 export type FilterScope = 'all' | 'today' | 'upcoming' | 'overdue' | 'completed'
+export type WeekScope = 'this_week' | 'last_week' | 'all'
 
 export interface FilterState {
   searchQuery: string
   priority: FilterPriority
-  tag: string | null
+  tag?: string | null
   scope: FilterScope
+  weekScope: WeekScope
 }
 
 export interface PomodoroSession {

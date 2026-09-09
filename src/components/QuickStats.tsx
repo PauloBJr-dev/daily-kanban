@@ -10,6 +10,7 @@ interface QuickStatsProps {
     overdueCount: number
     urgentCount: number
     completionRate: number
+    weekCompletedCount?: number
   }
 }
 
@@ -48,6 +49,11 @@ export const QuickStats: React.FC<QuickStatsProps> = ({ stats }) => {
               ({stats.completedCount}/{stats.total})
             </span>
           </div>
+          {stats.weekCompletedCount !== undefined && (
+            <p className="text-[11px] font-medium text-emerald-600/90 dark:text-emerald-400/90 mt-1">
+              {stats.weekCompletedCount} concluída(s) nesta semana
+            </p>
+          )}
         </div>
         <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
           <CheckCircle2 className="w-5 h-5" />
