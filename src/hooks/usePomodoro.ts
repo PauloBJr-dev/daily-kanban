@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import confetti from 'canvas-confetti'
-import type { PomodoroSession } from '../types/kanban'
-import { playWorkCompleteSound, playBreakCompleteSound } from '../services/soundService'
+import type { PomodoroSession, CatPurrType } from '../types/kanban'
+import {
+  playWorkCompleteSound,
+  playBreakCompleteSound,
+  startCatPurr,
+  stopCatPurr,
+} from '../services/soundService'
 import { notify, requestPermission } from '../services/notificationService'
 
 export const POMODORO_SETTINGS_KEY = 'dailyflow_pomodoro_settings'
@@ -9,26 +14,45 @@ export const POMODORO_SETTINGS_KEY = 'dailyflow_pomodoro_settings'
 const DEFAULT_WORK_TIME = 25 * 60 // 25 minutes
 const DEFAULT_BREAK_TIME = 5 * 60 // 5 minutes
 const DEFAULT_DOCUMENT_TITLE = 'DailyFlow Kanban'
+const DEFAULT_CAT_PURR_TYPE: CatPurrType = 'none'
+const DEFAULT_CAT_PURR_VOLUME = 0.6
 
 interface PomodoroSettings {
   workDuration: number
   breakDuration: number
   isSoundEnabled: boolean
+  catPurrType: CatPurrType
+  catPurrVolume: number
 }
 
 const loadSettings = (): PomodoroSettings => {
+  const defaults: PomodoroSettings = {
+    workDuration: DEFAULT_WORK_TIME,
+    breakDuration: DEFAULT_BREAK_TIME,
+    isSoundEnabled: true,
+    catPurrType: DEFAULT_CAT_PURR_TYPE,
+    catPurrVolume: DEFAULT_CAT_PURR_VOLUME,
+  }
+
   if (typeof window === 'undefined') {
-    return {
-      workDuration: DEFAULT_WORK_TIME,
-      breakDuration: DEFAULT_BREAK_TIME,
-      isSoundEnabled: true,
-    }
+    return defaults
   }
 
   try {
     const saved = localStorage.getItem(POMODORO_SETTINGS_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
+      const validPurrTypes: CatPurrType[] = ['none', 'soft', 'deep', 'rhythmic']
+      const catPurrType = validPurrTypes.includes(parsed.catPurrType)
+        ? (parsed.catPurrType as CatPurrType)
+        : DEFAULT_CAT_PURR_TYPE
+      const catPurrVolume =
+        typeof parsed.catPurrVolume === 'number' &&
+        parsed.catPurrVolume >= 0 &&
+        parsed.catPurrVolume <= 1
+          ? parsed.catPurrVolume
+          : DEFAULT_CAT_PURR_VOLUME
+
       return {
         workDuration:
           typeof parsed.workDuration === 'number' && parsed.workDuration > 0
@@ -40,17 +64,15 @@ const loadSettings = (): PomodoroSettings => {
             : DEFAULT_BREAK_TIME,
         isSoundEnabled:
           typeof parsed.isSoundEnabled === 'boolean' ? parsed.isSoundEnabled : true,
+        catPurrType,
+        catPurrVolume,
       }
     }
   } catch {
     // Ignora erros de parse do localStorage
   }
 
-  return {
-    workDuration: DEFAULT_WORK_TIME,
-    breakDuration: DEFAULT_BREAK_TIME,
-    isSoundEnabled: true,
-  }
+  return defaults
 }
 
 export function usePomodoro(
@@ -67,6 +89,8 @@ export function usePomodoro(
     workDuration: initialSettings.workDuration,
     breakDuration: initialSettings.breakDuration,
     isSoundEnabled: initialSettings.isSoundEnabled,
+    catPurrType: initialSettings.catPurrType,
+    catPurrVolume: initialSettings.catPurrVolume,
   }))
 
   const originalTitleRef = useRef<string>(
@@ -102,14 +126,41 @@ export function usePomodoro(
     }
   }, [session.isRunning, session.timeLeft, session.mode, formatTime])
 
-  // Restaura título ao desmontar o componente
+  // Restaura t?tulo e interrompe ?udio ao desmontar o componente
   useEffect(() => {
     return () => {
+      stopCatPurr()
       if (typeof document !== 'undefined') {
         document.title = originalTitleRef.current
       }
     }
   }, [])
+
+  // Gerenciamento ac?stico do ronrom de gato durante a pausa (break)
+  useEffect(() => {
+    const shouldPurr =
+      session.isRunning &&
+      session.mode === 'break' &&
+      (session.isSoundEnabled ?? true) &&
+      session.catPurrType &&
+      session.catPurrType !== 'none'
+
+    if (shouldPurr) {
+      startCatPurr(session.catPurrType!, session.catPurrVolume ?? DEFAULT_CAT_PURR_VOLUME)
+    } else {
+      stopCatPurr()
+    }
+
+    return () => {
+      stopCatPurr()
+    }
+  }, [
+    session.isRunning,
+    session.mode,
+    session.isSoundEnabled,
+    session.catPurrType,
+    session.catPurrVolume,
+  ])
 
   // Função central para processar conclusão de ciclo (foco -> descanso ou descanso -> foco)
   const handleCycleComplete = useCallback(() => {
@@ -403,6 +454,8 @@ export function usePomodoro(
             workDuration: newWorkDuration,
             breakDuration: newBreakDuration,
             isSoundEnabled: updated.isSoundEnabled ?? true,
+            catPurrType: updated.catPurrType ?? DEFAULT_CAT_PURR_TYPE,
+            catPurrVolume: updated.catPurrVolume ?? DEFAULT_CAT_PURR_VOLUME,
           })
         )
       } catch {
@@ -423,6 +476,8 @@ export function usePomodoro(
             workDuration: prev.workDuration,
             breakDuration: prev.breakDuration,
             isSoundEnabled: nextSound,
+            catPurrType: prev.catPurrType ?? DEFAULT_CAT_PURR_TYPE,
+            catPurrVolume: prev.catPurrVolume ?? DEFAULT_CAT_PURR_VOLUME,
           })
         )
       } catch {
@@ -435,6 +490,54 @@ export function usePomodoro(
     })
   }, [])
 
+  const updateSettings = useCallback(
+    (
+      workMinutes: number,
+      breakMinutes: number,
+      isSoundEnabled: boolean,
+      catPurrType: CatPurrType,
+      catPurrVolume: number
+    ) => {
+      const newWorkDuration = Math.max(1, Math.round(workMinutes)) * 60
+      const newBreakDuration = Math.max(1, Math.round(breakMinutes)) * 60
+      const validVolume = Math.max(0, Math.min(1, catPurrVolume))
+
+      setSession((prev) => {
+        const updated: PomodoroSession = {
+          ...prev,
+          workDuration: newWorkDuration,
+          breakDuration: newBreakDuration,
+          isSoundEnabled,
+          catPurrType,
+          catPurrVolume: validVolume,
+          timeLeft: !prev.isRunning
+            ? prev.mode === 'work'
+              ? newWorkDuration
+              : newBreakDuration
+            : prev.timeLeft,
+        }
+
+        try {
+          localStorage.setItem(
+            POMODORO_SETTINGS_KEY,
+            JSON.stringify({
+              workDuration: newWorkDuration,
+              breakDuration: newBreakDuration,
+              isSoundEnabled,
+              catPurrType,
+              catPurrVolume: validVolume,
+            })
+          )
+        } catch {
+          // Ignora falhas de escrita
+        }
+
+        return updated
+      })
+    },
+    []
+  )
+
   return {
     session,
     startFocus,
@@ -446,5 +549,6 @@ export function usePomodoro(
     formatTime,
     updateDurations,
     toggleSound,
+    updateSettings,
   }
 }

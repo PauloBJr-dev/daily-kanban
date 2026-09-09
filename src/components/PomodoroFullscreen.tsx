@@ -118,9 +118,12 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
           }`}
         >
           <span
+            key={isNearEnd ? `countdown-${session.timeLeft}` : 'fullscreen-timer'}
             data-testid="fullscreen-timer-display"
-            className={`text-7xl sm:text-9xl font-mono font-bold tracking-tight drop-shadow-sm select-none transition-colors ${
-              isNearEnd ? 'text-amber-400' : 'text-white'
+            className={`text-7xl sm:text-9xl font-mono font-bold tracking-tight drop-shadow-sm select-none transition-colors inline-block ${
+              isNearEnd
+                ? 'text-amber-400 animate-countdown-blink font-black'
+                : 'text-white'
             }`}
           >
             {formatTime(session.timeLeft)}

@@ -119,4 +119,41 @@ describe('PomodoroWidget component', () => {
     fireEvent.click(resetBtn)
     expect(onReset).toHaveBeenCalledTimes(1)
   })
+  it('aplica anima??o animate-countdown-blink a cada segundo nos ?ltimos 5 segundos', () => {
+    const nearEndSession: PomodoroSession = {
+      ...defaultSession,
+      timeLeft: 3,
+      isRunning: true,
+    }
+
+    const { rerender } = render(
+      <PomodoroWidget
+        session={nearEndSession}
+        onPlayPause={vi.fn()}
+        onReset={vi.fn()}
+        onSwitchMode={vi.fn()}
+        onClearTask={vi.fn()}
+        formatTime={formatTime}
+      />
+    )
+
+    const timerSpan = screen.getByText('00:03')
+    expect(timerSpan).toHaveClass('animate-countdown-blink')
+    expect(timerSpan).toHaveClass('text-amber-500')
+
+    // Ao diminuir para 2 segundos, o novo elemento renderizado mant?m a classe
+    rerender(
+      <PomodoroWidget
+        session={{ ...nearEndSession, timeLeft: 2 }}
+        onPlayPause={vi.fn()}
+        onReset={vi.fn()}
+        onSwitchMode={vi.fn()}
+        onClearTask={vi.fn()}
+        formatTime={formatTime}
+      />
+    )
+
+    const nextTimerSpan = screen.getByText('00:02')
+    expect(nextTimerSpan).toHaveClass('animate-countdown-blink')
+  })
 })

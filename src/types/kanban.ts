@@ -46,6 +46,8 @@ export interface FilterState {
   weekScope: WeekScope
 }
 
+export type CatPurrType = 'none' | 'soft' | 'deep' | 'rhythmic'
+
 export interface PomodoroSession {
   taskId: string | null
   taskTitle?: string
@@ -55,4 +57,6 @@ export interface PomodoroSession {
   workDuration: number // in seconds (default 25 * 60)
   breakDuration: number // in seconds (default 5 * 60)
   isSoundEnabled?: boolean
+  catPurrType?: CatPurrType
+  catPurrVolume?: number // 0 to 1 (default 0.6)
 }

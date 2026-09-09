@@ -9,7 +9,7 @@ import {
   Settings,
   Maximize2,
 } from 'lucide-react'
-import type { PomodoroSession } from '../types/kanban'
+import type { PomodoroSession, CatPurrType } from '../types/kanban'
 import { PomodoroSettingsModal } from './PomodoroSettingsModal'
 
 interface PomodoroWidgetProps {
@@ -22,6 +22,13 @@ interface PomodoroWidgetProps {
   onUpdateDurations?: (workMinutes: number, breakMinutes: number) => void
   onToggleSound?: () => void
   onOpenFullscreen?: () => void
+  onUpdateSettings?: (
+    workMinutes: number,
+    breakMinutes: number,
+    soundEnabled: boolean,
+    catPurrType: CatPurrType,
+    catPurrVolume: number
+  ) => void
 }
 
 export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
@@ -34,6 +41,7 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
   onUpdateDurations,
   onToggleSound,
   onOpenFullscreen,
+  onUpdateSettings,
 }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const isWork = session.mode === 'work'
@@ -51,13 +59,25 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
   const handleSaveSettings = (
     newWorkMinutes: number,
     newBreakMinutes: number,
-    newSoundEnabled: boolean
+    newSoundEnabled: boolean,
+    newCatPurrType: CatPurrType,
+    newCatPurrVolume: number
   ) => {
-    if (onUpdateDurations) {
-      onUpdateDurations(newWorkMinutes, newBreakMinutes)
-    }
-    if (onToggleSound && (session.isSoundEnabled ?? true) !== newSoundEnabled) {
-      onToggleSound()
+    if (onUpdateSettings) {
+      onUpdateSettings(
+        newWorkMinutes,
+        newBreakMinutes,
+        newSoundEnabled,
+        newCatPurrType,
+        newCatPurrVolume
+      )
+    } else {
+      if (onUpdateDurations) {
+        onUpdateDurations(newWorkMinutes, newBreakMinutes)
+      }
+      if (onToggleSound && (session.isSoundEnabled ?? true) !== newSoundEnabled) {
+        onToggleSound()
+      }
     }
   }
 
@@ -167,7 +187,14 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <span className="text-xl font-mono font-bold tracking-tight text-slate-900 dark:text-slate-100 min-w-[60px]">
+            <span
+              key={isNearEnd ? `widget-countdown-${session.timeLeft}` : 'widget-timer'}
+              className={`text-xl font-mono font-bold tracking-tight min-w-[60px] inline-block transition-colors ${
+                isNearEnd
+                  ? 'text-amber-500 dark:text-amber-400 animate-countdown-blink font-black'
+                  : 'text-slate-900 dark:text-slate-100'
+              }`}
+            >
               {formatTime(session.timeLeft)}
             </span>
           </div>
@@ -232,6 +259,8 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
         currentWorkMinutes={workMinutes}
         currentBreakMinutes={breakMinutes}
         isSoundEnabled={session.isSoundEnabled ?? true}
+        currentCatPurrType={session.catPurrType ?? 'none'}
+        currentCatPurrVolume={session.catPurrVolume ?? 0.6}
         onSave={handleSaveSettings}
       />
     </>

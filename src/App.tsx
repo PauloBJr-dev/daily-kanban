@@ -87,6 +87,7 @@ export const AppContent: React.FC = () => {
     formatTime,
     updateDurations,
     toggleSound,
+    updateSettings,
   } = usePomodoro(handleTaskMinuteLogged)
 
   const [isPomodoroFullscreen, setIsPomodoroFullscreen] = useState(false)
@@ -412,6 +413,7 @@ export const AppContent: React.FC = () => {
               formatTime={formatTime}
               onUpdateDurations={updateDurations}
               onToggleSound={toggleSound}
+              onUpdateSettings={updateSettings}
               onOpenFullscreen={() => setIsPomodoroFullscreen(true)}
             />
 
