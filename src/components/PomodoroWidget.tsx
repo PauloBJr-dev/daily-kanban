@@ -1,5 +1,14 @@
 import React, { useState } from 'react'
-import { Play, Pause, RotateCcw, Flame, Coffee, X, Settings } from 'lucide-react'
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  Flame,
+  Coffee,
+  X,
+  Settings,
+  Maximize2,
+} from 'lucide-react'
 import type { PomodoroSession } from '../types/kanban'
 import { PomodoroSettingsModal } from './PomodoroSettingsModal'
 
@@ -12,6 +21,7 @@ interface PomodoroWidgetProps {
   formatTime: (seconds: number) => string
   onUpdateDurations?: (workMinutes: number, breakMinutes: number) => void
   onToggleSound?: () => void
+  onOpenFullscreen?: () => void
 }
 
 export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
@@ -23,6 +33,7 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
   formatTime,
   onUpdateDurations,
   onToggleSound,
+  onOpenFullscreen,
 }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const isWork = session.mode === 'work'
@@ -31,6 +42,8 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
     0,
     Math.min(100, ((maxDuration - session.timeLeft) / maxDuration) * 100)
   )
+
+  const isNearEnd = session.isRunning && session.timeLeft <= 5 && session.timeLeft > 0
 
   const workMinutes = Math.round(session.workDuration / 60)
   const breakMinutes = Math.round(session.breakDuration / 60)
@@ -50,7 +63,14 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
 
   return (
     <>
-      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div
+        data-testid="pomodoro-widget"
+        className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border transition-all duration-300 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 ${
+          isNearEnd
+            ? 'border-amber-400/80 dark:border-amber-500/80 ring-2 ring-amber-500/60 shadow-lg shadow-amber-500/20 animate-pulse'
+            : 'border-slate-200/70 dark:border-slate-800'
+        }`}
+      >
         {/* Left info */}
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div
@@ -182,6 +202,17 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
             >
               <RotateCcw className="w-4 h-4" />
             </button>
+            {onOpenFullscreen && (
+              <button
+                type="button"
+                onClick={onOpenFullscreen}
+                aria-label="Expandir para tela cheia"
+                title="Tela Cheia"
+                className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
