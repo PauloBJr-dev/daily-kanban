@@ -19,6 +19,12 @@ export interface Task {
   createdAt: string // ISO string
   updatedAt: string // ISO string
   pomodoroMinutesSpent?: number
+  timeTracked?: {
+    inProgressSeconds?: number
+    inReviewSeconds?: number
+    currentTimerStartedAt?: string | null
+    currentTimerColumnId?: string | null
+  }
 }
 
 export interface Column {
@@ -26,6 +32,7 @@ export interface Column {
   title: string
   order: number
   colorTheme: 'blue' | 'amber' | 'purple' | 'emerald' | 'rose' | 'slate'
+  isPermanent?: boolean
 }
 
 export interface KanbanData {

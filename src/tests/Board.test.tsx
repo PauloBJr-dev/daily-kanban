@@ -1,13 +1,32 @@
-import { describe, it, expect, vi } from 'vitest'
+﻿import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Board } from '../components/Board'
 import type { Column, Task } from '../types/kanban'
 
 describe('Board', () => {
   const mockColumns: Column[] = [
-    { id: 'col-todo', title: 'A Fazer', order: 0, colorTheme: 'blue' },
-    { id: 'col-doing', title: 'Em Progresso', order: 1, colorTheme: 'amber' },
-    { id: 'col-done', title: 'Concluído', order: 2, colorTheme: 'emerald' },
+    { id: 'col-todo', title: 'A Fazer', order: 0, colorTheme: 'blue', isPermanent: true },
+    {
+      id: 'col-doing',
+      title: 'Em Progresso',
+      order: 1,
+      colorTheme: 'amber',
+      isPermanent: true,
+    },
+    {
+      id: 'col-custom',
+      title: 'Revisão Custom',
+      order: 2,
+      colorTheme: 'purple',
+      isPermanent: false,
+    },
+    {
+      id: 'col-done',
+      title: 'Concluído',
+      order: 3,
+      colorTheme: 'emerald',
+      isPermanent: true,
+    },
   ]
 
   const mockTasks: Task[] = [
@@ -44,6 +63,9 @@ describe('Board', () => {
     onStartFocus: vi.fn(),
     onAddColumn: vi.fn(),
     onDeleteColumn: vi.fn(),
+    onMoveColumn: vi.fn(),
+    onReorderColumns: vi.fn(),
+    onUpdateColumn: vi.fn(),
   }
 
   it('renderiza todas as colunas e suas tarefas respectivas', () => {
@@ -51,9 +73,101 @@ describe('Board', () => {
 
     expect(screen.getByText('A Fazer')).toBeInTheDocument()
     expect(screen.getByText('Em Progresso')).toBeInTheDocument()
+    expect(screen.getByText('Revisão Custom')).toBeInTheDocument()
     expect(screen.getByText('Concluído')).toBeInTheDocument()
     expect(screen.getByText('Tarefa 1')).toBeInTheDocument()
     expect(screen.getByText('Tarefa 2')).toBeInTheDocument()
+  })
+
+  it('oculta botão de exclusão em colunas permanentes e exibe apenas em colunas customizadas', () => {
+    render(<Board {...defaultProps} />)
+
+    // Colunas permanentes não devem ter o botão de excluir
+    expect(screen.queryByLabelText('Excluir coluna A Fazer')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Excluir coluna Em Progresso')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Excluir coluna Concluído')).not.toBeInTheDocument()
+
+    // Coluna não-permanente deve ter o botão de excluir
+    const deleteCustomBtn = screen.getByLabelText('Excluir coluna Revisão Custom')
+    expect(deleteCustomBtn).toBeInTheDocument()
+
+    fireEvent.click(deleteCustomBtn)
+    expect(defaultProps.onDeleteColumn).toHaveBeenCalledWith('col-custom')
+  })
+
+  it('permite mover colunas para a esquerda e direita com os botões direcionais', () => {
+    const onMoveColumn = vi.fn()
+    render(<Board {...defaultProps} onMoveColumn={onMoveColumn} />)
+
+    // Primeira coluna ('A Fazer') não tem botão para a esquerda, mas tem para a direita
+    expect(
+      screen.queryByLabelText('Mover coluna A Fazer para a esquerda')
+    ).not.toBeInTheDocument()
+    const moveRightFirst = screen.getByLabelText('Mover coluna A Fazer para a direita')
+    fireEvent.click(moveRightFirst)
+    expect(onMoveColumn).toHaveBeenCalledWith('col-todo', 'right')
+
+    // Coluna do meio ('Em Progresso') tem ambos os botões
+    const moveLeftDoing = screen.getByLabelText(
+      'Mover coluna Em Progresso para a esquerda'
+    )
+    fireEvent.click(moveLeftDoing)
+    expect(onMoveColumn).toHaveBeenCalledWith('col-doing', 'left')
+  })
+
+  it('permite edição inline de título e tema de cor da coluna', () => {
+    const onUpdateColumn = vi.fn()
+    render(<Board {...defaultProps} onUpdateColumn={onUpdateColumn} />)
+
+    // Clicar no botão de edição da coluna 'A Fazer'
+    const editBtn = screen.getByLabelText('Editar coluna A Fazer')
+    fireEvent.click(editBtn)
+
+    // Campo de input aparece
+    const titleInput = screen.getByLabelText('Nome da coluna')
+    fireEvent.change(titleInput, { target: { value: 'Backlog Geral' } })
+
+    // Selecionar novo tema (ex: Âmbar)
+    const amberTheme = screen.getByLabelText('Âmbar')
+    fireEvent.click(amberTheme)
+
+    // Salvar
+    const saveBtn = screen.getByLabelText('Salvar alterações da coluna')
+    fireEvent.click(saveBtn)
+
+    expect(onUpdateColumn).toHaveBeenCalledWith('col-todo', {
+      title: 'Backlog Geral',
+      colorTheme: 'amber',
+    })
+  })
+
+  it('suporta arrastar e soltar (drag & drop) para reordenar colunas com indicador visual', () => {
+    const onReorderColumns = vi.fn()
+    render(<Board {...defaultProps} onReorderColumns={onReorderColumns} />)
+
+    const secondColumnEl = document.getElementById('column-col-doing')!
+
+    // Simula arrastar coluna sobre a segunda coluna
+    fireEvent.dragOver(secondColumnEl, {
+      dataTransfer: {
+        types: ['text/kanban-column-id'],
+        setData: vi.fn(),
+        getData: vi.fn(),
+      },
+      clientX: 50,
+    })
+
+    // Deve exibir o indicador de drop
+    expect(screen.getByTestId(/column-drop-(left|right)/)).toBeInTheDocument()
+
+    // Simula soltar a primeira coluna sobre a segunda coluna
+    fireEvent.drop(secondColumnEl, {
+      dataTransfer: {
+        getData: (type: string) => (type === 'text/kanban-column-id' ? 'col-todo' : ''),
+      },
+    })
+
+    expect(onReorderColumns).toHaveBeenCalled()
   })
 
   it('permite adicionar uma nova coluna com nome e tema de cor', () => {
