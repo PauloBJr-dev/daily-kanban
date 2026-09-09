@@ -8,7 +8,7 @@ export const POMODORO_SETTINGS_KEY = 'dailyflow_pomodoro_settings'
 
 const DEFAULT_WORK_TIME = 25 * 60 // 25 minutes
 const DEFAULT_BREAK_TIME = 5 * 60 // 5 minutes
-const DEFAULT_DOCUMENT_TITLE = 'DailyFlow Kanban'
+const DEFAULT_DOCUMENT_TITLE = 'OrganoCat Kanban'
 
 interface PomodoroSettings {
   workDuration: number
@@ -90,10 +90,10 @@ export function usePomodoro(
     if (session.isRunning) {
       completedTitleRef.current = null
       if (session.timeLeft <= 5 && session.timeLeft > 0) {
-        document.title = `⚡ (${formatTime(session.timeLeft)}) Quase lá! | DailyFlow`
+        document.title = `⚡ (${formatTime(session.timeLeft)}) Quase lá! | OrganoCat`
       } else {
         const modeLabel = session.mode === 'work' ? '🎯 Foco' : '☕ Pausa'
-        document.title = `(${formatTime(session.timeLeft)}) ${modeLabel} | DailyFlow`
+        document.title = `(${formatTime(session.timeLeft)}) ${modeLabel} | OrganoCat`
       }
     } else if (completedTitleRef.current) {
       document.title = completedTitleRef.current
@@ -136,9 +136,9 @@ export function usePomodoro(
         } catch {
           // Silencia falhas caso canvas não esteja disponível
         }
-        completedTitleRef.current = '⏰ Foco Concluído! | DailyFlow'
+        completedTitleRef.current = '⏰ Foco Concluído! | OrganoCat'
         if (typeof document !== 'undefined') {
-          document.title = '⏰ Foco Concluído! | DailyFlow'
+          document.title = '⏰ Foco Concluído! | OrganoCat'
         }
 
         if (prev.taskId && onTaskMinuteLogged) {
@@ -152,9 +152,9 @@ export function usePomodoro(
           body: 'Sua pausa terminou. Pronto para mais um ciclo de foco produtivo?',
           icon: '/vite.svg',
         })
-        completedTitleRef.current = '⏰ Pausa Finalizada! | DailyFlow'
+        completedTitleRef.current = '⏰ Pausa Finalizada! | OrganoCat'
         if (typeof document !== 'undefined') {
-          document.title = '⏰ Pausa Finalizada! | DailyFlow'
+          document.title = '⏰ Pausa Finalizada! | OrganoCat'
         }
       }
 

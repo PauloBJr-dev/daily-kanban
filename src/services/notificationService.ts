@@ -1,5 +1,5 @@
 /**
- * Serviço de notificações do navegador para o DailyFlow Pomodoro.
+ * Serviço de notificações do navegador para o OrganoCat Pomodoro.
  * Lida com permissões, checagens de compatibilidade e disparo de alertas visuais no SO.
  */
 

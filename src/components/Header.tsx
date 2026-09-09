@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <h1 className="text-base sm:text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5 sm:gap-2">
-              DailyFlow
+              OrganoCat
               <span className="text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">
                 {activeView === 'academic' ? 'Acadêmico' : 'Kanban'}
               </span>

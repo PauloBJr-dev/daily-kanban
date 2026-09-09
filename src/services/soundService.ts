@@ -1,5 +1,5 @@
 /**
- * Serviço de áudio sintetizado para o DailyFlow Pomodoro.
+ * Serviço de áudio sintetizado para o OrganoCat Pomodoro.
  * Utiliza a Web Audio API nativa sem downloads externos nem dependências de rede.
  */
 

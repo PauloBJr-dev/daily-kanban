@@ -86,7 +86,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
                 Atalhos de Teclado
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Navegue pelo DailyFlow com rapidez e foco no trabalho diário
+                Navegue pelo OrganoCat com rapidez e foco no trabalho diário
               </p>
             </div>
           </div>
