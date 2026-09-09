@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import type { PomodoroSession } from '../types/kanban'
 import { playWorkCompleteSound, playBreakCompleteSound } from '../services/soundService'
-import { notify } from '../services/notificationService'
+import { notify, requestPermission } from '../services/notificationService'
 
 export const POMODORO_SETTINGS_KEY = 'dailyflow_pomodoro_settings'
 
@@ -89,8 +89,12 @@ export function usePomodoro(
 
     if (session.isRunning) {
       completedTitleRef.current = null
-      const modeLabel = session.mode === 'work' ? '🎯 Foco' : '☕ Pausa'
-      document.title = `(${formatTime(session.timeLeft)}) ${modeLabel} | DailyFlow`
+      if (session.timeLeft <= 5 && session.timeLeft > 0) {
+        document.title = `⚡ (${formatTime(session.timeLeft)}) Quase lá! | DailyFlow`
+      } else {
+        const modeLabel = session.mode === 'work' ? '🎯 Foco' : '☕ Pausa'
+        document.title = `(${formatTime(session.timeLeft)}) ${modeLabel} | DailyFlow`
+      }
     } else if (completedTitleRef.current) {
       document.title = completedTitleRef.current
     } else {
@@ -298,6 +302,13 @@ export function usePomodoro(
 
   const startFocus = useCallback((taskId?: string, taskTitle?: string) => {
     completedTitleRef.current = null
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      window.Notification.permission === 'default'
+    ) {
+      requestPermission().catch(() => {})
+    }
     setSession((prev) => {
       targetEndTimeRef.current = Date.now() + prev.timeLeft * 1000
       return {
@@ -321,6 +332,13 @@ export function usePomodoro(
 
   const resumeFocus = useCallback(() => {
     completedTitleRef.current = null
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      window.Notification.permission === 'default'
+    ) {
+      requestPermission().catch(() => {})
+    }
     setSession((prev) => {
       targetEndTimeRef.current = Date.now() + prev.timeLeft * 1000
       return { ...prev, isRunning: true }
