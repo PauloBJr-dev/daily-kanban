@@ -4,6 +4,52 @@ import type { Column, FilterState, KanbanData, Subtask, Task } from '../types/ka
 import { storageService } from '../services/storageService'
 import { INITIAL_DATA } from '../services/seedData'
 
+/**
+ * Calculates the Monday 00:00:00 to Sunday 23:59:59 date range according to ISO-8601 week cycle.
+ */
+export function getISOWeekRange(
+  scope: 'this_week' | 'last_week',
+  baseDate: Date = new Date()
+): { start: Date; end: Date } {
+  const d = new Date(baseDate)
+  const day = d.getDay()
+  const diffToMonday = day === 0 ? -6 : 1 - day
+
+  const start = new Date(d)
+  start.setDate(d.getDate() + diffToMonday)
+  start.setHours(0, 0, 0, 0)
+
+  if (scope === 'last_week') {
+    start.setDate(start.getDate() - 7)
+  }
+
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  end.setHours(23, 59, 59, 999)
+
+  return { start, end }
+}
+
+export function parseTaskDate(dateStr: string): Date | null {
+  if (!dateStr) return null
+  if (dateStr.length === 10 && dateStr.includes('-')) {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null
+    return new Date(year, month - 1, day, 12, 0, 0)
+  }
+  const d = new Date(dateStr)
+  return isNaN(d.getTime()) ? null : d
+}
+
+export function isTaskInDateRange(task: Task, start: Date, end: Date): boolean {
+  const dateStr = task.completedAt || task.updatedAt || task.createdAt
+  if (!dateStr) return false
+  const date = parseTaskDate(dateStr)
+  if (!date) return false
+  const time = date.getTime()
+  return time >= start.getTime() && time <= end.getTime()
+}
+
 export function useKanban() {
   const [data, setData] = useState<KanbanData>(() => storageService.load())
   const [filters, setFilters] = useState<FilterState>({
@@ -11,6 +57,7 @@ export function useKanban() {
     priority: 'all',
     tag: null,
     scope: 'all',
+    weekScope: 'this_week',
   })
 
   // Save to localStorage whenever data changes
@@ -101,7 +148,9 @@ export function useKanban() {
         const updatedTask: Task = {
           ...task,
           columnId: targetColumnId,
-          completedAt: isNowDone ? new Date().toISOString() : undefined,
+          completedAt: isNowDone
+            ? task.completedAt || new Date().toISOString()
+            : undefined,
           updatedAt: new Date().toISOString(),
         }
 
@@ -234,6 +283,9 @@ export function useKanban() {
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], [])
 
   const filteredTasks = useMemo(() => {
+    const { start: thisWeekStart, end: thisWeekEnd } = getISOWeekRange('this_week')
+    const { start: lastWeekStart, end: lastWeekEnd } = getISOWeekRange('last_week')
+
     return data.tasks.filter((task) => {
       // Search query
       if (filters.searchQuery.trim()) {
@@ -249,7 +301,7 @@ export function useKanban() {
         return false
       }
 
-      // Tag filter
+      // Tag filter (simplified - tag filtering removed from primary flow)
       if (filters.tag && !task.tags.includes(filters.tag)) {
         return false
       }
@@ -267,6 +319,21 @@ export function useKanban() {
       }
       if (filters.scope === 'completed') {
         return task.columnId === 'col-done' || task.columnId.includes('done')
+      }
+
+      // Smart Weekly Filter
+      // Crucial Business Rule:
+      // The week filter ONLY affects completed tasks (col-done / includes 'done').
+      // Active / pending tasks in other columns (col-todo, col-progress, etc.) ALWAYS remain visible
+      // and rollover to subsequent weeks!
+      const isDone = task.columnId === 'col-done' || task.columnId.includes('done')
+      if (isDone) {
+        if (filters.weekScope === 'this_week') {
+          if (!isTaskInDateRange(task, thisWeekStart, thisWeekEnd)) return false
+        } else if (filters.weekScope === 'last_week') {
+          if (!isTaskInDateRange(task, lastWeekStart, lastWeekEnd)) return false
+        }
+        // If 'all', all completed tasks are shown
       }
 
       return true
@@ -297,6 +364,11 @@ export function useKanban() {
         !(t.columnId === 'col-done' || t.columnId.includes('done'))
     ).length
 
+    const { start: thisWeekStart, end: thisWeekEnd } = getISOWeekRange('this_week')
+    const weekCompletedCount = doneTasks.filter((t) =>
+      isTaskInDateRange(t, thisWeekStart, thisWeekEnd)
+    ).length
+
     const completionRate = total > 0 ? Math.round((completedCount / total) * 100) : 0
 
     return {
@@ -307,6 +379,7 @@ export function useKanban() {
       overdueCount,
       urgentCount,
       completionRate,
+      weekCompletedCount,
     }
   }, [data.tasks, todayStr])
 

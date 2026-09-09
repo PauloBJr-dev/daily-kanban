@@ -1,11 +1,12 @@
-import React from 'react'
-import { Search, X, Tag } from 'lucide-react'
-import type { FilterPriority, FilterScope, FilterState } from '../types/kanban'
+import React, { useMemo } from 'react'
+import { Search, X, Calendar } from 'lucide-react'
+import type { FilterPriority, FilterScope, FilterState, WeekScope } from '../types/kanban'
+import { getISOWeekRange } from '../hooks/useKanban'
 
 interface FilterBarProps {
   filters: FilterState
   onFilterChange: (updates: Partial<FilterState>) => void
-  allTags: string[]
+  allTags?: string[]
   totalFiltered: number
   allTasksCount: number
   searchInputRef?: React.RefObject<HTMLInputElement | null>
@@ -14,7 +15,6 @@ interface FilterBarProps {
 export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
-  allTags,
   totalFiltered,
   allTasksCount,
   searchInputRef,
@@ -35,11 +35,41 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     { id: 'low', label: 'Baixa', dot: 'bg-slate-400' },
   ]
 
+  // Week ranges for display
+  const { start: thisWeekStart, end: thisWeekEnd } = useMemo(
+    () => getISOWeekRange('this_week'),
+    []
+  )
+  const { start: lastWeekStart, end: lastWeekEnd } = useMemo(
+    () => getISOWeekRange('last_week'),
+    []
+  )
+
+  const formatShortRange = (start: Date, end: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${pad(start.getDate())}/${pad(start.getMonth() + 1)} - ${pad(end.getDate())}/${pad(end.getMonth() + 1)}`
+  }
+
+  const thisWeekLabel = useMemo(
+    () => formatShortRange(thisWeekStart, thisWeekEnd),
+    [thisWeekStart, thisWeekEnd]
+  )
+  const lastWeekLabel = useMemo(
+    () => formatShortRange(lastWeekStart, lastWeekEnd),
+    [lastWeekStart, lastWeekEnd]
+  )
+
+  const weekScopes: { id: WeekScope; label: string; dateRange?: string }[] = [
+    { id: 'this_week', label: 'Esta Semana', dateRange: thisWeekLabel },
+    { id: 'last_week', label: 'Semana Passada', dateRange: lastWeekLabel },
+    { id: 'all', label: 'Todas' },
+  ]
+
   const hasActiveFilters =
     filters.searchQuery !== '' ||
     filters.priority !== 'all' ||
-    filters.tag !== null ||
-    filters.scope !== 'all'
+    filters.scope !== 'all' ||
+    (filters.weekScope && filters.weekScope !== 'this_week')
 
   const clearAllFilters = () => {
     onFilterChange({
@@ -47,24 +77,25 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       priority: 'all',
       tag: null,
       scope: 'all',
+      weekScope: 'this_week',
     })
   }
 
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-2">
-      {/* Search Input & Scopes */}
-      <div className="flex flex-wrap items-center gap-2 flex-1 w-full sm:w-auto">
+    <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-2">
+      {/* Left: Search & Weekly Smart Filter */}
+      <div className="flex flex-wrap items-center gap-2.5 flex-1 w-full sm:w-auto">
         {/* Search input */}
-        <div className="relative w-full sm:w-auto sm:min-w-[200px] sm:flex-1 sm:max-w-xs">
+        <div className="relative w-full sm:w-auto sm:min-w-[210px] sm:max-w-xs">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Buscar tarefas ou tags..."
+            placeholder="Buscar tarefas..."
             aria-label="Buscar tarefas ou tags"
             value={filters.searchQuery}
             onChange={(e) => onFilterChange({ searchQuery: e.target.value })}
-            className="w-full pl-9 pr-9 py-2 min-h-[40px] sm:min-h-0 text-sm bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-all"
+            className="w-full pl-9 pr-9 py-2 min-h-[40px] sm:min-h-0 text-sm bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-all shadow-2xs"
           />
           {filters.searchQuery ? (
             <button
@@ -82,8 +113,55 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           )}
         </div>
 
+        {/* Weekly Filter Pills (Zen & Minimalist) */}
+        <div
+          role="group"
+          aria-label="Filtro semanal do Kanban"
+          className="flex items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-x-auto max-w-full no-scrollbar"
+        >
+          <div className="flex items-center pl-2 pr-1 text-slate-400 dark:text-slate-500 select-none">
+            <Calendar className="w-3.5 h-3.5 mr-1" />
+            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">
+              Semana:
+            </span>
+          </div>
+          {weekScopes.map((w) => {
+            const isActive = (filters.weekScope ?? 'this_week') === w.id
+            return (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => onFilterChange({ weekScope: w.id })}
+                aria-pressed={isActive}
+                aria-label={`Filtrar por ${w.label}`}
+                className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <span>{w.label}</span>
+                {w.dateRange && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                      isActive
+                        ? 'bg-white/20 text-white dark:bg-slate-900/10 dark:text-slate-900 font-semibold'
+                        : 'text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800'
+                    }`}
+                  >
+                    {w.dateRange}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Right: Scope pills, Priority Filter & Clear Button */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
         {/* Scope pills */}
-        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto max-w-full no-scrollbar">
+        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-x-auto max-w-full no-scrollbar">
           {scopes.map((s) => {
             const isActive = filters.scope === s.id
             return (
@@ -103,16 +181,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             )
           })}
         </div>
-      </div>
 
-      {/* Priority & Tag Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto">
         {/* Priority select */}
         <select
           value={filters.priority}
           onChange={(e) => onFilterChange({ priority: e.target.value as FilterPriority })}
           aria-label="Filtrar por prioridade"
-          className="text-xs font-medium py-2 px-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+          className="text-xs font-medium py-2 px-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
         >
           {priorities.map((p) => (
             <option key={p.id} value={p.id}>
@@ -121,34 +196,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           ))}
         </select>
 
-        {/* Tag select */}
-        {allTags.length > 0 && (
-          <div className="relative">
-            <select
-              value={filters.tag || ''}
-              onChange={(e) =>
-                onFilterChange({ tag: e.target.value ? e.target.value : null })
-              }
-              aria-label="Filtrar por etiqueta"
-              className="text-xs font-medium py-2 pl-7 pr-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
-            >
-              <option value="">Todas Etiquetas</option>
-              {allTags.map((t) => (
-                <option key={t} value={t}>
-                  #{t}
-                </option>
-              ))}
-            </select>
-            <Tag className="w-3 h-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        )}
-
         {/* Clear filter */}
         {hasActiveFilters && (
           <button
             onClick={clearAllFilters}
             aria-label="Limpar todos os filtros"
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer whitespace-nowrap"
           >
             <X className="w-3.5 h-3.5" />
             Limpar ({totalFiltered}/{allTasksCount})
