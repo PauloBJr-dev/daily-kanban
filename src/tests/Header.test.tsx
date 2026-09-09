@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Header } from '../components/Header'
+import { AuthProvider } from '../context/AuthContext'
 
 describe('Header Component', () => {
   const defaultProps = {
@@ -16,13 +17,21 @@ describe('Header Component', () => {
       total: 5,
       completionRate: 60,
     },
-    activeView: 'kanban' as const,
+    activeView: 'kanban' as 'kanban' | 'academic',
     onViewChange: vi.fn(),
     onNewNote: vi.fn(),
   }
 
+  const renderHeader = (props = defaultProps) => {
+    return render(
+      <AuthProvider>
+        <Header {...props} />
+      </AuthProvider>
+    )
+  }
+
   it('renderiza corretamente no modo Kanban com título, tabs e progresso diário', () => {
-    render(<Header {...defaultProps} />)
+    renderHeader()
 
     expect(screen.getByText('DailyFlow')).toBeInTheDocument()
     expect(screen.getByText('Kanban')).toBeInTheDocument()
@@ -37,9 +46,15 @@ describe('Header Component', () => {
     expect(academicTab).toHaveAttribute('aria-selected', 'false')
   })
 
+  it('renderiza o menu de autenticação com botão Entrar com Google', () => {
+    renderHeader()
+
+    expect(screen.getByRole('button', { name: /entrar com google/i })).toBeInTheDocument()
+  })
+
   it('chama onViewChange ao clicar nas abas do switcher', () => {
     const onViewChange = vi.fn()
-    render(<Header {...defaultProps} onViewChange={onViewChange} />)
+    renderHeader({ ...defaultProps, onViewChange })
 
     const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
     fireEvent.click(academicTab)
@@ -48,7 +63,7 @@ describe('Header Component', () => {
   })
 
   it('renderiza corretamente no modo Acadêmico com pill de estudos e botão Nova Anotação', () => {
-    render(<Header {...defaultProps} activeView="academic" />)
+    renderHeader({ ...defaultProps, activeView: 'academic' })
 
     expect(screen.getByText('DailyFlow')).toBeInTheDocument()
     expect(screen.getByText('Acadêmico')).toBeInTheDocument()
@@ -67,7 +82,7 @@ describe('Header Component', () => {
 
   it('chama onNewNote ao clicar em Nova Anotação no modo acadêmico', () => {
     const onNewNote = vi.fn()
-    render(<Header {...defaultProps} activeView="academic" onNewNote={onNewNote} />)
+    renderHeader({ ...defaultProps, activeView: 'academic', onNewNote })
 
     const newNoteBtn = screen.getByRole('button', { name: 'Criar nova anotação' })
     fireEvent.click(newNoteBtn)
@@ -77,7 +92,7 @@ describe('Header Component', () => {
 
   it('chama onNewTask ao clicar em Nova Tarefa no modo kanban', () => {
     const onNewTask = vi.fn()
-    render(<Header {...defaultProps} onNewTask={onNewTask} />)
+    renderHeader({ ...defaultProps, onNewTask })
 
     const newTaskBtn = screen.getByRole('button', { name: 'Criar nova tarefa' })
     fireEvent.click(newTaskBtn)
@@ -87,7 +102,7 @@ describe('Header Component', () => {
 
   it('chama onToggleTheme ao clicar no botão de alternar tema', () => {
     const onToggleTheme = vi.fn()
-    render(<Header {...defaultProps} onToggleTheme={onToggleTheme} />)
+    renderHeader({ ...defaultProps, onToggleTheme })
 
     const themeBtn = screen.getByRole('button', { name: /ativar modo escuro/i })
     fireEvent.click(themeBtn)
@@ -97,7 +112,7 @@ describe('Header Component', () => {
 
   it('chama onOpenShortcuts ao clicar no botão de atalhos', () => {
     const onOpenShortcuts = vi.fn()
-    render(<Header {...defaultProps} onOpenShortcuts={onOpenShortcuts} />)
+    renderHeader({ ...defaultProps, onOpenShortcuts })
 
     const shortcutsBtn = screen.getByRole('button', { name: /atalhos de teclado/i })
     fireEvent.click(shortcutsBtn)
