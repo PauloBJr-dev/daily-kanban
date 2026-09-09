@@ -1,20 +1,43 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+﻿import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { App } from '../App'
 
 describe('App Integration', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem('organocat_guest_acknowledged', 'true')
   })
 
-  it('renderiza o cabeçalho, quick stats, pomodoro widget, filtros e colunas do quadro', async () => {
+  it('abre automaticamente o AuthModal na primeira visita quando usuário não está logado e não consentiu', async () => {
+    localStorage.removeItem('organocat_guest_acknowledged')
+    render(<App />)
+
+    // Modal de autenticação abre na primeira visita
+    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.getByText('O que é Armazenamento Local?')).toBeInTheDocument()
+
+    // Marca o checkbox e continua sem conta
+    const checkbox = screen.getByRole('checkbox', {
+      name: /estou ciente de que meus dados ficarão salvos apenas neste navegador/i,
+    })
+    fireEvent.click(checkbox)
+
+    const continueBtn = screen.getByRole('button', { name: /continuar sem conta/i })
+    fireEvent.click(continueBtn)
+
+    // Modal fecha e usuário vê o aplicativo
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(localStorage.getItem('organocat_guest_acknowledged')).toBe('true')
+  })
+
+  it('renderiza o cabeçalho OrganoCat, quick stats, pomodoro widget, filtros e colunas do quadro', async () => {
     render(<App />)
 
     // Header
-    expect(screen.getByText('DailyFlow')).toBeInTheDocument()
+    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
     expect(screen.getByText('Nova Tarefa')).toBeInTheDocument()
     expect(
-      await screen.findByRole('button', { name: /entrar com google/i })
+      await screen.findByRole('button', { name: /entrar ou criar conta/i })
     ).toBeInTheDocument()
 
     // QuickStats
@@ -163,7 +186,7 @@ describe('App Integration', () => {
 
     // Muda para o modo acadêmico
     fireEvent.click(screen.getByRole('tab', { name: /espaço acadêmico/i }))
-    expect(screen.getByText('DailyFlow')).toBeInTheDocument()
+    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
 
     // Alterna para o Modo Studio
     fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
@@ -172,14 +195,14 @@ describe('App Integration', () => {
     const zenBtn = screen.getByLabelText('Modo Zen')
     fireEvent.click(zenBtn)
 
-    // Cabeçalho global do DailyFlow deve estar oculto
-    expect(screen.queryByText('DailyFlow')).not.toBeInTheDocument()
+    // Cabeçalho global do OrganoCat deve estar oculto
+    expect(screen.queryByText('OrganoCat')).not.toBeInTheDocument()
 
     // Pressiona Escape para desativar o Modo Zen
     fireEvent.keyDown(window, { key: 'Escape' })
 
     // Cabeçalho global restaurado
-    expect(screen.getByText('DailyFlow')).toBeInTheDocument()
+    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
   })
 
   it('renderiza o link de acessibilidade para pular para o conteúdo principal', () => {

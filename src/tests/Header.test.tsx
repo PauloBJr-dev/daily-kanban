@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+﻿import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { Header } from '../components/Header'
 import { AuthProvider } from '../context/AuthContext'
 
@@ -22,18 +22,22 @@ describe('Header Component', () => {
     onNewNote: vi.fn(),
   }
 
-  const renderHeader = (props = defaultProps) => {
-    return render(
-      <AuthProvider>
-        <Header {...props} />
-      </AuthProvider>
-    )
+  const renderHeader = async (props = defaultProps) => {
+    let result: any
+    await act(async () => {
+      result = render(
+        <AuthProvider>
+          <Header {...props} />
+        </AuthProvider>
+      )
+    })
+    return result
   }
 
-  it('renderiza corretamente no modo Kanban com título, tabs e progresso diário', () => {
-    renderHeader()
+  it('renderiza corretamente no modo Kanban com título OrganoCat, tabs e progresso diário', async () => {
+    await renderHeader()
 
-    expect(screen.getByText('DailyFlow')).toBeInTheDocument()
+    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
     expect(screen.getByText('Kanban')).toBeInTheDocument()
     expect(screen.getByText('Progresso Diário:')).toBeInTheDocument()
     expect(screen.getByText('3/5 (60%)')).toBeInTheDocument()
@@ -46,17 +50,18 @@ describe('Header Component', () => {
     expect(academicTab).toHaveAttribute('aria-selected', 'false')
   })
 
-  it('renderiza o menu de autenticação com botão Entrar com Google', async () => {
-    renderHeader()
+  it('renderiza o menu de autenticação com botão Entrar / Criar Conta', async () => {
+    await renderHeader()
 
     expect(
-      await screen.findByRole('button', { name: /entrar com google/i })
+      await screen.findByRole('button', { name: /entrar ou criar conta/i })
     ).toBeInTheDocument()
+    expect(screen.getByText('Entrar / Criar Conta')).toBeInTheDocument()
   })
 
-  it('chama onViewChange ao clicar nas abas do switcher', () => {
+  it('chama onViewChange ao clicar nas abas do switcher', async () => {
     const onViewChange = vi.fn()
-    renderHeader({ ...defaultProps, onViewChange })
+    await renderHeader({ ...defaultProps, onViewChange })
 
     const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
     fireEvent.click(academicTab)
@@ -64,10 +69,10 @@ describe('Header Component', () => {
     expect(onViewChange).toHaveBeenCalledWith('academic')
   })
 
-  it('renderiza corretamente no modo Acadêmico com pill de estudos e botão Nova Anotação', () => {
-    renderHeader({ ...defaultProps, activeView: 'academic' })
+  it('renderiza corretamente no modo Acadêmico com pill de estudos e botão Nova Anotação', async () => {
+    await renderHeader({ ...defaultProps, activeView: 'academic' })
 
-    expect(screen.getByText('DailyFlow')).toBeInTheDocument()
+    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
     expect(screen.getByText('Acadêmico')).toBeInTheDocument()
     expect(screen.getByText('Espaço de Estudos e Revisões')).toBeInTheDocument()
     expect(screen.queryByText('Progresso Diário:')).not.toBeInTheDocument()
@@ -82,9 +87,9 @@ describe('Header Component', () => {
     expect(academicTab).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('chama onNewNote ao clicar em Nova Anotação no modo acadêmico', () => {
+  it('chama onNewNote ao clicar em Nova Anotação no modo acadêmico', async () => {
     const onNewNote = vi.fn()
-    renderHeader({ ...defaultProps, activeView: 'academic', onNewNote })
+    await renderHeader({ ...defaultProps, activeView: 'academic', onNewNote })
 
     const newNoteBtn = screen.getByRole('button', { name: 'Criar nova anotação' })
     fireEvent.click(newNoteBtn)
@@ -92,9 +97,9 @@ describe('Header Component', () => {
     expect(onNewNote).toHaveBeenCalledTimes(1)
   })
 
-  it('chama onNewTask ao clicar em Nova Tarefa no modo kanban', () => {
+  it('chama onNewTask ao clicar em Nova Tarefa no modo kanban', async () => {
     const onNewTask = vi.fn()
-    renderHeader({ ...defaultProps, onNewTask })
+    await renderHeader({ ...defaultProps, onNewTask })
 
     const newTaskBtn = screen.getByRole('button', { name: 'Criar nova tarefa' })
     fireEvent.click(newTaskBtn)
@@ -102,9 +107,9 @@ describe('Header Component', () => {
     expect(onNewTask).toHaveBeenCalledTimes(1)
   })
 
-  it('chama onToggleTheme ao clicar no botão de alternar tema', () => {
+  it('chama onToggleTheme ao clicar no botão de alternar tema', async () => {
     const onToggleTheme = vi.fn()
-    renderHeader({ ...defaultProps, onToggleTheme })
+    await renderHeader({ ...defaultProps, onToggleTheme })
 
     const themeBtn = screen.getByRole('button', { name: /ativar modo escuro/i })
     fireEvent.click(themeBtn)
@@ -112,9 +117,9 @@ describe('Header Component', () => {
     expect(onToggleTheme).toHaveBeenCalledTimes(1)
   })
 
-  it('chama onOpenShortcuts ao clicar no botão de atalhos', () => {
+  it('chama onOpenShortcuts ao clicar no botão de atalhos', async () => {
     const onOpenShortcuts = vi.fn()
-    renderHeader({ ...defaultProps, onOpenShortcuts })
+    await renderHeader({ ...defaultProps, onOpenShortcuts })
 
     const shortcutsBtn = screen.getByRole('button', { name: /atalhos de teclado/i })
     fireEvent.click(shortcutsBtn)

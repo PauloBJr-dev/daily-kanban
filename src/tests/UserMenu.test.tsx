@@ -1,25 +1,37 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { UserMenu } from '../components/UserMenu'
 import * as useAuthModule from '../hooks/useAuth'
 import type { User } from '@supabase/supabase-js'
 
 describe('UserMenu Component', () => {
-  const mockSignInWithGoogle = vi.fn().mockResolvedValue({ error: null })
+  const mockOpenAuthModal = vi.fn()
+  const mockCloseAuthModal = vi.fn()
   const mockSignOut = vi.fn().mockResolvedValue({ error: null })
+  const mockSignUpWithPassword = vi.fn().mockResolvedValue({ error: null })
+  const mockSignInWithPassword = vi.fn().mockResolvedValue({ error: null })
+  const mockContinueAsGuest = vi.fn()
 
   const baseAuthValue = {
     user: null,
     session: null,
     loading: false,
     isConfigured: true,
-    signInWithGoogle: mockSignInWithGoogle,
+    signInWithGoogle: vi.fn().mockResolvedValue({ error: null }),
     signOut: mockSignOut,
+    signUpWithPassword: mockSignUpWithPassword,
+    signInWithPassword: mockSignInWithPassword,
+    continueAsGuest: mockContinueAsGuest,
+    isGuestAcknowledged: false,
+    isAuthModalOpen: false,
+    openAuthModal: mockOpenAuthModal,
+    closeAuthModal: mockCloseAuthModal,
   }
 
   beforeEach(() => {
     vi.restoreAllMocks()
-    mockSignInWithGoogle.mockClear()
+    mockOpenAuthModal.mockClear()
+    mockCloseAuthModal.mockClear()
     mockSignOut.mockClear()
   })
 
@@ -31,10 +43,10 @@ describe('UserMenu Component', () => {
 
     const { container } = render(<UserMenu />)
     expect(container.querySelector('.animate-spin')).toBeInTheDocument()
-    expect(screen.queryByText(/Entrar com Google/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Entrar \/ Criar Conta/i)).not.toBeInTheDocument()
   })
 
-  it('renderiza corretamente em modo visitante (não logado)', async () => {
+  it('renderiza corretamente em modo visitante com botão Entrar / Criar Conta e abre o modal ao clicar', async () => {
     vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
       ...baseAuthValue,
       user: null,
@@ -42,15 +54,15 @@ describe('UserMenu Component', () => {
 
     render(<UserMenu />)
 
-    const loginButton = screen.getByRole('button', { name: /entrar com google/i })
+    const loginButton = screen.getByRole('button', { name: /entrar ou criar conta/i })
     expect(loginButton).toBeInTheDocument()
-    expect(screen.getByText('Entrar com Google')).toBeInTheDocument()
+    expect(screen.getByText('Entrar / Criar Conta')).toBeInTheDocument()
 
-    // Clicar no botão aciona signInWithGoogle
+    // Clicar no botão aciona openAuthModal
     await act(async () => {
       fireEvent.click(loginButton)
     })
-    expect(mockSignInWithGoogle).toHaveBeenCalledTimes(1)
+    expect(mockOpenAuthModal).toHaveBeenCalledTimes(1)
   })
 
   it('renderiza em modo logado com avatar de imagem e primeiro nome abreviado', () => {
