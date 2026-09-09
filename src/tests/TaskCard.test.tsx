@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+﻿import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TaskCard } from '../components/TaskCard'
 import type { Column, Task } from '../types/kanban'
@@ -120,7 +120,6 @@ describe('TaskCard', () => {
 
     render(<TaskCard {...defaultProps} task={taskWithManySubtasks} />)
 
-    // Inicialmente, apenas as primeiras 4 estão visíveis
     expect(screen.getByText('Subtarefa 1')).toBeInTheDocument()
     expect(screen.getByText('Subtarefa 2')).toBeInTheDocument()
     expect(screen.getByText('Subtarefa 3')).toBeInTheDocument()
@@ -128,20 +127,16 @@ describe('TaskCard', () => {
     expect(screen.queryByText('Subtarefa 5')).not.toBeInTheDocument()
     expect(screen.queryByText('Subtarefa 6')).not.toBeInTheDocument()
 
-    // Botão para ver mais 2 subtarefas
     const expandBtn = screen.getByRole('button', { name: /ver mais 2 subtarefas/i })
     expect(expandBtn).toBeInTheDocument()
 
-    // Expandir
     fireEvent.click(expandBtn)
     expect(screen.getByText('Subtarefa 5')).toBeInTheDocument()
     expect(screen.getByText('Subtarefa 6')).toBeInTheDocument()
 
-    // Botão muda para Ver menos
     const collapseBtn = screen.getByRole('button', { name: /ver menos/i })
     expect(collapseBtn).toBeInTheDocument()
 
-    // Colapsar
     fireEvent.click(collapseBtn)
     expect(screen.queryByText('Subtarefa 5')).not.toBeInTheDocument()
     expect(
@@ -153,7 +148,6 @@ describe('TaskCard', () => {
     const onDelete = vi.fn()
     render(<TaskCard {...defaultProps} onDelete={onDelete} />)
 
-    // Open options menu
     const moreBtn = screen.getByTitle('Mais opções')
     fireEvent.click(moreBtn)
 
@@ -161,5 +155,60 @@ describe('TaskCard', () => {
     fireEvent.click(deleteBtn)
 
     expect(onDelete).toHaveBeenCalledWith('task-1')
+  })
+
+  it('fecha o menu de 3 pontinhos ao clicar fora ou pressionar Escape', () => {
+    render(<TaskCard {...defaultProps} />)
+
+    const moreBtn = screen.getByTitle('Mais opções')
+    fireEvent.click(moreBtn)
+    expect(screen.getByText('Editar')).toBeInTheDocument()
+
+    // Pressionar tecla Escape deve fechar o menu
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByText('Editar')).not.toBeInTheDocument()
+
+    // Reabrir o menu
+    fireEvent.click(moreBtn)
+    expect(screen.getByText('Editar')).toBeInTheDocument()
+
+    // Clicar fora (no document body) deve fechar o menu
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByText('Editar')).not.toBeInTheDocument()
+  })
+
+  it('exibe badge discreto de tempo rastreado acumulado e com cronômetro ativo', () => {
+    const taskWithTimer: Task = {
+      ...sampleTask,
+      timeTracked: {
+        inProgressSeconds: 120, // 2 minutos acumulados
+        inReviewSeconds: 0,
+        currentTimerStartedAt: new Date(Date.now() - 30000).toISOString(), // 30s correndo
+        currentTimerColumnId: 'col-progress',
+      },
+    }
+
+    const { rerender } = render(<TaskCard {...defaultProps} task={taskWithTimer} />)
+
+    const timerBadge = screen.getByTestId('task-timer-badge')
+    expect(timerBadge).toBeInTheDocument()
+    expect(timerBadge).toHaveAttribute('title', 'Cronômetro ativo')
+
+    // Quando o cronômetro para mas tem tempo acumulado
+    const taskStoppedTimer: Task = {
+      ...sampleTask,
+      timeTracked: {
+        inProgressSeconds: 150,
+        inReviewSeconds: 0,
+        currentTimerStartedAt: null,
+        currentTimerColumnId: null,
+      },
+    }
+
+    rerender(<TaskCard {...defaultProps} task={taskStoppedTimer} />)
+    const stoppedTimerBadge = screen.getByTestId('task-timer-badge')
+    expect(stoppedTimerBadge).toBeInTheDocument()
+    expect(stoppedTimerBadge).toHaveAttribute('title', 'Tempo acumulado')
+    expect(stoppedTimerBadge.textContent).toContain('2m 30s')
   })
 })

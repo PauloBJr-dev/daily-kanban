@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+﻿import { useState, useEffect, useMemo, useCallback } from 'react'
 import confetti from 'canvas-confetti'
 import type { Column, FilterState, KanbanData, Subtask, Task } from '../types/kanban'
 import { storageService } from '../services/storageService'
@@ -52,6 +52,17 @@ export function isTaskInDateRange(task: Task, start: Date, end: Date): boolean {
   return time >= start.getTime() && time <= end.getTime()
 }
 
+export const isProgressColumn = (colId: string) =>
+  colId === 'col-progress' || colId.toLowerCase().includes('progress')
+
+export const isReviewColumn = (colId: string) =>
+  colId === 'col-review' ||
+  colId.toLowerCase().includes('review') ||
+  colId.toLowerCase().includes('espera')
+
+export const isTrackedColumn = (colId: string) =>
+  isProgressColumn(colId) || isReviewColumn(colId)
+
 export function useKanban() {
   const { user } = useAuth(false)
   const userId = user?.id ?? null
@@ -78,7 +89,7 @@ export function useKanban() {
         const cloudData = await supabaseKanbanService.fetchKanbanData(userId)
         if (!isMounted) return
 
-        // Se o Supabase estiver vazio e houver dados locais, fazer upload automático dos dados locais
+        // Se o Supabase estiver vazio e houver dados locais, fazer upload automÃ¡tico dos dados locais
         if (cloudData.columns.length === 0 && cloudData.tasks.length === 0) {
           const localData = storageService.load()
           if (localData.columns.length > 0 || localData.tasks.length > 0) {
@@ -133,8 +144,17 @@ export function useKanban() {
   const addTask = useCallback(
     (taskInput: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
       const now = new Date().toISOString()
+      const isTracked = isTrackedColumn(taskInput.columnId)
+      const initialTimeTracked = taskInput.timeTracked ?? {
+        inProgressSeconds: 0,
+        inReviewSeconds: 0,
+        currentTimerStartedAt: isTracked ? now : null,
+        currentTimerColumnId: isTracked ? taskInput.columnId : null,
+      }
+
       const newTask: Task = {
         ...taskInput,
+        timeTracked: initialTimeTracked,
         id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         createdAt: now,
         updatedAt: now,
@@ -175,7 +195,7 @@ export function useKanban() {
 
       if (userId) {
         supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
-          console.error('Erro ao sincronizar atualização de tarefa no Supabase:', err)
+          console.error('Erro ao sincronizar atualizaÃ§Ã£o de tarefa no Supabase:', err)
         })
       }
     },
@@ -230,13 +250,46 @@ export function useKanban() {
         triggerCelebration()
       }
 
+      const currentTimeTracked = currentTask.timeTracked || {
+        inProgressSeconds: 0,
+        inReviewSeconds: 0,
+        currentTimerStartedAt: null,
+        currentTimerColumnId: null,
+      }
+
+      let inProgressSeconds = currentTimeTracked.inProgressSeconds || 0
+      let inReviewSeconds = currentTimeTracked.inReviewSeconds || 0
+
+      if (
+        currentTimeTracked.currentTimerStartedAt &&
+        currentTimeTracked.currentTimerColumnId
+      ) {
+        const startedAtMs = new Date(currentTimeTracked.currentTimerStartedAt).getTime()
+        if (!isNaN(startedAtMs)) {
+          const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000))
+          if (isProgressColumn(currentTimeTracked.currentTimerColumnId)) {
+            inProgressSeconds += elapsed
+          } else if (isReviewColumn(currentTimeTracked.currentTimerColumnId)) {
+            inReviewSeconds += elapsed
+          }
+        }
+      }
+
+      const willTrack = isTrackedColumn(targetColumnId)
+      const now = new Date().toISOString()
+      const updatedTimeTracked = {
+        inProgressSeconds,
+        inReviewSeconds,
+        currentTimerStartedAt: willTrack ? now : null,
+        currentTimerColumnId: willTrack ? targetColumnId : null,
+      }
+
       const updatedTask: Task = {
         ...currentTask,
         columnId: targetColumnId,
-        completedAt: isNowDone
-          ? currentTask.completedAt || new Date().toISOString()
-          : undefined,
-        updatedAt: new Date().toISOString(),
+        completedAt: isNowDone ? currentTask.completedAt || now : undefined,
+        updatedAt: now,
+        timeTracked: updatedTimeTracked,
       }
 
       setData((prev) => {
@@ -379,7 +432,14 @@ export function useKanban() {
   const deleteColumn = useCallback(
     (columnId: string) => {
       setData((prev) => {
-        // Don't delete if it's the last remaining column
+        const col = prev.columns.find((c) => c.id === columnId)
+        if (!col) return prev
+        if (
+          col.isPermanent ||
+          ['col-todo', 'col-progress', 'col-review', 'col-done'].includes(columnId)
+        ) {
+          return prev
+        }
         if (prev.columns.length <= 1) return prev
 
         if (userId) {
@@ -398,24 +458,112 @@ export function useKanban() {
     [userId]
   )
 
+  const updateColumn = useCallback(
+    (
+      columnId: string,
+      updates: { title?: string; colorTheme?: Column['colorTheme'] }
+    ) => {
+      setData((prev) => {
+        const nextColumns = prev.columns.map((col) => {
+          if (col.id !== columnId) return col
+          return {
+            ...col,
+            ...(updates.title !== undefined && { title: updates.title.trim() }),
+            ...(updates.colorTheme !== undefined && { colorTheme: updates.colorTheme }),
+          }
+        })
+
+        if (userId) {
+          supabaseKanbanService.syncColumns(userId, nextColumns).catch((err) => {
+            console.error('Erro ao sincronizar atualizaÃ§Ã£o de coluna no Supabase:', err)
+          })
+        }
+
+        return {
+          ...prev,
+          columns: nextColumns,
+        }
+      })
+    },
+    [userId]
+  )
+
+  const reorderColumns = useCallback(
+    (newColumns: Column[]) => {
+      const ordered = newColumns.map((col, idx) => ({ ...col, order: idx }))
+      setData((prev) => ({
+        ...prev,
+        columns: ordered,
+      }))
+
+      if (userId) {
+        supabaseKanbanService.syncColumns(userId, ordered).catch((err) => {
+          console.error('Erro ao sincronizar reordenaÃ§Ã£o de colunas no Supabase:', err)
+        })
+      }
+    },
+    [userId]
+  )
+
+  const moveColumn = useCallback(
+    (columnId: string, direction: 'left' | 'right') => {
+      setData((prev) => {
+        const sorted = [...prev.columns].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        const index = sorted.findIndex((c) => c.id === columnId)
+        if (index === -1) return prev
+
+        const targetIndex = direction === 'left' ? index - 1 : index + 1
+        if (targetIndex < 0 || targetIndex >= sorted.length) return prev
+
+        const newCols = [...sorted]
+        const [movedCol] = newCols.splice(index, 1)
+        newCols.splice(targetIndex, 0, movedCol)
+
+        const ordered = newCols.map((col, idx) => ({ ...col, order: idx }))
+
+        if (userId) {
+          supabaseKanbanService.syncColumns(userId, ordered).catch((err) => {
+            console.error('Erro ao sincronizar movimento de coluna no Supabase:', err)
+          })
+        }
+
+        return {
+          ...prev,
+          columns: ordered,
+        }
+      })
+    },
+    [userId]
+  )
+
   const exportData = useCallback(() => {
-    storageService.exportJSON(data)
+    try {
+      storageService.exportJSON(data)
+    } catch {
+      // Ignorar caso ambiente de teste não suporte download
+    }
+    return JSON.stringify(data, null, 2)
   }, [data])
 
   const importData = useCallback(
-    (newData: KanbanData) => {
-      if (storageService.validateJSON(newData)) {
-        setData(newData)
-        if (userId) {
-          supabaseKanbanService
-            .uploadLocalData(userId, newData.columns, newData.tasks)
-            .catch((err) => {
-              console.error('Erro ao sincronizar dados importados no Supabase:', err)
-            })
+    (content: string | KanbanData) => {
+      try {
+        const parsed = typeof content === 'string' ? JSON.parse(content) : content
+        if (storageService.validateJSON(parsed)) {
+          setData(parsed)
+          if (userId) {
+            supabaseKanbanService
+              .uploadLocalData(userId, parsed.columns, parsed.tasks)
+              .catch((err) => {
+                console.error('Erro ao sincronizar dados importados no Supabase:', err)
+              })
+          }
+          return true
         }
-        return true
+        return false
+      } catch {
+        return false
       }
-      return false
     },
     [userId]
   )
@@ -542,8 +690,13 @@ export function useKanban() {
     }
   }, [data.tasks, todayStr])
 
+  const sortedColumns = useMemo(
+    () => [...data.columns].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [data.columns]
+  )
+
   return {
-    columns: data.columns,
+    columns: sortedColumns,
     tasks: filteredTasks,
     allTasksCount: data.tasks.length,
     filters,
@@ -559,7 +712,10 @@ export function useKanban() {
     addSubtask,
     removeSubtask,
     addColumn,
+    updateColumn,
     deleteColumn,
+    reorderColumns,
+    moveColumn,
     exportData,
     importData,
     resetToSeed,
