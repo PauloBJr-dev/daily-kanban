@@ -34,30 +34,8 @@ export interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isConfigured = isSupabaseConfigured()
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window !== 'undefined' && !isConfigured) {
-      try {
-        const savedUser = localStorage.getItem('organocat_local_user')
-        if (savedUser) return JSON.parse(savedUser)
-      } catch {
-        // ignore
-      }
-    }
-    return null
-  })
-
-  const [session, setSession] = useState<Session | null>(() => {
-    if (typeof window !== 'undefined' && !isConfigured) {
-      try {
-        const savedSession = localStorage.getItem('organocat_local_session')
-        if (savedSession) return JSON.parse(savedSession)
-      } catch {
-        // ignore
-      }
-    }
-    return null
-  })
-
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState<boolean>(() => isConfigured)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false)
 
@@ -100,17 +78,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session) {
           setSession(session)
           setUser(session.user ?? null)
-        } else if (typeof window !== 'undefined') {
-          const savedUser = localStorage.getItem('organocat_local_user')
-          const savedSession = localStorage.getItem('organocat_local_session')
-          if (savedUser && savedSession) {
-            try {
-              setUser(JSON.parse(savedUser))
-              setSession(JSON.parse(savedSession))
-            } catch {
-              // ignore
-            }
-          }
         }
         setLoading(false)
       })
@@ -142,108 +109,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       email: string,
       password: string
     ): Promise<{ error: Error | null }> => {
-      if (isConfigured) {
-        try {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: name,
-                name,
-              },
-            },
-          })
-
-          if (error) {
-            return { error: new Error(error.message) }
-          }
-
-          if (data.session && data.user) {
-            setSession(data.session)
-            setUser(data.user)
-            setIsGuestAcknowledged(true)
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('organocat_guest_acknowledged', 'true')
-            }
-            setIsAuthModalOpen(false)
-            return { error: null }
-          }
-
-          // Se retornou usuário sem sessão imediata (ou confirmação de e-mail pendente),
-          // salva sessão/usuário simulado com o Nome para personalização visual imediata
-          if (data.user) {
-            const immediateUser: User = {
-              ...data.user,
-              user_metadata: {
-                ...data.user.user_metadata,
-                full_name: name,
-                name,
-              },
-            }
-            const immediateSession: Session = {
-              access_token: 'organocat-token-' + Date.now(),
-              refresh_token: 'organocat-refresh-' + Date.now(),
-              expires_in: 3600 * 24 * 30,
-              token_type: 'bearer',
-              user: immediateUser,
-            }
-            setUser(immediateUser)
-            setSession(immediateSession)
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('organocat_local_user', JSON.stringify(immediateUser))
-              localStorage.setItem(
-                'organocat_local_session',
-                JSON.stringify(immediateSession)
-              )
-              localStorage.setItem('organocat_guest_acknowledged', 'true')
-            }
-            setIsGuestAcknowledged(true)
-            setIsAuthModalOpen(false)
-            return { error: null }
-          }
-
-          return { error: null }
-        } catch (err) {
-          return { error: err instanceof Error ? err : new Error(String(err)) }
-        }
+      if (!isConfigured) {
+        return { error: new Error('Serviço de autenticação não configurado.') }
       }
 
-      // Autenticação local simulada para qualquer ambiente (offline / sem Supabase)
       try {
-        const localUser: User = {
-          id: 'local-user-' + Date.now(),
-          app_metadata: { provider: 'local' },
-          user_metadata: {
-            full_name: name,
-            name,
-          },
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
+        const { data, error } = await supabase.auth.signUp({
           email,
-          phone: '',
-          role: 'authenticated',
-          updated_at: new Date().toISOString(),
-        }
-        const localSession: Session = {
-          access_token: 'organocat-local-session-' + Date.now(),
-          refresh_token: 'organocat-local-refresh-' + Date.now(),
-          expires_in: 3600 * 24 * 365,
-          token_type: 'bearer',
-          user: localUser,
-        }
+          password,
+          options: {
+            data: {
+              full_name: name,
+              name,
+            },
+          },
+        })
 
-        setUser(localUser)
-        setSession(localSession)
-        setIsGuestAcknowledged(true)
-
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('organocat_local_user', JSON.stringify(localUser))
-          localStorage.setItem('organocat_local_session', JSON.stringify(localSession))
-          localStorage.setItem('organocat_guest_acknowledged', 'true')
+        if (error) {
+          return { error: new Error(error.message) }
         }
 
-        setIsAuthModalOpen(false)
+        if (data.session && data.user) {
+          setSession(data.session)
+          setUser(data.user)
+          setIsGuestAcknowledged(true)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('organocat_guest_acknowledged', 'true')
+          }
+          setIsAuthModalOpen(false)
+          return { error: null }
+        }
+
+        // Se retornou usuário sem sessão imediata (caso raro)
+        if (data.user) {
+          const signInRes = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+
+          if (!signInRes.error && signInRes.data?.session && signInRes.data?.user) {
+            setSession(signInRes.data.session)
+            setUser(signInRes.data.user)
+            setIsGuestAcknowledged(true)
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('organocat_guest_acknowledged', 'true')
+            }
+            setIsAuthModalOpen(false)
+            return { error: null }
+          }
+
+          setIsAuthModalOpen(false)
+          return { error: null }
+        }
+
         return { error: null }
       } catch (err) {
         return { error: err instanceof Error ? err : new Error(String(err)) }
@@ -254,89 +172,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithPassword = useCallback(
     async (email: string, password: string): Promise<{ error: Error | null }> => {
-      if (isConfigured) {
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          })
-
-          if (error) {
-            return { error: new Error(error.message) }
-          }
-
-          if (data.session && data.user) {
-            setSession(data.session)
-            setUser(data.user)
-            setIsGuestAcknowledged(true)
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('organocat_guest_acknowledged', 'true')
-            }
-            setIsAuthModalOpen(false)
-          }
-          return { error: null }
-        } catch (err) {
-          return { error: err instanceof Error ? err : new Error(String(err)) }
+      if (!isConfigured) {
+        return {
+          error: new Error(
+            'Serviço de autenticação não configurado. Para testar localmente, utilize a opção Continuar sem Conta.'
+          ),
         }
       }
 
-      // Autenticação local simulada
       try {
-        if (typeof window !== 'undefined') {
-          const savedUser = localStorage.getItem('organocat_local_user')
-          if (savedUser) {
-            const parsed = JSON.parse(savedUser) as User
-            if (parsed.email?.toLowerCase() === email.toLowerCase()) {
-              const localSession: Session = {
-                access_token: 'organocat-local-session-' + Date.now(),
-                refresh_token: 'organocat-local-refresh-' + Date.now(),
-                expires_in: 3600 * 24 * 365,
-                token_type: 'bearer',
-                user: parsed,
-              }
-              setUser(parsed)
-              setSession(localSession)
-              localStorage.setItem(
-                'organocat_local_session',
-                JSON.stringify(localSession)
-              )
-              localStorage.setItem('organocat_guest_acknowledged', 'true')
-              setIsGuestAcknowledged(true)
-              setIsAuthModalOpen(false)
-              return { error: null }
-            }
-          }
-        }
-
-        const localName = email.split('@')[0]
-        const fallbackUser: User = {
-          id: 'local-user-' + Date.now(),
-          app_metadata: { provider: 'local' },
-          user_metadata: {
-            full_name: localName,
-            name: localName,
-          },
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
-          phone: '',
-          role: 'authenticated',
-          updated_at: new Date().toISOString(),
-        }
-        const fallbackSession: Session = {
-          access_token: 'organocat-local-session-' + Date.now(),
-          refresh_token: 'organocat-local-refresh-' + Date.now(),
-          expires_in: 3600 * 24 * 365,
-          token_type: 'bearer',
-          user: fallbackUser,
+          password,
+        })
+
+        if (error) {
+          return { error: new Error(error.message) }
         }
 
-        setUser(fallbackUser)
-        setSession(fallbackSession)
+        if (!data?.session || !data?.user) {
+          return { error: new Error('Credenciais inválidas.') }
+        }
+
+        setSession(data.session)
+        setUser(data.user)
         setIsGuestAcknowledged(true)
         if (typeof window !== 'undefined') {
-          localStorage.setItem('organocat_local_user', JSON.stringify(fallbackUser))
-          localStorage.setItem('organocat_local_session', JSON.stringify(fallbackSession))
           localStorage.setItem('organocat_guest_acknowledged', 'true')
         }
         setIsAuthModalOpen(false)

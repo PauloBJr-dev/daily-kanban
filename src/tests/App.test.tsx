@@ -182,6 +182,27 @@ describe('App Integration', () => {
   })
 
   it('alterna para o Modo Zen no Studio e oculta o cabeçalho global do App, restaurando com Escape', () => {
+    localStorage.setItem(
+      'dailyflow_academic_data_v1',
+      JSON.stringify({
+        subjects: [{ id: 'sub-calc', name: 'Cálculo', color: 'indigo' }],
+        notes: [
+          {
+            id: 'note-zen',
+            title: 'Nota para Teste Zen',
+            content: 'Conteúdo de estudo',
+            subjectId: 'sub-calc',
+            status: 'in_progress',
+            tags: ['Zen'],
+            isPinned: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        version: 1,
+      })
+    )
+
     render(<App />)
 
     // Muda para o modo acadêmico
@@ -252,8 +273,18 @@ describe('App Integration', () => {
   it('abre automaticamente em tela cheia ao iniciar foco em uma tarefa e fecha com Escape', () => {
     render(<App />)
 
-    const focusButtons = screen.getAllByRole('button', { name: /iniciar pomodoro para/i })
-    fireEvent.click(focusButtons[0])
+    // Cria uma nova tarefa para iniciar o foco
+    fireEvent.click(screen.getByText('Nova Tarefa'))
+    const titleInput = screen.getByPlaceholderText(
+      'Ex: Revisar layout da nova landing page'
+    )
+    fireEvent.change(titleInput, { target: { value: 'Tarefa de Teste para Foco' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Criar Tarefa' }))
+
+    const focusBtn = screen.getByRole('button', {
+      name: /iniciar pomodoro para/i,
+    })
+    fireEvent.click(focusBtn)
 
     expect(
       screen.getByRole('dialog', { name: /cronômetro pomodoro em tela cheia/i })
