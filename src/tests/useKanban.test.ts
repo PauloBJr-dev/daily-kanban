@@ -420,6 +420,117 @@ describe('useKanban', () => {
       })
     })
 
+    it('não faz upload automático de dados residuais e inicia com INITIAL_DATA com 0 tarefas para conta nova', async () => {
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
+        columns: [],
+        tasks: [],
+      })
+      const uploadSpy = vi
+        .spyOn(supabaseKanbanService, 'uploadLocalData')
+        .mockResolvedValue()
+
+      const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
+
+      await waitFor(() => {
+        expect(result.current.columns.length).toBe(INITIAL_DATA.columns.length)
+        expect(result.current.tasks.length).toBe(0)
+      })
+
+      expect(uploadSpy).not.toHaveBeenCalled()
+    })
+
+    it('redefine o estado para INITIAL_DATA com 0 tarefas quando userId muda para null (logout)', async () => {
+      const cloudData = {
+        columns: [
+          {
+            id: 'col-cloud-logged',
+            title: 'Nuvem Logado',
+            order: 0,
+            colorTheme: 'blue' as const,
+          },
+        ],
+        tasks: [
+          {
+            id: 'task-cloud-logged',
+            title: 'Tarefa Logada',
+            columnId: 'col-cloud-logged',
+            priority: 'high' as const,
+            tags: ['Cloud'],
+            subtasks: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      }
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce(cloudData)
+
+      let currentAuth: AuthContextType = {
+        ...mockAuthContextValue,
+        user: mockAuthUser,
+      }
+
+      const DynamicAuthWrapper: React.FC<{ children: React.ReactNode }> = ({
+        children,
+      }) => React.createElement(AuthContext.Provider, { value: currentAuth }, children)
+
+      const { result, rerender } = renderHook(() => useKanban(), {
+        wrapper: DynamicAuthWrapper,
+      })
+
+      await waitFor(() => {
+        expect(result.current.tasks).toHaveLength(1)
+        expect(result.current.tasks[0].title).toBe('Tarefa Logada')
+      })
+
+      // Simula logout mudando user para null
+      currentAuth = {
+        ...mockAuthContextValue,
+        user: null,
+      }
+
+      rerender()
+
+      await waitFor(() => {
+        expect(result.current.tasks).toHaveLength(0)
+        expect(result.current.allTasksCount).toBe(0)
+        expect(result.current.columns).toHaveLength(INITIAL_DATA.columns.length)
+      })
+    })
+
+    it('salva dados no storage particionado com userId quando o usuário está conectado', async () => {
+      const saveSpy = vi.spyOn(storageService, 'save')
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
+        columns: INITIAL_DATA.columns,
+        tasks: INITIAL_DATA.tasks,
+      })
+      vi.spyOn(supabaseKanbanService, 'syncTask').mockResolvedValue()
+
+      const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
+
+      await waitFor(() => {
+        expect(result.current.allTasksCount).toBe(0)
+      })
+
+      act(() => {
+        result.current.addTask({
+          title: 'Tarefa com userId Particionado',
+          columnId: 'col-todo',
+          priority: 'low',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tasks: expect.arrayContaining([
+            expect.objectContaining({ title: 'Tarefa com userId Particionado' }),
+          ]),
+        }),
+        'user-kanban-test'
+      )
+    })
+
     it('dispara syncTask em background ao adicionar ou editar tarefa', async () => {
       vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
         columns: INITIAL_DATA.columns,

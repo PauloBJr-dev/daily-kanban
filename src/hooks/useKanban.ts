@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from 'react'
+﻿import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import type { Column, FilterState, KanbanData, Subtask, Task } from '../types/kanban'
 import { storageService } from '../services/storageService'
@@ -67,7 +67,8 @@ export function useKanban() {
   const { user } = useAuth(false)
   const userId = user?.id ?? null
 
-  const [data, setData] = useState<KanbanData>(() => storageService.load())
+  const prevUserIdRef = useRef<string | null>(userId)
+  const [data, setData] = useState<KanbanData>(() => storageService.load(userId))
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
     priority: 'all',
@@ -76,35 +77,40 @@ export function useKanban() {
     weekScope: 'this_week',
   })
 
-  // Synchronize with Supabase when user is authenticated
+  // Synchronize with Supabase when user is authenticated or reset on logout
   useEffect(() => {
     let isMounted = true
 
-    async function syncData() {
-      if (!userId) {
-        return
-      }
+    // Reset on logout transition (userId was authenticated and is now null)
+    if (prevUserIdRef.current && !userId) {
+      setData(INITIAL_DATA)
+      prevUserIdRef.current = null
+      return
+    }
 
+    if (!userId) {
+      prevUserIdRef.current = null
+      return
+    }
+
+    prevUserIdRef.current = userId
+
+    const activeUserId = userId
+
+    async function syncData() {
       try {
-        const cloudData = await supabaseKanbanService.fetchKanbanData(userId)
+        const cloudData = await supabaseKanbanService.fetchKanbanData(activeUserId)
         if (!isMounted) return
 
-        // Se o Supabase estiver vazio e houver dados locais, fazer upload automÃ¡tico dos dados locais
+        // Novo usuário sempre começa com quadro limpo inicial (INITIAL_DATA com 0 tarefas)
         if (cloudData.columns.length === 0 && cloudData.tasks.length === 0) {
-          const localData = storageService.load()
-          if (localData.columns.length > 0 || localData.tasks.length > 0) {
-            await supabaseKanbanService.uploadLocalData(
-              userId,
-              localData.columns,
-              localData.tasks
-            )
-            setData(localData)
-            return
-          }
+          setData(INITIAL_DATA)
+          return
         }
 
         setData({
-          columns: cloudData.columns,
+          columns:
+            cloudData.columns.length > 0 ? cloudData.columns : INITIAL_DATA.columns,
           tasks: cloudData.tasks,
           version: 1,
         })
@@ -120,11 +126,12 @@ export function useKanban() {
     }
   }, [userId])
 
-  // Save to localStorage in visitor mode
+  // Save to localStorage partitioned by userId
   useEffect(() => {
-    if (!userId) {
-      storageService.save(data)
+    if (prevUserIdRef.current !== userId) {
+      return
     }
+    storageService.save(data, userId)
   }, [data, userId])
 
   const triggerCelebration = useCallback(() => {

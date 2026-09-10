@@ -1,13 +1,16 @@
-﻿/* eslint-disable react/only-export-components */
+/* eslint-disable react/only-export-components */
 import React, { createContext, useEffect, useState, useMemo, useCallback } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { storageService } from '../services/storageService'
+import { academicStorageService } from '../services/academicStorageService'
 
 export interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
   isConfigured: boolean
+  authModalInitialTab?: 'signin' | 'signup'
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<{ error: Error | null }>
   signUpWithPassword: (
@@ -22,7 +25,7 @@ export interface AuthContextType {
   continueAsGuest: () => void
   isGuestAcknowledged: boolean
   isAuthModalOpen: boolean
-  openAuthModal: () => void
+  openAuthModal: (initialTab?: 'signin' | 'signup' | unknown) => void
   closeAuthModal: () => void
 }
 
@@ -38,13 +41,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState<boolean>(() => isConfigured)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false)
+  const [authModalInitialTab, setAuthModalInitialTab] = useState<
+    'signin' | 'signup' | undefined
+  >(undefined)
 
   const [isGuestAcknowledged, setIsGuestAcknowledged] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem('organocat_guest_acknowledged') === 'true'
   })
 
-  const openAuthModal = useCallback(() => {
+  const openAuthModal = useCallback((initialTab?: 'signin' | 'signup' | unknown) => {
+    if (initialTab === 'signin' || initialTab === 'signup') {
+      setAuthModalInitialTab(initialTab)
+    }
     setIsAuthModalOpen(true)
   }, [])
 
@@ -59,6 +68,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsGuestAcknowledged(true)
     setIsAuthModalOpen(false)
   }, [])
+
+  const sanitizeUrlTokens = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const hasAccessToken = window.location.hash.includes('access_token')
+      const hasCode = window.location.search.includes('code')
+      if (hasAccessToken || hasCode) {
+        window.history.replaceState(null, '', window.location.pathname)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    sanitizeUrlTokens()
+  }, [sanitizeUrlTokens])
 
   useEffect(() => {
     let isMounted = true
@@ -79,11 +102,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(session)
           setUser(session.user ?? null)
         }
+        sanitizeUrlTokens()
         setLoading(false)
       })
       .catch((err) => {
         if (!isMounted) return
         console.error('Erro ao recuperar sessão Supabase:', err)
+        sanitizeUrlTokens()
         setLoading(false)
       })
 
@@ -94,6 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!isMounted) return
       setSession(session)
       setUser(session?.user ?? null)
+      sanitizeUrlTokens()
       setLoading(false)
     })
 
@@ -101,7 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [isConfigured])
+  }, [isConfigured, sanitizeUrlTokens])
 
   const signUpWithPassword = useCallback(
     async (
@@ -126,7 +152,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         })
 
         if (error) {
-          return { error: new Error(error.message) }
+          return {
+            error: new Error(
+              'Não foi possível criar a conta. Verifique os dados informados ou tente entrar caso já possua conta.'
+            ),
+          }
         }
 
         if (data.session && data.user) {
@@ -163,8 +193,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         return { error: null }
-      } catch (err) {
-        return { error: err instanceof Error ? err : new Error(String(err)) }
+      } catch {
+        return {
+          error: new Error(
+            'Não foi possível criar a conta. Verifique os dados informados ou tente entrar caso já possua conta.'
+          ),
+        }
       }
     },
     [isConfigured]
@@ -186,12 +220,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           password,
         })
 
-        if (error) {
-          return { error: new Error(error.message) }
-        }
-
-        if (!data?.session || !data?.user) {
-          return { error: new Error('Credenciais inválidas.') }
+        if (error || !data?.session || !data?.user) {
+          return {
+            error: new Error(
+              'E-mail ou senha incorretos. Por favor, verifique suas credenciais.'
+            ),
+          }
         }
 
         setSession(data.session)
@@ -202,8 +236,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         setIsAuthModalOpen(false)
         return { error: null }
-      } catch (err) {
-        return { error: err instanceof Error ? err : new Error(String(err)) }
+      } catch {
+        return {
+          error: new Error(
+            'E-mail ou senha incorretos. Por favor, verifique suas credenciais.'
+          ),
+        }
       }
     },
     [isConfigured]
@@ -234,27 +272,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = useCallback(async (): Promise<{ error: Error | null }> => {
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('organocat_guest_acknowledged')
       localStorage.removeItem('organocat_local_user')
       localStorage.removeItem('organocat_local_session')
     }
 
-    if (!isConfigured) {
-      setUser(null)
-      setSession(null)
-      return { error: null }
+    setIsGuestAcknowledged(false)
+    storageService.clear(null)
+    academicStorageService.clear(null)
+
+    let signOutError: Error | null = null
+    if (isConfigured) {
+      try {
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          signOutError = new Error(error.message)
+        }
+      } catch (err) {
+        signOutError = err instanceof Error ? err : new Error(String(err))
+      }
     }
 
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (!error) {
-        setUser(null)
-        setSession(null)
-      }
-      return { error: error ? new Error(error.message) : null }
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error(String(err)) }
-    }
-  }, [isConfigured])
+    setUser(null)
+    setSession(null)
+    openAuthModal('signin')
+
+    return { error: signOutError }
+  }, [isConfigured, openAuthModal])
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -262,6 +306,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       session,
       loading,
       isConfigured,
+      authModalInitialTab,
       signInWithGoogle,
       signOut,
       signUpWithPassword,
@@ -277,6 +322,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       session,
       loading,
       isConfigured,
+      authModalInitialTab,
       signInWithGoogle,
       signOut,
       signUpWithPassword,

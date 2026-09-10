@@ -266,7 +266,9 @@ describe('AuthContext & useAuth', () => {
     })
 
     expect(res.error).not.toBeNull()
-    expect(res.error?.message).toBe('User already registered')
+    expect(res.error?.message).toBe(
+      'Não foi possível criar a conta. Verifique os dados informados ou tente entrar caso já possua conta.'
+    )
     expect(result.current.user).toBeNull()
     expect(result.current.session).toBeNull()
   })
@@ -427,7 +429,9 @@ describe('AuthContext & useAuth', () => {
     })
 
     expect(res.error).not.toBeNull()
-    expect(res.error?.message).toBe('Invalid login credentials')
+    expect(res.error?.message).toBe(
+      'E-mail ou senha incorretos. Por favor, verifique suas credenciais.'
+    )
     expect(result.current.user).toBeNull()
     expect(result.current.session).toBeNull()
   })
@@ -474,7 +478,9 @@ describe('AuthContext & useAuth', () => {
     })
 
     expect(res.error).not.toBeNull()
-    expect(res.error?.message).toBe('Credenciais inválidas.')
+    expect(res.error?.message).toBe(
+      'E-mail ou senha incorretos. Por favor, verifique suas credenciais.'
+    )
     expect(result.current.user).toBeNull()
     expect(result.current.session).toBeNull()
   })

@@ -6,6 +6,7 @@ const DEFAULT_GUEST_AUTH: AuthContextType = {
   session: null,
   loading: false,
   isConfigured: false,
+  authModalInitialTab: undefined,
   signInWithGoogle: async () => ({ error: null }),
   signOut: async () => ({ error: null }),
   signUpWithPassword: async () => ({ error: null }),

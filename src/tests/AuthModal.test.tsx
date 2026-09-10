@@ -15,12 +15,13 @@ describe('AuthModal Component', () => {
     session: null,
     loading: false,
     isConfigured: false,
+    authModalInitialTab: undefined as 'signin' | 'signup' | undefined,
     signInWithGoogle: vi.fn().mockResolvedValue({ error: null }),
     signOut: vi.fn().mockResolvedValue({ error: null }),
     signUpWithPassword: mockSignUpWithPassword,
     signInWithPassword: mockSignInWithPassword,
     continueAsGuest: mockContinueAsGuest,
-    isGuestAcknowledged: false,
+    isGuestAcknowledged: true, // Permitir fechar nos testes gerais
     isAuthModalOpen: true,
     openAuthModal: mockOpenAuthModal,
     closeAuthModal: mockCloseAuthModal,
@@ -34,7 +35,7 @@ describe('AuthModal Component', () => {
     mockCloseAuthModal.mockClear()
     mockOpenAuthModal.mockClear()
 
-    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue(defaultAuthValue)
+    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({ ...defaultAuthValue })
   })
 
   it('não renderiza nada quando isOpen for false', () => {
@@ -222,7 +223,7 @@ describe('AuthModal Component', () => {
     expect(handleClose).toHaveBeenCalledTimes(1)
   })
 
-  it('fecha o modal ao clicar no botão X e ao pressionar Escape', () => {
+  it('fecha o modal ao clicar no botão X e ao pressionar Escape quando o usuário já é visitante ou autenticado', () => {
     const handleClose = vi.fn()
     render(<AuthModal isOpen={true} onClose={handleClose} />)
 
@@ -232,5 +233,137 @@ describe('AuthModal Component', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(handleClose).toHaveBeenCalledTimes(2)
+  })
+
+  describe('Barreira de Primeiro Acesso e Fechamento', () => {
+    it('oculta o botão X e impede fechamento por Escape e backdrop no primeiro acesso sem consentimento', () => {
+      vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+        ...defaultAuthValue,
+        user: null,
+        isGuestAcknowledged: false,
+      })
+
+      const handleClose = vi.fn()
+      render(<AuthModal isOpen={true} onClose={handleClose} />)
+
+      // Botão X de fechar não deve estar presente
+      expect(screen.queryByLabelText('Fechar')).not.toBeInTheDocument()
+
+      // Pressionar Escape não deve fechar
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(handleClose).not.toHaveBeenCalled()
+
+      // Clicar no backdrop não deve fechar
+      const dialog = screen.getByRole('dialog')
+      fireEvent.click(dialog)
+      expect(handleClose).not.toHaveBeenCalled()
+    })
+
+    it('exibe o botão X e permite fechar normalmente quando usuário está autenticado', () => {
+      vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+        ...defaultAuthValue,
+        user: { id: 'u-123' } as any,
+        isGuestAcknowledged: false,
+      })
+
+      const handleClose = vi.fn()
+      render(<AuthModal isOpen={true} onClose={handleClose} />)
+
+      const closeBtn = screen.getByLabelText('Fechar')
+      expect(closeBtn).toBeInTheDocument()
+
+      fireEvent.click(closeBtn)
+      expect(handleClose).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('Reset de Campos e initialTab', () => {
+    it('limpa todos os campos ao reabrir o modal', () => {
+      const { rerender } = render(
+        <AuthModal isOpen={true} onClose={mockCloseAuthModal} />
+      )
+
+      // Preenche os campos
+      const nameInput = screen.getByLabelText('Seu Nome ou Apelido') as HTMLInputElement
+      const emailInput = screen.getByLabelText('Seu e-mail') as HTMLInputElement
+      const passwordInput = screen.getByLabelText('Senha') as HTMLInputElement
+      const checkbox = screen.getByRole('checkbox', {
+        name: /estou ciente de que meus dados ficarão salvos apenas neste navegador/i,
+      }) as HTMLInputElement
+
+      fireEvent.change(nameInput, { target: { value: 'Nome Teste' } })
+      fireEvent.change(emailInput, { target: { value: 'teste@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'minhasenha123' } })
+      fireEvent.click(checkbox)
+
+      expect(nameInput.value).toBe('Nome Teste')
+      expect(emailInput.value).toBe('teste@example.com')
+      expect(passwordInput.value).toBe('minhasenha123')
+      expect(checkbox.checked).toBe(true)
+
+      // Fecha o modal
+      rerender(<AuthModal isOpen={false} onClose={mockCloseAuthModal} />)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+      // Reabre o modal
+      rerender(<AuthModal isOpen={true} onClose={mockCloseAuthModal} />)
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+      const newNameInput = screen.getByLabelText(
+        'Seu Nome ou Apelido'
+      ) as HTMLInputElement
+      const newEmailInput = screen.getByLabelText('Seu e-mail') as HTMLInputElement
+      const newPasswordInput = screen.getByLabelText('Senha') as HTMLInputElement
+      const newCheckbox = screen.getByRole('checkbox', {
+        name: /estou ciente de que meus dados ficarão salvos apenas neste navegador/i,
+      }) as HTMLInputElement
+
+      expect(newNameInput.value).toBe('')
+      expect(newEmailInput.value).toBe('')
+      expect(newPasswordInput.value).toBe('')
+      expect(newCheckbox.checked).toBe(false)
+    })
+
+    it('respeita authModalInitialTab abrindo na aba signin', () => {
+      vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+        ...defaultAuthValue,
+        authModalInitialTab: 'signin',
+      })
+
+      render(<AuthModal isOpen={true} onClose={mockCloseAuthModal} />)
+
+      const tabEntrar = screen.getByRole('tab', { name: 'Entrar' })
+      expect(tabEntrar).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('button', { name: /entrar na conta/i })).toBeInTheDocument()
+      expect(screen.queryByLabelText('Seu Nome ou Apelido')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Mobile UX e Touch Targets', () => {
+    it('renderiza puxador de bottom sheet no topo e classes responsivas para inputs e botões', () => {
+      render(<AuthModal isOpen={true} onClose={mockCloseAuthModal} />)
+
+      // Abas com touch target min-h-[44px]
+      const tabCriar = screen.getByRole('tab', { name: 'Criar Conta' })
+      expect(tabCriar.className).toContain('min-h-[44px]')
+
+      // Inputs com text-base sm:text-xs (evita zoom no Safari iOS)
+      const nameInput = screen.getByLabelText('Seu Nome ou Apelido')
+      expect(nameInput.className).toContain('text-base')
+      expect(nameInput.className).toContain('sm:text-xs')
+
+      // Botão de toggle de senha com touch target 44px
+      const togglePasswordBtn = screen.getByLabelText('Mostrar senha')
+      expect(togglePasswordBtn.className).toContain('min-h-[44px]')
+      expect(togglePasswordBtn.className).toContain('min-w-[44px]')
+
+      // Botão principal de ação com min-h-[44px]
+      const submitBtn = screen.getByRole('button', { name: /criar conta e começar/i })
+      expect(submitBtn.className).toContain('min-h-[44px]')
+
+      // Botão Convidado com min-h-[44px]
+      const guestBtn = screen.getByRole('button', { name: /continuar sem conta/i })
+      expect(guestBtn.className).toContain('min-h-[44px]')
+    })
   })
 })

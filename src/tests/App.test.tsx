@@ -1,6 +1,7 @@
 ﻿import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { App } from '../App'
+import { academicStorageService } from '../services/academicStorageService'
 
 describe('App Integration', () => {
   beforeEach(() => {
@@ -183,7 +184,7 @@ describe('App Integration', () => {
 
   it('alterna para o Modo Zen no Studio e oculta o cabeçalho global do App, restaurando com Escape', () => {
     localStorage.setItem(
-      'dailyflow_academic_data_v1',
+      academicStorageService.getStorageKey(),
       JSON.stringify({
         subjects: [{ id: 'sub-calc', name: 'Cálculo', color: 'indigo' }],
         notes: [

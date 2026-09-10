@@ -1,12 +1,15 @@
-import type { KanbanData } from '../types/kanban'
+﻿import type { KanbanData } from '../types/kanban'
 import { INITIAL_DATA } from './seedData'
 
-const STORAGE_KEY = 'dailyflow_kanban_data_v1'
-
 export const storageService = {
-  load(): KanbanData {
+  getStorageKey(userId?: string | null): string {
+    return userId ? `organocat_kanban_user_${userId}` : 'organocat_kanban_guest'
+  },
+
+  load(userId?: string | null): KanbanData {
+    const key = this.getStorageKey(userId)
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
+      const raw = localStorage.getItem(key)
       if (!raw) {
         return INITIAL_DATA
       }
@@ -21,9 +24,10 @@ export const storageService = {
     }
   },
 
-  save(data: KanbanData): void {
+  save(data: KanbanData, userId?: string | null): void {
+    const key = this.getStorageKey(userId)
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      localStorage.setItem(key, JSON.stringify(data))
     } catch (err) {
       console.error('Falha ao salvar dados no localStorage', err)
     }
@@ -50,7 +54,8 @@ export const storageService = {
     return true
   },
 
-  clear(): void {
-    localStorage.removeItem(STORAGE_KEY)
+  clear(userId?: string | null): void {
+    const key = this.getStorageKey(userId)
+    localStorage.removeItem(key)
   },
 }
