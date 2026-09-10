@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react'
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   X,
   Cat,
@@ -31,11 +31,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     signUpWithPassword,
     signInWithPassword,
     continueAsGuest,
+    authModalInitialTab,
+    user,
+    isGuestAcknowledged,
   } = useAuth()
   const toast = useToast()
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : isAuthModalOpen
   const onClose = propOnClose || closeAuthModal
+
+  const canClose = Boolean(user || isGuestAcknowledged)
 
   const [tab, setTab] = useState<'signup' | 'signin'>('signup')
   const [name, setName] = useState('')
@@ -46,16 +51,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Fechar com tecla Escape
+  // Sempre que isOpen mudar para true: limpar campos e aplicar aba inicial
+  const prevIsOpenRef = useRef(false)
+  useEffect(() => {
+    if (isOpen && !prevIsOpenRef.current) {
+      setName('')
+      setEmail('')
+      setPassword('')
+      setErrorMessage(null)
+      setIsAgreedGuest(false)
+      setShowPassword(false)
+      if (authModalInitialTab) {
+        // oxlint-disable-next-line react/set-state-in-effect
+        setTab(authModalInitialTab)
+      }
+    }
+    prevIsOpenRef.current = isOpen
+  }, [isOpen, authModalInitialTab])
+
+  // Fechar com tecla Escape (apenas se puder fechar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape' && isOpen && canClose) {
         onClose()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, canClose])
 
   const handleTabChange = (newTab: 'signup' | 'signin') => {
     setTab(newTab)
@@ -146,12 +169,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       aria-modal="true"
       aria-labelledby="auth-modal-title"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
-      onClick={onClose}
+      onClick={canClose ? onClose : undefined}
     >
       <div
-        className="w-full sm:max-w-lg bg-white dark:bg-slate-900 border-t sm:border border-slate-200/90 dark:border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] sm:max-h-[90vh] flex flex-col"
+        className="w-full sm:max-w-lg bg-white dark:bg-slate-900 border-t sm:border border-slate-200/90 dark:border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92dvh] sm:max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Puxador visual de bottom sheet para mobile */}
+        <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -170,26 +196,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {canClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        {/* Modal Body (Scrollable) */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* Tab Switcher */}
+        {/* Modal Body (Scrollable & overscroll-contain) */}
+        <div className="p-6 overflow-y-auto overscroll-contain space-y-5 flex-1">
+          {/* Tab Switcher com touch target mínimo de 44px */}
           <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
             <button
               type="button"
               role="tab"
               aria-selected={tab === 'signup'}
               onClick={() => handleTabChange('signup')}
-              className={`py-2 px-3 text-xs font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
+              className={`min-h-[44px] flex items-center justify-center py-2 px-3 text-xs font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                 tab === 'signup'
                   ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-slate-900/5 dark:ring-white/10'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -202,7 +230,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               role="tab"
               aria-selected={tab === 'signin'}
               onClick={() => handleTabChange('signin')}
-              className={`py-2 px-3 text-xs font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
+              className={`min-h-[44px] flex items-center justify-center py-2 px-3 text-xs font-semibold rounded-xl transition-all duration-150 cursor-pointer ${
                 tab === 'signin'
                   ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-slate-900/5 dark:ring-white/10'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -242,7 +270,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: Carlos Silva"
                     required
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
@@ -269,7 +297,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
                     required
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
@@ -297,7 +325,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     placeholder="Mínimo de 8 caracteres"
                     required
                     minLength={8}
-                    className={`w-full pl-9 pr-10 py-2 text-xs rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all ${
+                    className={`w-full pl-9 pr-12 py-2 text-base sm:text-xs rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all ${
                       isPasswordShort
                         ? 'border-amber-400 dark:border-amber-500 focus:ring-amber-500/40'
                         : isPasswordValid
@@ -309,7 +337,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className="absolute inset-y-0 right-0 px-3 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   >
                     {showPassword ? (
                       <EyeOff className="w-4 h-4" />
@@ -339,13 +367,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
-              {/* Botão Submissão Cadastro */}
+              {/* Botão Submissão Cadastro com min-h-[44px] */}
               <button
                 type="submit"
                 disabled={
                   submitting || password.length < 8 || !name.trim() || !email.trim()
                 }
-                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full min-h-[44px] py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {submitting ? (
                   <>
@@ -384,7 +412,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
                     required
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                   />
                 </div>
               </div>
@@ -408,13 +436,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Sua senha"
                     required
-                    className="w-full pl-9 pr-10 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                    className="w-full pl-9 pr-12 py-2 text-base sm:text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className="absolute inset-y-0 right-0 px-3 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                   >
                     {showPassword ? (
                       <EyeOff className="w-4 h-4" />
@@ -425,11 +453,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
-              {/* Botão Submissão Login */}
+              {/* Botão Submissão Login com min-h-[44px] */}
               <button
                 type="submit"
                 disabled={submitting || !email.trim() || !password}
-                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full min-h-[44px] py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {submitting ? (
                   <>
@@ -515,12 +543,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </label>
             </div>
 
-            {/* Botão Continuar sem Conta */}
+            {/* Botão Continuar sem Conta com min-h-[44px] */}
             <button
               type="button"
               onClick={handleContinueAsGuest}
               disabled={!isAgreedGuest || submitting}
-              className="w-full py-2 px-3 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full min-h-[44px] py-2 px-3 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span>Continuar sem Conta</span>
             </button>

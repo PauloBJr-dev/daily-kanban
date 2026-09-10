@@ -2,6 +2,7 @@
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { AcademicView } from '../components/academic/AcademicView'
 import { DEFAULT_SUBJECTS } from '../services/academicSeedData'
+import { academicStorageService } from '../services/academicStorageService'
 import type { AcademicNote } from '../types/academic'
 
 const sampleNotes: AcademicNote[] = [
@@ -56,7 +57,7 @@ describe('AcademicView', () => {
   beforeEach(() => {
     localStorage.clear()
     localStorage.setItem(
-      'dailyflow_academic_data_v1',
+      academicStorageService.getStorageKey(),
       JSON.stringify({
         subjects: DEFAULT_SUBJECTS,
         notes: sampleNotes,

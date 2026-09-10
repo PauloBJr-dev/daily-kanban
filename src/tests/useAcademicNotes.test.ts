@@ -487,7 +487,7 @@ describe('useAcademicNotes', () => {
       })
     })
 
-    it('faz upload automático dos dados locais se o Supabase estiver vazio na primeira conexão', async () => {
+    it('não faz upload automático de dados residuais e inicia com INITIAL_ACADEMIC_DATA para nova conta', async () => {
       vi.spyOn(supabaseAcademicService, 'fetchAcademicData').mockResolvedValueOnce({
         subjects: [],
         notes: [],
@@ -497,10 +497,78 @@ describe('useAcademicNotes', () => {
         .spyOn(supabaseAcademicService, 'uploadLocalData')
         .mockResolvedValue()
 
-      renderHook(() => useAcademicNotes(), { wrapper: AuthWrapper })
+      const { result } = renderHook(() => useAcademicNotes(), { wrapper: AuthWrapper })
 
       await waitFor(() => {
-        expect(uploadSpy).toHaveBeenCalled()
+        expect(result.current.subjects.length).toBe(INITIAL_ACADEMIC_DATA.subjects.length)
+        expect(result.current.notes.length).toBe(0)
+      })
+
+      expect(uploadSpy).not.toHaveBeenCalled()
+    })
+
+    it('redefine o estado para INITIAL_ACADEMIC_DATA com 0 notas quando userId muda para null (logout)', async () => {
+      const mockCloudSubjects = [
+        {
+          id: 'sub-cloud-1',
+          name: 'Nuvem',
+          color: 'indigo',
+          code: 'NUV-101',
+          icon: 'Book',
+        },
+      ]
+      const mockCloudNotes = [
+        {
+          id: 'note-cloud-1',
+          title: 'Nota Nuvem Ativa',
+          content: 'Conteúdo',
+          subjectId: 'sub-cloud-1',
+          status: 'to_review' as const,
+          tags: [],
+          isPinned: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]
+
+      vi.spyOn(supabaseAcademicService, 'fetchAcademicData').mockResolvedValueOnce({
+        subjects: mockCloudSubjects,
+        notes: mockCloudNotes,
+        version: 1,
+      })
+
+      let currentAuth: AuthContextType = {
+        ...mockAuthContextValue,
+        user: mockAuthUser,
+      }
+
+      const DynamicAuthWrapper: React.FC<{ children: React.ReactNode }> = ({
+        children,
+      }) => React.createElement(AuthContext.Provider, { value: currentAuth }, children)
+
+      const { result, rerender } = renderHook(() => useAcademicNotes(), {
+        wrapper: DynamicAuthWrapper,
+      })
+
+      await waitFor(() => {
+        expect(result.current.notes).toHaveLength(1)
+        expect(result.current.notes[0].title).toBe('Nota Nuvem Ativa')
+      })
+
+      // Simula logout mudando user para null
+      currentAuth = {
+        ...mockAuthContextValue,
+        user: null,
+      }
+
+      rerender()
+
+      await waitFor(() => {
+        expect(result.current.notes).toHaveLength(0)
+        expect(result.current.allNotesCount).toBe(0)
+        expect(result.current.subjects).toHaveLength(
+          INITIAL_ACADEMIC_DATA.subjects.length
+        )
       })
     })
 

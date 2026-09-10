@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type {
   AcademicData,
   AcademicFilterState,
@@ -23,33 +23,51 @@ export function useAcademicNotes() {
   const { user } = useAuth(false)
   const userId = user?.id ?? null
 
-  const [data, setData] = useState<AcademicData>(() => academicStorageService.load())
+  const prevUserIdRef = useRef<string | null>(userId)
+  const [data, setData] = useState<AcademicData>(() =>
+    academicStorageService.load(userId)
+  )
   const [filters, setFilters] = useState<AcademicFilterState>(DEFAULT_FILTERS)
 
-  // Synchronize with Supabase when user is authenticated
+  // Synchronize with Supabase when user is authenticated or reset on logout
   useEffect(() => {
     let isMounted = true
 
-    async function syncData() {
-      if (!userId) {
-        return
-      }
+    // Reset on logout transition (userId was authenticated and is now null)
+    if (prevUserIdRef.current && !userId) {
+      setData(INITIAL_ACADEMIC_DATA)
+      prevUserIdRef.current = null
+      return
+    }
 
+    if (!userId) {
+      prevUserIdRef.current = null
+      return
+    }
+
+    prevUserIdRef.current = userId
+
+    const activeUserId = userId
+
+    async function syncData() {
       try {
-        const cloudData = await supabaseAcademicService.fetchAcademicData(userId)
+        const cloudData = await supabaseAcademicService.fetchAcademicData(activeUserId)
         if (!isMounted) return
 
-        // Se o Supabase estiver vazio e houver dados locais, fazer upload automático dos dados locais
+        // Novo usuário sempre começa com caderno limpo inicial
         if (cloudData.subjects.length === 0 && cloudData.notes.length === 0) {
-          const localData = academicStorageService.load()
-          if (localData.subjects.length > 0 || localData.notes.length > 0) {
-            await supabaseAcademicService.uploadLocalData(userId, localData)
-            setData(localData)
-            return
-          }
+          setData(INITIAL_ACADEMIC_DATA)
+          return
         }
 
-        setData(cloudData)
+        setData({
+          subjects:
+            cloudData.subjects.length > 0
+              ? cloudData.subjects
+              : INITIAL_ACADEMIC_DATA.subjects,
+          notes: cloudData.notes,
+          version: 1,
+        })
       } catch (err) {
         console.error('Erro ao carregar dados acadêmicos do Supabase:', err)
       }
@@ -62,11 +80,12 @@ export function useAcademicNotes() {
     }
   }, [userId])
 
-  // Persist to localStorage whenever data changes (visitor mode)
+  // Persist to localStorage partitioned by userId
   useEffect(() => {
-    if (!userId) {
-      academicStorageService.save(data)
+    if (prevUserIdRef.current !== userId) {
+      return
     }
+    academicStorageService.save(data, userId)
   }, [data, userId])
 
   const addNote = useCallback(

@@ -1,12 +1,15 @@
-import type { AcademicData } from '../types/academic'
+﻿import type { AcademicData } from '../types/academic'
 import { INITIAL_ACADEMIC_DATA } from './academicSeedData'
 
-const STORAGE_KEY = 'dailyflow_academic_data_v1'
-
 export const academicStorageService = {
-  load(): AcademicData {
+  getStorageKey(userId?: string | null): string {
+    return userId ? `organocat_academic_user_${userId}` : 'organocat_academic_guest'
+  },
+
+  load(userId?: string | null): AcademicData {
+    const key = this.getStorageKey(userId)
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
+      const raw = localStorage.getItem(key)
       if (!raw) {
         return INITIAL_ACADEMIC_DATA
       }
@@ -25,9 +28,10 @@ export const academicStorageService = {
     }
   },
 
-  save(data: AcademicData): void {
+  save(data: AcademicData, userId?: string | null): void {
+    const key = this.getStorageKey(userId)
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      localStorage.setItem(key, JSON.stringify(data))
     } catch (err) {
       console.error('Falha ao salvar dados acadêmicos no localStorage', err)
     }
@@ -54,7 +58,8 @@ export const academicStorageService = {
     return true
   },
 
-  clear(): void {
-    localStorage.removeItem(STORAGE_KEY)
+  clear(userId?: string | null): void {
+    const key = this.getStorageKey(userId)
+    localStorage.removeItem(key)
   },
 }
