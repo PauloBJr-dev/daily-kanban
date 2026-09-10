@@ -57,7 +57,7 @@ describe('useKanban', () => {
 
       expect(result.current.columns.length).toBe(INITIAL_DATA.columns.length)
       expect(result.current.allTasksCount).toBe(INITIAL_DATA.tasks.length)
-      expect(result.current.tasks.length).toBeGreaterThan(0)
+      expect(result.current.tasks.length).toBe(INITIAL_DATA.tasks.length)
       expect(result.current.stats.total).toBe(INITIAL_DATA.tasks.length)
       expect(result.current.allTags).toBeDefined()
     })
@@ -83,7 +83,17 @@ describe('useKanban', () => {
 
     it('permite atualizar e deletar uma tarefa', () => {
       const { result } = renderHook(() => useKanban())
-      const target = result.current.tasks[0]
+
+      let target: Task
+      act(() => {
+        target = result.current.addTask({
+          title: 'Tarefa Inicial',
+          columnId: 'col-todo',
+          priority: 'medium',
+          tags: [],
+          subtasks: [],
+        })
+      })
 
       act(() => {
         result.current.updateTask(target.id, {
@@ -105,7 +115,17 @@ describe('useKanban', () => {
 
     it('permite restaurar uma tarefa deletada', () => {
       const { result } = renderHook(() => useKanban())
-      const target = result.current.tasks[0]
+
+      let target: Task
+      act(() => {
+        target = result.current.addTask({
+          title: 'Tarefa Deletar e Restaurar',
+          columnId: 'col-todo',
+          priority: 'medium',
+          tags: [],
+          subtasks: [],
+        })
+      })
 
       act(() => {
         result.current.deleteTask(target.id)
@@ -120,22 +140,43 @@ describe('useKanban', () => {
 
     it('permite alternar subtask com toggleSubtask', () => {
       const { result } = renderHook(() => useKanban())
-      const taskWithSubtasks = result.current.tasks.find((t) => t.subtasks.length > 0)!
-      const targetSubtask = taskWithSubtasks.subtasks[0]
+
+      let createdTask: Task
+      act(() => {
+        createdTask = result.current.addTask({
+          title: 'Tarefa com Subtarefa',
+          columnId: 'col-todo',
+          priority: 'medium',
+          tags: [],
+          subtasks: [{ id: 'sub-test-1', title: 'Sub 1', completed: false }],
+        })
+      })
+
+      const targetSubtask = createdTask!.subtasks[0]
       const initialStatus = targetSubtask.completed
 
       act(() => {
-        result.current.toggleSubtask(taskWithSubtasks.id, targetSubtask.id)
+        result.current.toggleSubtask(createdTask!.id, targetSubtask.id)
       })
 
-      const updatedTask = result.current.tasks.find((t) => t.id === taskWithSubtasks.id)!
+      const updatedTask = result.current.tasks.find((t) => t.id === createdTask!.id)!
       const updatedSubtask = updatedTask.subtasks.find((s) => s.id === targetSubtask.id)!
       expect(updatedSubtask.completed).toBe(!initialStatus)
     })
 
     it('adiciona e remove subtasks dinamicamente', () => {
       const { result } = renderHook(() => useKanban())
-      const task = result.current.tasks[0]
+
+      let task: Task
+      act(() => {
+        task = result.current.addTask({
+          title: 'Tarefa com Subtarefas Dinâmicas',
+          columnId: 'col-todo',
+          priority: 'medium',
+          tags: [],
+          subtasks: [],
+        })
+      })
 
       act(() => {
         result.current.addSubtask(task.id, 'Subtarefa Teste Manual')
@@ -211,8 +252,20 @@ describe('useKanban', () => {
     it('permite restaurar dados para seed inicial', () => {
       const { result } = renderHook(() => useKanban())
 
+      let task: Task
       act(() => {
-        result.current.deleteTask(result.current.tasks[0].id)
+        task = result.current.addTask({
+          title: 'Tarefa Temporária',
+          columnId: 'col-todo',
+          priority: 'low',
+          tags: [],
+          subtasks: [],
+        })
+      })
+      expect(result.current.allTasksCount).toBe(1)
+
+      act(() => {
+        result.current.deleteTask(task.id)
       })
 
       act(() => {
@@ -362,8 +415,8 @@ describe('useKanban', () => {
       const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
 
       await waitFor(() => {
-        expect(result.current.columns[0].title).toBe('Nuvem')
-        expect(result.current.tasks[0].title).toBe('Tarefa Nuvem')
+        expect(result.current.columns[0].id).toBe('col-cloud')
+        expect(result.current.tasks[0].id).toBe('task-cloud')
       })
     })
 
@@ -380,11 +433,12 @@ describe('useKanban', () => {
         expect(result.current.allTasksCount).toBe(INITIAL_DATA.tasks.length)
       })
 
+      let added: Task
       act(() => {
-        result.current.addTask({
-          title: 'Nova Tarefa Nuvem',
+        added = result.current.addTask({
+          title: 'Tarefa Nuvem Sync',
           columnId: 'col-todo',
-          priority: 'low',
+          priority: 'medium',
           tags: [],
           subtasks: [],
         })
@@ -393,14 +447,12 @@ describe('useKanban', () => {
       expect(syncTaskSpy).toHaveBeenCalledWith(
         'user-kanban-test',
         expect.objectContaining({
-          title: 'Nova Tarefa Nuvem',
+          title: 'Tarefa Nuvem Sync',
         })
       )
 
-      const targetId = result.current.tasks[0].id
-
       act(() => {
-        result.current.updateTask(targetId, {
+        result.current.updateTask(added.id, {
           title: 'Tarefa Nuvem Editada',
         })
       })
@@ -414,9 +466,20 @@ describe('useKanban', () => {
     })
 
     it('dispara deleteTask em background de forma otimista ao deletar tarefa', async () => {
+      const cloudTask: Task = {
+        id: 'task-cloud-123',
+        title: 'Tarefa Nuvem',
+        columnId: 'col-todo',
+        priority: 'high',
+        tags: [],
+        subtasks: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
       vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
         columns: INITIAL_DATA.columns,
-        tasks: INITIAL_DATA.tasks,
+        tasks: [cloudTask],
       })
       const deleteTaskSpy = vi
         .spyOn(supabaseKanbanService, 'deleteTask')
@@ -425,7 +488,7 @@ describe('useKanban', () => {
       const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
 
       await waitFor(() => {
-        expect(result.current.allTasksCount).toBe(INITIAL_DATA.tasks.length)
+        expect(result.current.allTasksCount).toBe(1)
       })
 
       const targetId = result.current.tasks[0].id

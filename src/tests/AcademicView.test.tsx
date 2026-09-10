@@ -1,10 +1,68 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+﻿import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { AcademicView } from '../components/academic/AcademicView'
+import { DEFAULT_SUBJECTS } from '../services/academicSeedData'
+import type { AcademicNote } from '../types/academic'
+
+const sampleNotes: AcademicNote[] = [
+  {
+    id: 'note-1',
+    title: 'Teorema Fundamental do Cálculo e Aplicações de Derivadas',
+    content:
+      'Revisão dos conceitos essenciais: taxas de variação instantânea e reta tangente.',
+    subjectId: 'sub-calc',
+    status: 'in_progress',
+    tags: ['Cálculo', 'Derivadas'],
+    isPinned: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'note-2',
+    title: 'Árvores Balanceadas: AVL e Rubro-Negra',
+    content: 'Comparativo de rotações simples e duplas na AVL.',
+    subjectId: 'sub-eda',
+    status: 'to_review',
+    tags: ['Estruturas de Dados', 'Árvores'],
+    isPinned: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'note-3',
+    title: 'Camada de Transporte: TCP vs UDP e Handshake de 3 Vias',
+    content: 'Diferença entre controle de fluxo e congestionamento.',
+    subjectId: 'sub-redes',
+    status: 'mastered',
+    tags: ['Redes', 'TCP/IP'],
+    isPinned: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'note-4',
+    title: 'Backpropagation e Otimizadores Gradiente Descendente',
+    content: 'Cálculo do gradiente e otimizadores SGD, Adam.',
+    subjectId: 'sub-ia',
+    status: 'to_review',
+    tags: ['Machine Learning', 'Deep Learning'],
+    isPinned: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+]
 
 describe('AcademicView', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem(
+      'dailyflow_academic_data_v1',
+      JSON.stringify({
+        subjects: DEFAULT_SUBJECTS,
+        notes: sampleNotes,
+        version: 1,
+      })
+    )
   })
 
   it('renderiza os cards de estatísticas acadêmicas', () => {
@@ -20,10 +78,18 @@ describe('AcademicView', () => {
     expect(within(statsSection).getByText('Fixadas')).toBeInTheDocument()
   })
 
+  it('renderiza o estado vazio inicial quando não há anotações cadastradas', () => {
+    localStorage.clear()
+    render(<AcademicView />)
+
+    expect(screen.getByText('Seu caderno está vazio')).toBeInTheDocument()
+    expect(screen.getByText('Criar Primeira Anotação')).toBeInTheDocument()
+  })
+
   it('renderiza a lista inicial de notas e as disciplinas na barra de filtros', () => {
     render(<AcademicView />)
 
-    // Check seed notes
+    // Check notes
     expect(
       screen.getByText('Teorema Fundamental do Cálculo e Aplicações de Derivadas')
     ).toBeInTheDocument()
