@@ -8,6 +8,15 @@ import confetti from 'canvas-confetti'
 vi.mock('../services/soundService', () => ({
   playWorkCompleteSound: vi.fn(),
   playBreakCompleteSound: vi.fn(),
+  startCatPurr: vi.fn(),
+  stopCatPurr: vi.fn(),
+  soundService: {
+    playWorkCompleteSound: vi.fn(),
+    playBreakCompleteSound: vi.fn(),
+    startCatPurr: vi.fn(),
+    stopCatPurr: vi.fn(),
+    previewCatPurr: vi.fn(),
+  },
 }))
 
 vi.mock('../services/notificationService', () => ({
@@ -267,5 +276,67 @@ describe('usePomodoro hook', () => {
     })
 
     expect(notificationService.requestPermission).toHaveBeenCalled()
+  })
+  it('inicia o ronrom de gato na pausa quando ativado e interrompe ao pausar ou voltar ao foco', () => {
+    localStorage.setItem(
+      POMODORO_SETTINGS_KEY,
+      JSON.stringify({
+        workDuration: 25 * 60,
+        breakDuration: 5 * 60,
+        isSoundEnabled: true,
+        catPurrType: 'rhythmic',
+        catPurrVolume: 0.75,
+      })
+    )
+
+    const { result } = renderHook(() => usePomodoro())
+
+    // 1. Muda para pausa e inicia cron?metro
+    act(() => {
+      result.current.switchMode('break')
+      result.current.resumeFocus()
+    })
+
+    expect(soundService.startCatPurr).toHaveBeenCalledWith('rhythmic', 0.75)
+
+    // 2. Pausa cron?metro -> deve parar o som
+    act(() => {
+      result.current.pauseFocus()
+    })
+
+    expect(soundService.stopCatPurr).toHaveBeenCalled()
+
+    // 3. Retoma -> inicia novamente
+    act(() => {
+      result.current.resumeFocus()
+    })
+
+    expect(soundService.startCatPurr).toHaveBeenCalledWith('rhythmic', 0.75)
+
+    // 4. Alterna para foco de trabalho -> para o som
+    act(() => {
+      result.current.switchMode('work')
+    })
+
+    expect(soundService.stopCatPurr).toHaveBeenCalled()
+  })
+
+  it('permite atualizar configura??es com updateSettings persistindo no localStorage', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => {
+      result.current.updateSettings(50, 10, true, 'soft', 0.9)
+    })
+
+    expect(result.current.session.workDuration).toBe(50 * 60)
+    expect(result.current.session.breakDuration).toBe(10 * 60)
+    expect(result.current.session.catPurrType).toBe('soft')
+    expect(result.current.session.catPurrVolume).toBe(0.9)
+
+    const saved = JSON.parse(localStorage.getItem(POMODORO_SETTINGS_KEY) || '{}')
+    expect(saved.workDuration).toBe(50 * 60)
+    expect(saved.breakDuration).toBe(10 * 60)
+    expect(saved.catPurrType).toBe('soft')
+    expect(saved.catPurrVolume).toBe(0.9)
   })
 })

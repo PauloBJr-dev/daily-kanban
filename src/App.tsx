@@ -45,7 +45,10 @@ export const AppContent: React.FC = () => {
     moveTask,
     toggleSubtask,
     addColumn,
+    updateColumn,
     deleteColumn,
+    reorderColumns,
+    moveColumn,
     exportData,
     importData,
     resetToSeed,
@@ -105,6 +108,7 @@ export const AppContent: React.FC = () => {
     formatTime,
     updateDurations,
     toggleSound,
+    updateSettings,
   } = usePomodoro(handleTaskMinuteLogged)
 
   const [isPomodoroFullscreen, setIsPomodoroFullscreen] = useState(false)
@@ -300,9 +304,24 @@ export const AppContent: React.FC = () => {
     [addColumn, toast]
   )
 
+  const handleUpdateColumn = useCallback(
+    (
+      columnId: string,
+      updates: { title?: string; colorTheme?: Column['colorTheme'] }
+    ) => {
+      updateColumn(columnId, updates)
+      toast.success('Coluna atualizada com sucesso')
+    },
+    [updateColumn, toast]
+  )
+
   const requestDeleteColumn = useCallback(
     (columnId: string) => {
       const col = columns.find((c) => c.id === columnId)
+      if (col?.isPermanent) {
+        toast.error('Colunas padrão não podem ser excluídas')
+        return
+      }
       const tasksInCol = tasks.filter((t) => t.columnId === columnId).length
       setConfirmState({
         isOpen: true,
@@ -320,46 +339,35 @@ export const AppContent: React.FC = () => {
     [columns, tasks, deleteColumn, toast]
   )
 
-  const requestResetData = useCallback(() => {
-    setConfirmState({
-      isOpen: true,
-      title: 'Restaurar Dados Padrão',
-      message:
-        'Todas as tarefas e colunas atuais serão substituídas pelo conjunto de demonstração inicial.',
-      confirmText: 'Restaurar',
-      isDanger: false,
-      requireConfirmationWord: 'RESTAURAR',
-      onConfirm: () => {
-        resetToSeed()
-        clearFocusedTask()
-        toast.info('Dados de demonstração restaurados')
-      },
-    })
-  }, [resetToSeed, clearFocusedTask, toast])
+  const handleFilterChange = useCallback(
+    (updates: Partial<typeof filters>) => {
+      setFilters((prev) => ({ ...prev, ...updates }))
+    },
+    [setFilters]
+  )
 
-  // JSON Export handler
   const handleExport = useCallback(() => {
     exportData()
     toast.success('Backup JSON exportado com sucesso')
   }, [exportData, toast])
 
-  // JSON Import handler
   const handleImport = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
+
       const reader = new FileReader()
       reader.onload = (event) => {
         try {
-          const parsed = JSON.parse(event.target?.result as string)
-          const success = importData(parsed)
+          const content = event.target?.result as string
+          const success = importData(content)
           if (success) {
-            toast.success('Dados importados com sucesso')
+            toast.success('Dados importados com sucesso!')
           } else {
-            toast.error('Arquivo JSON inválido ou incompatível.')
+            toast.error('Formato de arquivo inválido')
           }
         } catch {
-          toast.error('Erro ao ler arquivo JSON.')
+          toast.error('Erro ao ler arquivo')
         }
       }
       reader.readAsText(file)
@@ -368,24 +376,33 @@ export const AppContent: React.FC = () => {
     [importData, toast]
   )
 
-  const handleFilterChange = useCallback(
-    (updates: Partial<typeof filters>) => {
-      setFilters((prev) => ({ ...prev, ...updates }))
-    },
-    [setFilters]
-  )
+  const handleResetData = useCallback(() => {
+    setConfirmState({
+      isOpen: true,
+      title: 'Restaurar Dados Padrão',
+      message:
+        'Deseja restaurar o DailyFlow para os dados de demonstração iniciais? Suas alterações locais serão substituídas.',
+      confirmText: 'Restaurar',
+      isDanger: true,
+      requireConfirmationWord: 'RESTAURAR',
+      onConfirm: () => {
+        resetToSeed()
+        toast.info('Dados de demonstração restaurados')
+      },
+    })
+  }, [resetToSeed, toast])
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      {/* Skip to Main Content Link for A11y */}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-200 selection:bg-indigo-500 selection:text-white">
+      {/* Skip to main content for accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:font-medium focus:text-sm focus:rounded-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-xl focus:shadow-lg focus:outline-none"
       >
         Pular para o conteúdo
       </a>
 
-      {/* Header (Hidden in Zen Mode) */}
+      {/* App Header (Hidden in Academic Zen Mode) */}
       {!isZenMode && (
         <Header
           activeView={activeView}
@@ -394,7 +411,7 @@ export const AppContent: React.FC = () => {
           onNewNote={handleOpenNewNote}
           onExport={handleExport}
           onImport={handleImport}
-          onReset={requestResetData}
+          onReset={handleResetData}
           onOpenShortcuts={handleOpenShortcuts}
           isDark={isDark}
           onToggleTheme={toggleTheme}
@@ -430,6 +447,7 @@ export const AppContent: React.FC = () => {
               formatTime={formatTime}
               onUpdateDurations={updateDurations}
               onToggleSound={toggleSound}
+              onUpdateSettings={updateSettings}
               onOpenFullscreen={() => setIsPomodoroFullscreen(true)}
             />
 
@@ -456,6 +474,9 @@ export const AppContent: React.FC = () => {
                 onStartFocus={handleStartFocus}
                 onAddColumn={handleAddColumn}
                 onDeleteColumn={requestDeleteColumn}
+                onMoveColumn={moveColumn}
+                onReorderColumns={reorderColumns}
+                onUpdateColumn={handleUpdateColumn}
                 focusedTaskId={session.taskId}
               />
             </section>

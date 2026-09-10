@@ -19,6 +19,12 @@ export interface Task {
   createdAt: string // ISO string
   updatedAt: string // ISO string
   pomodoroMinutesSpent?: number
+  timeTracked?: {
+    inProgressSeconds?: number
+    inReviewSeconds?: number
+    currentTimerStartedAt?: string | null
+    currentTimerColumnId?: string | null
+  }
 }
 
 export interface Column {
@@ -26,6 +32,7 @@ export interface Column {
   title: string
   order: number
   colorTheme: 'blue' | 'amber' | 'purple' | 'emerald' | 'rose' | 'slate'
+  isPermanent?: boolean
 }
 
 export interface KanbanData {
@@ -46,6 +53,8 @@ export interface FilterState {
   weekScope: WeekScope
 }
 
+export type CatPurrType = 'none' | 'soft' | 'deep' | 'rhythmic'
+
 export interface PomodoroSession {
   taskId: string | null
   taskTitle?: string
@@ -55,4 +64,6 @@ export interface PomodoroSession {
   workDuration: number // in seconds (default 25 * 60)
   breakDuration: number // in seconds (default 5 * 60)
   isSoundEnabled?: boolean
+  catPurrType?: CatPurrType
+  catPurrVolume?: number // 0 to 1 (default 0.6)
 }

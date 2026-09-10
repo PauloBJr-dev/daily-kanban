@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Plus, X, Check } from 'lucide-react'
 import type { Column as ColumnType, Task } from '../types/kanban'
 import { Column } from './Column'
@@ -14,6 +14,12 @@ interface BoardProps {
   onStartFocus: (taskId: string, taskTitle: string) => void
   onAddColumn: (title: string, colorTheme: ColumnType['colorTheme']) => void
   onDeleteColumn?: (columnId: string) => void
+  onMoveColumn?: (columnId: string, direction: 'left' | 'right') => void
+  onReorderColumns?: (newColumns: ColumnType[]) => void
+  onUpdateColumn?: (
+    columnId: string,
+    updates: { title?: string; colorTheme?: ColumnType['colorTheme'] }
+  ) => void
   focusedTaskId?: string | null
 }
 
@@ -28,6 +34,9 @@ export const Board: React.FC<BoardProps> = ({
   onStartFocus,
   onAddColumn,
   onDeleteColumn,
+  onMoveColumn,
+  onReorderColumns,
+  onUpdateColumn,
   focusedTaskId,
 }) => {
   const [isAddingColumn, setIsAddingColumn] = useState(false)
@@ -155,6 +164,9 @@ export const Board: React.FC<BoardProps> = ({
               onToggleSubtask={onToggleSubtask}
               onStartFocus={onStartFocus}
               onDeleteColumn={onDeleteColumn}
+              onMoveColumn={onMoveColumn}
+              onReorderColumns={onReorderColumns}
+              onUpdateColumn={onUpdateColumn}
               focusedTaskId={focusedTaskId}
             />
           )

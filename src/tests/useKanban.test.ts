@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+﻿import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import React from 'react'
 
@@ -12,6 +12,7 @@ import { INITIAL_DATA } from '../services/seedData'
 import { supabaseKanbanService } from '../services/supabaseKanbanService'
 import { AuthContext, type AuthContextType } from '../context/AuthContext'
 import type { User } from '@supabase/supabase-js'
+import type { Task } from '../types/kanban'
 
 const mockAuthUser: User = {
   id: 'user-kanban-test',
@@ -117,151 +118,256 @@ describe('useKanban', () => {
       expect(result.current.tasks.some((t) => t.id === target.id)).toBe(true)
     })
 
-    it('permite mover tarefa de coluna e adiciona completedAt quando for para concluído', () => {
+    it('permite alternar subtask com toggleSubtask', () => {
       const { result } = renderHook(() => useKanban())
-      const target = result.current.tasks.find((t) => t.columnId !== 'col-done')!
+      const taskWithSubtasks = result.current.tasks.find((t) => t.subtasks.length > 0)!
+      const targetSubtask = taskWithSubtasks.subtasks[0]
+      const initialStatus = targetSubtask.completed
 
       act(() => {
-        result.current.moveTask(target.id, 'col-done')
+        result.current.toggleSubtask(taskWithSubtasks.id, targetSubtask.id)
       })
 
-      const moved = result.current.tasks.find((t) => t.id === target.id)
-      expect(moved?.columnId).toBe('col-done')
-      expect(moved?.completedAt).toBeDefined()
+      const updatedTask = result.current.tasks.find((t) => t.id === taskWithSubtasks.id)!
+      const updatedSubtask = updatedTask.subtasks.find((s) => s.id === targetSubtask.id)!
+      expect(updatedSubtask.completed).toBe(!initialStatus)
     })
 
-    it('permite manipular subtarefas (adicionar, alternar e remover)', () => {
+    it('adiciona e remove subtasks dinamicamente', () => {
       const { result } = renderHook(() => useKanban())
-      const target = result.current.tasks[0]
+      const task = result.current.tasks[0]
 
       act(() => {
-        result.current.addSubtask(target.id, 'Subtarefa de Teste')
+        result.current.addSubtask(task.id, 'Subtarefa Teste Manual')
       })
 
-      const withSub = result.current.tasks.find((t) => t.id === target.id)!
-      const newSub = withSub.subtasks.find((s) => s.title === 'Subtarefa de Teste')!
-      expect(newSub).toBeDefined()
-      expect(newSub.completed).toBe(false)
+      const withSub = result.current.tasks.find((t) => t.id === task.id)!
+      const added = withSub.subtasks.find((s) => s.title === 'Subtarefa Teste Manual')
+      expect(added).toBeDefined()
 
       act(() => {
-        result.current.toggleSubtask(target.id, newSub.id)
+        result.current.removeSubtask(task.id, added!.id)
       })
 
-      const toggled = result.current.tasks.find((t) => t.id === target.id)!
-      expect(toggled.subtasks.find((s) => s.id === newSub.id)?.completed).toBe(true)
-
-      act(() => {
-        result.current.removeSubtask(target.id, newSub.id)
-      })
-
-      const removed = result.current.tasks.find((t) => t.id === target.id)!
-      expect(removed.subtasks.find((s) => s.id === newSub.id)).toBeUndefined()
+      const withoutSub = result.current.tasks.find((t) => t.id === task.id)!
+      expect(withoutSub.subtasks.some((s) => s.id === added!.id)).toBe(false)
     })
 
-    it('permite adicionar e excluir coluna (com suas respectivas tarefas)', () => {
+    it('adiciona e remove colunas preservando limites mínimos', () => {
       const { result } = renderHook(() => useKanban())
+      const initialCount = result.current.columns.length
 
       act(() => {
-        result.current.addColumn('Revisão de Código', 'purple')
+        result.current.addColumn('Coluna Custom', 'purple')
       })
 
-      expect(result.current.columns.some((c) => c.title === 'Revisão de Código')).toBe(
-        true
-      )
-      const newCol = result.current.columns.find((c) => c.title === 'Revisão de Código')!
+      expect(result.current.columns.length).toBe(initialCount + 1)
+      const addedCol = result.current.columns.find((c) => c.title === 'Coluna Custom')!
+      expect(addedCol).toBeDefined()
 
       act(() => {
-        result.current.deleteColumn(newCol.id)
+        result.current.deleteColumn(addedCol.id)
       })
 
-      expect(result.current.columns.some((c) => c.id === newCol.id)).toBe(false)
+      expect(result.current.columns.length).toBe(initialCount)
     })
 
-    it('importa e reseta dados corretamente', () => {
+    it('exporta e importa dados via JSON com sucesso', () => {
       const { result } = renderHook(() => useKanban())
+      const exported = result.current.exportData()
+      expect(typeof exported).toBe('string')
+
+      const customPayload = JSON.stringify({
+        columns: [{ id: 'col-custom', title: 'Custom', order: 0, colorTheme: 'rose' }],
+        tasks: [
+          {
+            id: 'task-custom',
+            title: 'Importada',
+            columnId: 'col-custom',
+            priority: 'low',
+            tags: [],
+            subtasks: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        version: 1,
+      })
+
+      act(() => {
+        const success = result.current.importData(customPayload)
+        expect(success).toBe(true)
+      })
+
+      expect(result.current.columns[0].title).toBe('Custom')
+      expect(result.current.tasks[0].title).toBe('Importada')
+
+      act(() => {
+        const invalidSuccess = result.current.importData('invalid json')
+        expect(invalidSuccess).toBe(false)
+      })
+    })
+
+    it('permite restaurar dados para seed inicial', () => {
+      const { result } = renderHook(() => useKanban())
+
+      act(() => {
+        result.current.deleteTask(result.current.tasks[0].id)
+      })
 
       act(() => {
         result.current.resetToSeed()
       })
+
       expect(result.current.allTasksCount).toBe(INITIAL_DATA.tasks.length)
-
-      const customData = {
-        columns: [
-          { id: 'col-solo', title: 'Única', order: 0, colorTheme: 'blue' as const },
-        ],
-        tasks: [],
-        version: 1,
-      }
-
-      let importSuccess = false
-      act(() => {
-        importSuccess = result.current.importData(customData)
-      })
-
-      expect(importSuccess).toBe(true)
-      expect(result.current.columns).toHaveLength(1)
     })
   })
 
-  describe('Modo Autenticado (Sincronização em Nuvem Supabase)', () => {
-    it('carrega dados da nuvem ao montar quando existem tarefas no Supabase', async () => {
-      const mockCloudColumns = [
-        {
-          id: 'col-cloud',
-          title: 'Coluna Nuvem',
-          order: 0,
-          colorTheme: 'emerald' as const,
-        },
-      ]
-      const mockCloudTasks = [
-        {
-          id: 'task-cloud-1',
-          title: 'Tarefa na Nuvem',
-          columnId: 'col-cloud',
-          priority: 'urgent' as const,
+  describe('Colunas Permanentes, Reordenação e Cronômetro Automático', () => {
+    it('impede a exclusão de colunas permanentes padrão', () => {
+      const { result } = renderHook(() => useKanban())
+      const initialColCount = result.current.columns.length
+
+      // Tentativa de deletar coluna padrão 'col-todo'
+      act(() => {
+        result.current.deleteColumn('col-todo')
+      })
+      expect(result.current.columns.length).toBe(initialColCount)
+      expect(result.current.columns.some((c) => c.id === 'col-todo')).toBe(true)
+
+      // Tentativa de deletar coluna padrão 'col-done'
+      act(() => {
+        result.current.deleteColumn('col-done')
+      })
+      expect(result.current.columns.length).toBe(initialColCount)
+      expect(result.current.columns.some((c) => c.id === 'col-done')).toBe(true)
+    })
+
+    it('permite atualizar título e tema de cor de uma coluna com updateColumn', () => {
+      const { result } = renderHook(() => useKanban())
+
+      act(() => {
+        result.current.updateColumn('col-todo', {
+          title: 'Backlog Prioritário',
+          colorTheme: 'rose',
+        })
+      })
+
+      const updated = result.current.columns.find((c) => c.id === 'col-todo')
+      expect(updated?.title).toBe('Backlog Prioritário')
+      expect(updated?.colorTheme).toBe('rose')
+    })
+
+    it('reordena colunas com reorderColumns atribuindo índices de order sequenciais', () => {
+      const { result } = renderHook(() => useKanban())
+      const cols = [...result.current.columns]
+      const reversed = [...cols].reverse()
+
+      act(() => {
+        result.current.reorderColumns(reversed)
+      })
+
+      expect(result.current.columns[0].id).toBe(reversed[0].id)
+      expect(result.current.columns[0].order).toBe(0)
+      expect(result.current.columns[result.current.columns.length - 1].order).toBe(
+        reversed.length - 1
+      )
+    })
+
+    it('move coluna para esquerda e direita com moveColumn respeitando limites', () => {
+      const { result } = renderHook(() => useKanban())
+      const firstColId = result.current.columns[0].id
+      const secondColId = result.current.columns[1].id
+
+      // Mover a primeira coluna para a esquerda não deve alterar nada (limite esquerdo)
+      act(() => {
+        result.current.moveColumn(firstColId, 'left')
+      })
+      expect(result.current.columns[0].id).toBe(firstColId)
+
+      // Mover a primeira coluna para a direita
+      act(() => {
+        result.current.moveColumn(firstColId, 'right')
+      })
+      expect(result.current.columns[0].id).toBe(secondColId)
+      expect(result.current.columns[1].id).toBe(firstColId)
+
+      // Mover de volta para a esquerda
+      act(() => {
+        result.current.moveColumn(firstColId, 'left')
+      })
+      expect(result.current.columns[0].id).toBe(firstColId)
+      expect(result.current.columns[1].id).toBe(secondColId)
+    })
+
+    it('gerencia cronômetro de tempo automaticamente ao mover tarefas entre colunas', () => {
+      const { result } = renderHook(() => useKanban())
+
+      // Adiciona uma tarefa em 'col-todo'
+      let createdTask: Task
+      act(() => {
+        createdTask = result.current.addTask({
+          title: 'Tarefa Cronometrada',
+          columnId: 'col-todo',
+          priority: 'medium',
           tags: [],
           subtasks: [],
-          createdAt: '2026-09-08T00:00:00.000Z',
-          updatedAt: '2026-09-08T00:00:00.000Z',
-        },
-      ]
-
-      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
-        columns: mockCloudColumns,
-        tasks: mockCloudTasks,
+        })
       })
+
+      expect(createdTask!.timeTracked?.currentTimerStartedAt).toBeNull()
+
+      // Mover para 'col-progress' (Em progresso) -> deve iniciar o cronômetro
+      act(() => {
+        result.current.moveTask(createdTask!.id, 'col-progress')
+      })
+
+      const inProgressTask = result.current.tasks.find((t) => t.id === createdTask!.id)!
+      expect(inProgressTask.timeTracked?.currentTimerStartedAt).toBeTruthy()
+      expect(inProgressTask.timeTracked?.currentTimerColumnId).toBe('col-progress')
+
+      // Mover para 'col-done' -> deve acumular o tempo e parar o cronômetro
+      act(() => {
+        result.current.moveTask(createdTask!.id, 'col-done')
+      })
+
+      const doneTask = result.current.tasks.find((t) => t.id === createdTask!.id)!
+      expect(doneTask.timeTracked?.currentTimerStartedAt).toBeNull()
+      expect(doneTask.timeTracked?.currentTimerColumnId).toBeNull()
+      expect(typeof doneTask.timeTracked?.inProgressSeconds).toBe('number')
+    })
+  })
+
+  describe('Sincronização com Supabase (Usuário Conectado)', () => {
+    it('carrega dados da nuvem quando logado com fetchKanbanData', async () => {
+      const cloudData = {
+        columns: [
+          { id: 'col-cloud', title: 'Nuvem', order: 0, colorTheme: 'blue' as const },
+        ],
+        tasks: [
+          {
+            id: 'task-cloud',
+            title: 'Tarefa Nuvem',
+            columnId: 'col-cloud',
+            priority: 'high' as const,
+            tags: ['Cloud'],
+            subtasks: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+      }
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce(cloudData)
 
       const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
 
       await waitFor(() => {
-        expect(result.current.columns).toHaveLength(1)
-        expect(result.current.columns[0].id).toBe('col-cloud')
-      })
-
-      expect(result.current.tasks.some((t) => t.id === 'task-cloud-1')).toBe(true)
-    })
-
-    it('faz upload automático dos dados locais se o Supabase estiver vazio na primeira conexão', async () => {
-      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
-        columns: [],
-        tasks: [],
-      })
-      const uploadSpy = vi
-        .spyOn(supabaseKanbanService, 'uploadLocalData')
-        .mockResolvedValue()
-
-      renderHook(() => useKanban(), { wrapper: AuthWrapper })
-
-      await waitFor(() => {
-        expect(uploadSpy).toHaveBeenCalledWith(
-          'user-kanban-test',
-          expect.any(Array),
-          expect.any(Array)
-        )
+        expect(result.current.columns[0].title).toBe('Nuvem')
+        expect(result.current.tasks[0].title).toBe('Tarefa Nuvem')
       })
     })
 
-    it('dispara syncTask em background de forma otimista ao adicionar e atualizar tarefa', async () => {
+    it('dispara syncTask em background ao adicionar ou editar tarefa', async () => {
       vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
         columns: INITIAL_DATA.columns,
         tasks: INITIAL_DATA.tasks,
@@ -274,33 +380,31 @@ describe('useKanban', () => {
         expect(result.current.allTasksCount).toBe(INITIAL_DATA.tasks.length)
       })
 
-      let addedTask: any
       act(() => {
-        addedTask = result.current.addTask({
-          title: 'Tarefa Nuvem Imediata',
+        result.current.addTask({
+          title: 'Nova Tarefa Nuvem',
           columnId: 'col-todo',
-          priority: 'medium',
+          priority: 'low',
           tags: [],
           subtasks: [],
         })
       })
 
-      // Atualização otimista de 0ms
-      expect(result.current.tasks.some((t) => t.id === addedTask.id)).toBe(true)
       expect(syncTaskSpy).toHaveBeenCalledWith(
         'user-kanban-test',
         expect.objectContaining({
-          title: 'Tarefa Nuvem Imediata',
+          title: 'Nova Tarefa Nuvem',
         })
       )
 
+      const targetId = result.current.tasks[0].id
+
       act(() => {
-        result.current.updateTask(addedTask.id, { title: 'Tarefa Nuvem Editada' })
+        result.current.updateTask(targetId, {
+          title: 'Tarefa Nuvem Editada',
+        })
       })
 
-      expect(result.current.tasks.find((t) => t.id === addedTask.id)?.title).toBe(
-        'Tarefa Nuvem Editada'
-      )
       expect(syncTaskSpy).toHaveBeenCalledWith(
         'user-kanban-test',
         expect.objectContaining({

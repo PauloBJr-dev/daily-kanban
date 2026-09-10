@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Clock,
   CheckSquare,
@@ -38,6 +38,71 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [showMenu, setShowMenu] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Automatic Background Timer (1s ticker when active)
+  const [nowMs, setNowMs] = useState<number>(() => Date.now())
+  const isTimerRunning = Boolean(task.timeTracked?.currentTimerStartedAt)
+
+  useEffect(() => {
+    if (!isTimerRunning) return
+    const interval = setInterval(() => {
+      setNowMs(Date.now())
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isTimerRunning])
+
+  const totalTrackedSeconds = useMemo(() => {
+    const tt = task.timeTracked
+    let sec = (tt?.inProgressSeconds || 0) + (tt?.inReviewSeconds || 0)
+    if (tt?.currentTimerStartedAt) {
+      const startedAt = new Date(tt.currentTimerStartedAt).getTime()
+      if (!isNaN(startedAt)) {
+        sec += Math.max(0, Math.floor((nowMs - startedAt) / 1000))
+      }
+    }
+    return sec
+  }, [task.timeTracked, nowMs])
+
+  const formatTrackedTime = (totalSeconds: number): string => {
+    if (totalSeconds < 60) {
+      return `${totalSeconds}s`
+    }
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
+    }
+    return `${minutes}m ${seconds.toString().padStart(2, '0')}s`
+  }
+
+  // Dismiss menu on click outside or Escape
+  useEffect(() => {
+    if (!showMenu) return
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showMenu])
 
   // Subtask progress
   const totalSubtasks = task.subtasks.length
@@ -122,15 +187,40 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             : 'border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 shadow-xs'
       } ${isDone ? 'opacity-75 hover:opacity-100' : ''}`}
     >
-      {/* Top row: Priority badge + Quick actions */}
+      {/* Top row: Priority badge + Timer badge + Focused badge + Quick actions */}
       <div className="flex items-center justify-between gap-2 mb-2.5">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium tracking-tight ${currentPriority.badgeClass}`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${currentPriority.dotClass}`} />
             {currentPriority.label}
           </span>
+
+          {/* Discreet Timer badge */}
+          {totalTrackedSeconds > 0 && (
+            <span
+              data-testid="task-timer-badge"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-colors ${
+                isTimerRunning
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800'
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800/80 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+              }`}
+              title={isTimerRunning ? 'Cronômetro ativo' : 'Tempo acumulado'}
+              aria-label={
+                isTimerRunning
+                  ? `Cronômetro ativo: ${formatTrackedTime(totalTrackedSeconds)}`
+                  : `Tempo acumulado: ${formatTrackedTime(totalTrackedSeconds)}`
+              }
+            >
+              {isTimerRunning ? (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              ) : (
+                <Clock className="w-3 h-3 text-slate-400" />
+              )}
+              <span>{formatTrackedTime(totalTrackedSeconds)}</span>
+            </span>
+          )}
 
           {/* Focused badge */}
           {isFocused && (
@@ -172,8 +262,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </button>
           )}
 
-          {/* Options Dropdown toggle */}
-          <div className="relative">
+          {/* Options Dropdown toggle with click-outside and Escape dismiss */}
+          <div className="relative" ref={menuRef}>
             <button
               onClick={(e) => {
                 e.stopPropagation()
