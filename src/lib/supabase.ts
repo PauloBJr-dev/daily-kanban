@@ -1,13 +1,17 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const getEnvVar = (key: string): string => {
+  const env = import.meta.env as Record<string, string | undefined>
+  const val = env[key] ?? env[`\uFEFF${key}`]
+  return (val || '').trim()
+}
+
+export const supabaseUrl = getEnvVar('VITE_SUPABASE_URL')
+export const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY')
 
 export const isSupabaseConfigured = (): boolean => {
-  const envUrl = import.meta.env.VITE_SUPABASE_URL
-  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-  const url = (envUrl !== undefined ? envUrl : supabaseUrl || '').trim()
-  const key = (envKey !== undefined ? envKey : supabaseAnonKey || '').trim()
+  const url = getEnvVar('VITE_SUPABASE_URL')
+  const key = getEnvVar('VITE_SUPABASE_ANON_KEY')
 
   if (!url || !key) return false
   if (
