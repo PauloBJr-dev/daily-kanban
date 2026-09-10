@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../hooks/useAuth'
@@ -51,6 +51,12 @@ describe('AuthContext & useAuth', () => {
   it('helper isSupabaseConfigured retorna true quando URL e Anon Key são válidas', () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://test-app.supabase.co')
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'valid-anon-key-secret')
+    expect(isSupabaseConfigured()).toBe(true)
+  })
+
+  it('helper isSupabaseConfigured reconhece chaves com prefixo BOM UTF-8', () => {
+    vi.stubEnv('\uFEFFVITE_SUPABASE_URL', 'https://test-app.supabase.co')
+    vi.stubEnv('\uFEFFVITE_SUPABASE_ANON_KEY', 'valid-anon-key-secret')
     expect(isSupabaseConfigured()).toBe(true)
   })
 
