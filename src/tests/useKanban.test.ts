@@ -648,5 +648,192 @@ describe('useKanban', () => {
       expect(result.current.columns.some((c) => c.id === addedCol.id)).toBe(false)
       expect(deleteColumnSpy).toHaveBeenCalledWith(addedCol.id)
     })
+
+    it('carrega imediatamente o cache local do usuário autenticado antes da resposta do Supabase', async () => {
+      const cachedUserData = {
+        columns: [
+          {
+            id: 'col-cache',
+            title: 'Coluna Cache',
+            order: 0,
+            colorTheme: 'purple' as const,
+          },
+        ],
+        tasks: [
+          {
+            id: 'task-cache-1',
+            title: 'Tarefa Imediata do Cache',
+            columnId: 'col-cache',
+            priority: 'urgent' as const,
+            tags: [],
+            subtasks: [],
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        ],
+        version: 1,
+      }
+      storageService.save(cachedUserData, 'user-kanban-test')
+
+      // Supabase fetch pendente (simulando latência de rede)
+      let resolveFetch!: (value: any) => void
+      const fetchPromise = new Promise((resolve) => {
+        resolveFetch = resolve
+      })
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockImplementation(
+        () => fetchPromise as any
+      )
+
+      const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
+
+      // Síncrono / Imediato: já deve conter os dados locais antes do Supabase responder
+      expect(result.current.tasks).toHaveLength(1)
+      expect(result.current.tasks[0].title).toBe('Tarefa Imediata do Cache')
+
+      // Conclui a promessa do Supabase
+      resolveFetch({ columns: [], tasks: [] })
+    })
+
+    it('preserva dados locais no estado e storage quando o Supabase lança erro de rede/banco', async () => {
+      const localUserData = {
+        columns: [
+          {
+            id: 'col-offline',
+            title: 'Offline Col',
+            order: 0,
+            colorTheme: 'blue' as const,
+          },
+        ],
+        tasks: [
+          {
+            id: 'task-offline-1',
+            title: 'Tarefa Segura Offline',
+            columnId: 'col-offline',
+            priority: 'high' as const,
+            tags: [],
+            subtasks: [],
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        ],
+        version: 1,
+      }
+      storageService.save(localUserData, 'user-kanban-test')
+
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockRejectedValueOnce(
+        new Error('Supabase network failure / 500 server error')
+      )
+
+      const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
+
+      await waitFor(() => {
+        // Os dados não devem ser resetados para INITIAL_DATA (com 0 tarefas)
+        expect(result.current.tasks).toHaveLength(1)
+        expect(result.current.tasks[0].title).toBe('Tarefa Segura Offline')
+      })
+
+      // O localStorage também deve continuar íntegro
+      const savedInStorage = storageService.load('user-kanban-test')
+      expect(savedInStorage.tasks).toHaveLength(1)
+      expect(savedInStorage.tasks[0].title).toBe('Tarefa Segura Offline')
+    })
+
+    it('faz upload automático dos dados locais do usuário quando a nuvem está vazia', async () => {
+      const localUserData = {
+        columns: [
+          {
+            id: 'col-sync',
+            title: 'Minha Coluna Local',
+            order: 0,
+            colorTheme: 'emerald' as const,
+          },
+        ],
+        tasks: [
+          {
+            id: 'task-upload-me',
+            title: 'Tarefa Para Upload Nuvem',
+            columnId: 'col-sync',
+            priority: 'high' as const,
+            tags: [],
+            subtasks: [],
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        ],
+        version: 1,
+      }
+      storageService.save(localUserData, 'user-kanban-test')
+
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
+        columns: [],
+        tasks: [],
+      })
+      const uploadSpy = vi
+        .spyOn(supabaseKanbanService, 'uploadLocalData')
+        .mockResolvedValue()
+
+      const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
+
+      await waitFor(() => {
+        expect(uploadSpy).toHaveBeenCalledWith(
+          'user-kanban-test',
+          localUserData.columns,
+          localUserData.tasks
+        )
+      })
+
+      expect(result.current.tasks).toHaveLength(1)
+      expect(result.current.tasks[0].title).toBe('Tarefa Para Upload Nuvem')
+    })
+
+    it('migra dados de visitante e faz upload quando a conta é nova e a nuvem está vazia', async () => {
+      const guestData = {
+        columns: [
+          {
+            id: 'col-guest',
+            title: 'Coluna Visitante',
+            order: 0,
+            colorTheme: 'amber' as const,
+          },
+        ],
+        tasks: [
+          {
+            id: 'task-guest-upload',
+            title: 'Tarefa Convidado Migrada',
+            columnId: 'col-guest',
+            priority: 'urgent' as const,
+            tags: ['Convidado'],
+            subtasks: [],
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        ],
+        version: 1,
+      }
+      storageService.save(guestData, null)
+
+      vi.spyOn(supabaseKanbanService, 'fetchKanbanData').mockResolvedValueOnce({
+        columns: [],
+        tasks: [],
+      })
+      const uploadSpy = vi
+        .spyOn(supabaseKanbanService, 'uploadLocalData')
+        .mockResolvedValue()
+
+      const { result } = renderHook(() => useKanban(), { wrapper: AuthWrapper })
+
+      await waitFor(() => {
+        expect(uploadSpy).toHaveBeenCalledWith(
+          'user-kanban-test',
+          guestData.columns,
+          expect.arrayContaining([
+            expect.objectContaining({ title: 'Tarefa Convidado Migrada' }),
+          ])
+        )
+      })
+
+      expect(result.current.tasks).toHaveLength(1)
+      expect(result.current.tasks[0].title).toBe('Tarefa Convidado Migrada')
+    })
   })
 })
