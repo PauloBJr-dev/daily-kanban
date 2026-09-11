@@ -31,28 +31,33 @@ describe('App Integration', () => {
     expect(localStorage.getItem('organocat_guest_acknowledged')).toBe('true')
   })
 
-  it('renderiza o cabeçalho OrganoCat, quick stats, pomodoro widget, filtros e colunas do quadro', async () => {
+  it('renderiza o cabeçalho OrganoCat, pomodoro widget, filtros e colunas do quadro na visão Kanban', async () => {
     render(<App />)
 
     // Header
-    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: /organocat/i })
+    ).toBeInTheDocument()
     expect(screen.getByText('Nova Tarefa')).toBeInTheDocument()
     expect(
       await screen.findByRole('button', { name: /entrar ou criar conta/i })
     ).toBeInTheDocument()
 
-    // QuickStats
-    expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()
-    expect(screen.getByText('Taxa Geral de Conclusão')).toBeInTheDocument()
-
-    // Pomodoro
+    // Kanban com ordem estrita:
+    // 1. Cronômetro Pomodoro
     expect(screen.getByText('Bloco de Foco Diário')).toBeInTheDocument()
 
-    // Board columns
+    // 2. Filtros
+    expect(screen.getByPlaceholderText('Buscar tarefas...')).toBeInTheDocument()
+
+    // 3. Colunas do Quadro Kanban
     expect(screen.getByText('A Fazer')).toBeInTheDocument()
     expect(screen.getByText('Em Progresso')).toBeInTheDocument()
     expect(screen.getByText('Em Espera')).toBeInTheDocument()
     expect(screen.getByText('Concluído Hoje')).toBeInTheDocument()
+
+    // KPIs agora estão em Métricas, não devem poluir o Kanban
+    expect(screen.queryByText('Taxa Geral de Conclusão')).not.toBeInTheDocument()
   })
 
   it('abre e fecha o TaskModal ao clicar em Nova Tarefa', () => {
@@ -79,26 +84,46 @@ describe('App Integration', () => {
     expect(localStorage.getItem('dailyflow_theme')).toBeDefined()
   })
 
-  it('renderiza o seletor de visualização (switcher) no cabeçalho', () => {
+  it('renderiza as opções de navegação na barra lateral e badge de contexto no cabeçalho', () => {
     render(<App />)
 
-    const kanbanTab = screen.getByRole('tab', { name: /quadro diário/i })
-    const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
-
-    expect(kanbanTab).toBeInTheDocument()
-    expect(academicTab).toBeInTheDocument()
-    expect(kanbanTab).toHaveAttribute('aria-selected', 'true')
-    expect(academicTab).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getAllByRole('button', { name: 'Kanban' })[0]).toBeInTheDocument()
+    expect(
+      screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0]
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Métricas' })[0]).toBeInTheDocument()
+    expect(
+      screen.getAllByRole('button', { name: 'Configurações' })[0]
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Perfil' })[0]).toBeInTheDocument()
 
     // Pill central exibe progresso diário no modo Kanban
     expect(screen.getByText('Progresso Diário:')).toBeInTheDocument()
   })
 
+  it('alterna para a visão de Métricas e exibe os KPIs e painel analítico', () => {
+    render(<App />)
+
+    const metricsBtn = screen.getAllByRole('button', { name: 'Métricas' })[0]
+    fireEvent.click(metricsBtn)
+
+    // Métricas renderizada com os KPIs movidos
+    expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()
+    expect(screen.getByText('Taxa Geral de Conclusão')).toBeInTheDocument()
+    expect(screen.getByText('Painel Analítico de Produtividade')).toBeInTheDocument()
+
+    // Kanban não deve estar visível
+    expect(
+      screen.queryByRole('region', { name: 'Coluna A Fazer' })
+    ).not.toBeInTheDocument()
+    expect(localStorage.getItem('dailyflow_active_view')).toBe('metrics')
+  })
+
   it('alterna para o Espaço Acadêmico e renderiza o AcademicView', () => {
     render(<App />)
 
-    const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
-    fireEvent.click(academicTab)
+    const academicBtn = screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0]
+    fireEvent.click(academicBtn)
 
     // Academic View renderizada
     expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
@@ -107,10 +132,9 @@ describe('App Integration', () => {
     ).toBeInTheDocument()
 
     // Elementos do Kanban não devem estar visíveis
-    expect(screen.queryByText('Metas de Hoje')).not.toBeInTheDocument()
     expect(screen.queryByText('A Fazer')).not.toBeInTheDocument()
 
-    // Botão de ação do cabeçalho agora é Nova Anotação (presente no header e no caderno)
+    // Botão de ação do cabeçalho agora é Nova Anotação
     expect(
       screen.getAllByRole('button', { name: 'Criar nova anotação' })[0]
     ).toBeInTheDocument()
@@ -118,23 +142,20 @@ describe('App Integration', () => {
     // Pill central agora é acadêmico
     expect(screen.getByText('Espaço de Estudos e Revisões')).toBeInTheDocument()
 
-    // Tab switcher atualizado
-    expect(academicTab).toHaveAttribute('aria-selected', 'true')
     expect(localStorage.getItem('dailyflow_active_view')).toBe('academic')
   })
 
-  it('alterna de volta para o Quadro Diário', () => {
+  it('alterna de volta para o Quadro Kanban', () => {
     render(<App />)
 
-    const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
-    fireEvent.click(academicTab)
+    const academicBtn = screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0]
+    fireEvent.click(academicBtn)
     expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
 
-    const kanbanTab = screen.getByRole('tab', { name: /quadro diário/i })
-    fireEvent.click(kanbanTab)
+    const kanbanBtn = screen.getAllByRole('button', { name: 'Kanban' })[0]
+    fireEvent.click(kanbanBtn)
 
     // Retorna ao Kanban
-    expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()
     expect(screen.getByText('A Fazer')).toBeInTheDocument()
     expect(screen.getByText('Nova Tarefa')).toBeInTheDocument()
     expect(localStorage.getItem('dailyflow_active_view')).toBe('kanban')
@@ -144,7 +165,7 @@ describe('App Integration', () => {
     render(<App />)
 
     // Muda para o modo acadêmico
-    fireEvent.click(screen.getByRole('tab', { name: /espaço acadêmico/i }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0])
 
     // Clica no botão de criar anotação
     const newNoteButtons = screen.getAllByRole('button', { name: 'Criar nova anotação' })
@@ -166,7 +187,7 @@ describe('App Integration', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
     // Alterna para o modo acadêmico
-    fireEvent.click(screen.getByRole('tab', { name: /espaço acadêmico/i }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0])
 
     // No modo Acadêmico, "n" abre Nova Anotação
     fireEvent.keyDown(window, { key: 'n' })
@@ -207,8 +228,10 @@ describe('App Integration', () => {
     render(<App />)
 
     // Muda para o modo acadêmico
-    fireEvent.click(screen.getByRole('tab', { name: /espaço acadêmico/i }))
-    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0])
+    expect(
+      screen.getByRole('heading', { level: 1, name: /organocat/i })
+    ).toBeInTheDocument()
 
     // Alterna para o Modo Studio
     fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
@@ -218,13 +241,17 @@ describe('App Integration', () => {
     fireEvent.click(zenBtn)
 
     // Cabeçalho global do OrganoCat deve estar oculto
-    expect(screen.queryByText('OrganoCat')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { level: 1, name: /organocat/i })
+    ).not.toBeInTheDocument()
 
     // Pressiona Escape para desativar o Modo Zen
     fireEvent.keyDown(window, { key: 'Escape' })
 
     // Cabeçalho global restaurado
-    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: /organocat/i })
+    ).toBeInTheDocument()
   })
 
   it('renderiza o link de acessibilidade para pular para o conteúdo principal', () => {
@@ -251,10 +278,15 @@ describe('App Integration', () => {
     expect(screen.getByText('Tarefa criada com sucesso')).toBeInTheDocument()
   })
 
-  it('exibe confirmação com palavra de segurança "RESTAURAR" ao solicitar restauração padrão', () => {
+  it('exibe confirmação com palavra de segurança "RESTAURAR" ao solicitar restauração em Configurações', () => {
     render(<App />)
 
-    const resetBtn = screen.getByTitle('Restaurar dados de demonstração')
+    // Abre a aba de Configurações
+    fireEvent.click(screen.getAllByRole('button', { name: 'Configurações' })[0])
+
+    const resetBtn = screen.getByRole('button', {
+      name: /restaurar dados de demonstração/i,
+    })
     fireEvent.click(resetBtn)
 
     expect(screen.getByText('Restaurar Dados Padrão')).toBeInTheDocument()
