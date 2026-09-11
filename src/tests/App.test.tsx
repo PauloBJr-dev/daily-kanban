@@ -34,9 +34,12 @@ describe('App Integration', () => {
   it('renderiza o cabeçalho OrganoCat, pomodoro widget, filtros e colunas do quadro na visão Kanban', async () => {
     render(<App />)
 
-    // Header
+    // Header & Sidebar
     expect(
-      screen.getByRole('heading', { level: 1, name: /organocat/i })
+      screen.getByRole('heading', { level: 1, name: /quadro kanban/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 2, name: /organocat/i })
     ).toBeInTheDocument()
     expect(screen.getByText('Nova Tarefa')).toBeInTheDocument()
     expect(
@@ -230,7 +233,7 @@ describe('App Integration', () => {
     // Muda para o modo acadêmico
     fireEvent.click(screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0])
     expect(
-      screen.getByRole('heading', { level: 1, name: /organocat/i })
+      screen.getByRole('heading', { level: 1, name: /espaço acadêmico/i })
     ).toBeInTheDocument()
 
     // Alterna para o Modo Studio
@@ -240,9 +243,9 @@ describe('App Integration', () => {
     const zenBtn = screen.getByLabelText('Modo Zen')
     fireEvent.click(zenBtn)
 
-    // Cabeçalho global do OrganoCat deve estar oculto
+    // Cabeçalho global deve estar oculto no Modo Zen
     expect(
-      screen.queryByRole('heading', { level: 1, name: /organocat/i })
+      screen.queryByRole('heading', { level: 1, name: /espaço acadêmico/i })
     ).not.toBeInTheDocument()
 
     // Pressiona Escape para desativar o Modo Zen
@@ -250,7 +253,7 @@ describe('App Integration', () => {
 
     // Cabeçalho global restaurado
     expect(
-      screen.getByRole('heading', { level: 1, name: /organocat/i })
+      screen.getByRole('heading', { level: 1, name: /espaço acadêmico/i })
     ).toBeInTheDocument()
   })
 

@@ -31,11 +31,13 @@ describe('Header Component', () => {
     return result
   }
 
-  it('renderiza corretamente no modo Kanban com título OrganoCat, badge, botão da sidebar e progresso diário', async () => {
+  it('renderiza corretamente no modo Kanban com título da tela ativa, botão da sidebar e progresso diário', async () => {
     await renderHeader()
 
-    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
-    expect(screen.getByText('Kanban')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Quadro Kanban' })
+    ).toBeInTheDocument()
+    expect(screen.queryByText('OrganoCat')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Alternar barra lateral' })
     ).toBeInTheDocument()
@@ -63,11 +65,13 @@ describe('Header Component', () => {
     expect(screen.getByText('Entrar / Criar Conta')).toBeInTheDocument()
   })
 
-  it('renderiza corretamente no modo Acadêmico com pill de estudos e botão Nova Anotação', async () => {
+  it('renderiza corretamente no modo Acadêmico com título da tela ativa, pill de estudos e botão Nova Anotação', async () => {
     await renderHeader({ ...defaultProps, activeView: 'academic' })
 
-    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
-    expect(screen.getByText('Acadêmico')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
+    ).toBeInTheDocument()
+    expect(screen.queryByText('OrganoCat')).not.toBeInTheDocument()
     expect(screen.getByText('Espaço de Estudos e Revisões')).toBeInTheDocument()
     expect(screen.queryByText('Progresso Diário:')).not.toBeInTheDocument()
     expect(
@@ -75,13 +79,15 @@ describe('Header Component', () => {
     ).toBeInTheDocument()
   })
 
-  it('renderiza badges corretos para Métricas, Configurações e Perfil', async () => {
+  it('renderiza títulos corretos da tela ativa para Métricas, Configurações e Perfil', async () => {
     const { rerender } = render(
       <AuthProvider>
         <Header {...defaultProps} activeView="metrics" />
       </AuthProvider>
     )
-    expect(screen.getByText('Métricas')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Métricas & Produtividade' })
+    ).toBeInTheDocument()
     expect(screen.getByText('Painel Analítico de Produtividade')).toBeInTheDocument()
 
     rerender(
@@ -89,7 +95,9 @@ describe('Header Component', () => {
         <Header {...defaultProps} activeView="settings" />
       </AuthProvider>
     )
-    expect(screen.getByText('Configurações')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Configurações' })
+    ).toBeInTheDocument()
     expect(screen.getByText('Preferências & Personalização')).toBeInTheDocument()
 
     rerender(
@@ -97,7 +105,7 @@ describe('Header Component', () => {
         <Header {...defaultProps} activeView="profile" />
       </AuthProvider>
     )
-    expect(screen.getByText('Perfil')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Perfil' })).toBeInTheDocument()
     expect(screen.getByText('Gestão de Perfil & Dados')).toBeInTheDocument()
   })
 

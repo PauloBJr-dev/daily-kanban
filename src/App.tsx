@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Header } from './components/Header'
 import { Sidebar, type AppView } from './components/Sidebar'
 import { MetricsView } from './components/metrics'
@@ -485,7 +485,7 @@ export const AppContent: React.FC = () => {
           className={
             isZenMode
               ? 'flex-1 w-full p-0 overflow-hidden'
-              : 'flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6'
+              : 'flex-1 w-full px-6 lg:px-8 py-6 space-y-6'
           }
         >
           {/* TAB 1: KANBAN */}
