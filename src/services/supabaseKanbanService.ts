@@ -14,7 +14,7 @@ export async function fetchKanbanData(
       .from('tasks')
       .select('*')
       .eq('user_id', userId)
-      .order('order', { ascending: true }),
+      .order('created_at', { ascending: true }),
   ])
 
   if (columnsRes.error) {
@@ -31,7 +31,7 @@ export async function fetchKanbanData(
     id: row.id,
     title: row.title,
     order: row.order ?? 0,
-    colorTheme: (row.color || row.color_theme || 'blue') as Column['colorTheme'],
+    colorTheme: (row.color_theme || row.color || 'blue') as Column['colorTheme'],
   }))
 
   const tasks: Task[] = (tasksRes.data || []).map((row: any) => ({
@@ -63,7 +63,7 @@ export async function syncColumns(userId: string, columns: Column[]): Promise<vo
     id: col.id,
     user_id: userId,
     title: col.title,
-    color: col.colorTheme,
+    color_theme: col.colorTheme,
     order: col.order ?? idx,
     updated_at: new Date().toISOString(),
   }))
@@ -89,7 +89,7 @@ export async function syncTask(userId: string, task: Task): Promise<void> {
     due_date: task.dueDate ?? null,
     pomodoro_minutes_spent: task.pomodoroMinutesSpent ?? 0,
     subtasks: task.subtasks ?? [],
-    order: (task as any).order ?? 0,
+    completed_at: task.completedAt ?? null,
     created_at: task.createdAt,
     updated_at: task.updatedAt,
   }
@@ -139,7 +139,7 @@ export async function uploadLocalData(
   }
 
   if (tasks.length > 0) {
-    const taskRows = tasks.map((task, idx) => ({
+    const taskRows = tasks.map((task) => ({
       id: task.id,
       user_id: userId,
       column_id: task.columnId,
@@ -149,7 +149,7 @@ export async function uploadLocalData(
       due_date: task.dueDate ?? null,
       pomodoro_minutes_spent: task.pomodoroMinutesSpent ?? 0,
       subtasks: task.subtasks ?? [],
-      order: (task as any).order ?? idx,
+      completed_at: task.completedAt ?? null,
       created_at: task.createdAt,
       updated_at: task.updatedAt,
     }))

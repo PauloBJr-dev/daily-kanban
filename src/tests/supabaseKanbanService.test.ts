@@ -17,14 +17,14 @@ describe('supabaseKanbanService', () => {
   })
 
   describe('fetchKanbanData', () => {
-    it('busca e mapeia colunas e tarefas do Supabase com sucesso', async () => {
+    it('busca e mapeia colunas e tarefas do Supabase com sucesso ordenando tarefas por created_at', async () => {
       const mockColumnsData = [
         {
           id: 'col-1',
           user_id: 'user-abc',
           title: 'A Fazer',
           order: 0,
-          color: 'blue',
+          color_theme: 'blue',
           created_at: '2026-09-01T00:00:00.000Z',
           updated_at: '2026-09-01T00:00:00.000Z',
         },
@@ -41,31 +41,39 @@ describe('supabaseKanbanService', () => {
           due_date: '2026-09-10',
           subtasks: [{ id: 'sub-1', title: 'Unitário', completed: false }],
           pomodoro_minutes_spent: 25,
-          order: 0,
+          completed_at: '2026-09-05T12:00:00.000Z',
           created_at: '2026-09-01T00:00:00.000Z',
           updated_at: '2026-09-01T00:00:00.000Z',
         },
       ]
+
+      const taskOrderSpy = vi.fn().mockResolvedValue({ data: mockTasksData, error: null })
+      const columnOrderSpy = vi
+        .fn()
+        .mockResolvedValue({ data: mockColumnsData, error: null })
 
       vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
         if (table === 'kanban_columns') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockResolvedValue({ data: mockColumnsData, error: null }),
+            order: columnOrderSpy,
           } as any
         }
         if (table === 'tasks') {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockResolvedValue({ data: mockTasksData, error: null }),
+            order: taskOrderSpy,
           } as any
         }
         return {} as any
       })
 
       const result = await fetchKanbanData('user-abc')
+
+      // Garante que a ordenação de tarefas foi feita por 'created_at' e não por 'order'
+      expect(taskOrderSpy).toHaveBeenCalledWith('created_at', { ascending: true })
 
       expect(result.columns).toHaveLength(1)
       expect(result.columns[0]).toEqual({
@@ -85,7 +93,7 @@ describe('supabaseKanbanService', () => {
         tags: [],
         dueDate: '2026-09-10',
         subtasks: [{ id: 'sub-1', title: 'Unitário', completed: false }],
-        completedAt: undefined,
+        completedAt: '2026-09-05T12:00:00.000Z',
         createdAt: '2026-09-01T00:00:00.000Z',
         updatedAt: '2026-09-01T00:00:00.000Z',
         pomodoroMinutesSpent: 25,
@@ -107,7 +115,7 @@ describe('supabaseKanbanService', () => {
   })
 
   describe('syncColumns', () => {
-    it('faz upsert das colunas com formato correto', async () => {
+    it('faz upsert das colunas com color_theme e sem coluna color', async () => {
       const upsertMock = vi.fn().mockResolvedValue({ error: null })
       vi.spyOn(supabase, 'from').mockReturnValue({
         upsert: upsertMock,
@@ -125,12 +133,16 @@ describe('supabaseKanbanService', () => {
             id: 'col-todo',
             user_id: 'user-abc',
             title: 'A Fazer',
-            color: 'blue',
+            color_theme: 'blue',
             order: 0,
           }),
         ],
         { onConflict: 'id,user_id' }
       )
+
+      const payload = upsertMock.mock.calls[0][0][0]
+      expect(payload).toHaveProperty('color_theme', 'blue')
+      expect(payload).not.toHaveProperty('color')
     })
 
     it('não executa upsert quando array de colunas está vazio', async () => {
@@ -153,7 +165,7 @@ describe('supabaseKanbanService', () => {
   })
 
   describe('syncTask', () => {
-    it('faz upsert da tarefa no Supabase com sucesso', async () => {
+    it('faz upsert da tarefa incluindo completed_at e sem campo order', async () => {
       const upsertMock = vi.fn().mockResolvedValue({ error: null })
       vi.spyOn(supabase, 'from').mockReturnValue({
         upsert: upsertMock,
@@ -167,6 +179,7 @@ describe('supabaseKanbanService', () => {
         priority: 'high',
         tags: [],
         subtasks: [],
+        completedAt: '2026-09-08T15:30:00.000Z',
         createdAt: '2026-09-08T00:00:00.000Z',
         updatedAt: '2026-09-08T00:00:00.000Z',
       }
@@ -180,9 +193,38 @@ describe('supabaseKanbanService', () => {
           column_id: 'col-todo',
           title: 'Estudar TypeScript',
           priority: 'high',
+          completed_at: '2026-09-08T15:30:00.000Z',
         }),
         { onConflict: 'id,user_id' }
       )
+
+      const payload = upsertMock.mock.calls[0][0]
+      expect(payload).not.toHaveProperty('order')
+      expect(payload.completed_at).toBe('2026-09-08T15:30:00.000Z')
+    })
+
+    it('envia completed_at como null quando a tarefa não está concluída', async () => {
+      const upsertMock = vi.fn().mockResolvedValue({ error: null })
+      vi.spyOn(supabase, 'from').mockReturnValue({
+        upsert: upsertMock,
+      } as any)
+
+      const task: Task = {
+        id: 'task-pending',
+        title: 'Pendente',
+        columnId: 'col-todo',
+        priority: 'low',
+        tags: [],
+        subtasks: [],
+        createdAt: '2026-09-08T00:00:00.000Z',
+        updatedAt: '2026-09-08T00:00:00.000Z',
+      }
+
+      await syncTask('user-abc', task)
+
+      const payload = upsertMock.mock.calls[0][0]
+      expect(payload.completed_at).toBeNull()
+      expect(payload).not.toHaveProperty('order')
     })
 
     it('lança erro quando upsert de tarefa falha', async () => {
@@ -231,14 +273,14 @@ describe('supabaseKanbanService', () => {
   })
 
   describe('uploadLocalData', () => {
-    it('faz upload de colunas e tarefas locais em lote', async () => {
+    it('faz upload de colunas e tarefas locais em lote sem order e com completed_at e color_theme', async () => {
       const upsertMock = vi.fn().mockResolvedValue({ error: null })
       vi.spyOn(supabase, 'from').mockReturnValue({
         upsert: upsertMock,
       } as any)
 
       const columns: Column[] = [
-        { id: 'col-1', title: 'Backlog', order: 0, colorTheme: 'slate' },
+        { id: 'col-1', title: 'Backlog', order: 0, colorTheme: 'blue' },
       ]
       const tasks: Task[] = [
         {
@@ -248,6 +290,7 @@ describe('supabaseKanbanService', () => {
           priority: 'low',
           tags: [],
           subtasks: [],
+          completedAt: '2026-09-02T10:00:00.000Z',
           createdAt: '2026-09-01T00:00:00.000Z',
           updatedAt: '2026-09-01T00:00:00.000Z',
         },
@@ -255,6 +298,16 @@ describe('supabaseKanbanService', () => {
 
       await uploadLocalData('user-abc', columns, tasks)
       expect(upsertMock).toHaveBeenCalledTimes(2)
+
+      // Verificar colunas
+      const columnsPayload = upsertMock.mock.calls[0][0]
+      expect(columnsPayload[0]).toHaveProperty('color_theme', 'blue')
+      expect(columnsPayload[0]).not.toHaveProperty('color')
+
+      // Verificar tarefas
+      const tasksPayload = upsertMock.mock.calls[1][0]
+      expect(tasksPayload[0]).not.toHaveProperty('order')
+      expect(tasksPayload[0]).toHaveProperty('completed_at', '2026-09-02T10:00:00.000Z')
     })
   })
 

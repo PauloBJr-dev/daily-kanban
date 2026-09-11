@@ -1,4 +1,4 @@
-﻿import type { KanbanData } from '../types/kanban'
+import type { KanbanData } from '../types/kanban'
 import { INITIAL_DATA } from './seedData'
 
 export const storageService = {
@@ -11,6 +11,19 @@ export const storageService = {
     try {
       const raw = localStorage.getItem(key)
       if (!raw) {
+        const legacyRaw = localStorage.getItem('dailyflow_kanban_data_v1')
+        if (legacyRaw) {
+          try {
+            const parsedLegacy = JSON.parse(legacyRaw)
+            if (this.validateJSON(parsedLegacy)) {
+              localStorage.setItem(key, legacyRaw)
+              localStorage.removeItem('dailyflow_kanban_data_v1')
+              return parsedLegacy
+            }
+          } catch {
+            // Ignorar erro ao processar chave legada corrompida
+          }
+        }
         return INITIAL_DATA
       }
       const parsed = JSON.parse(raw)
@@ -19,9 +32,35 @@ export const storageService = {
       }
       return parsed as KanbanData
     } catch (err) {
-      console.warn('Falha ao ler localStorage, utilizando dados padrão.', err)
+      console.warn('Falha ao ler localStorage, utilizando dados padr?o.', err)
       return INITIAL_DATA
     }
+  },
+
+  migrateGuestData(userId: string): KanbanData | null {
+    if (!userId) return null
+
+    const userData = this.load(userId)
+    if (userData.tasks.length > 0) {
+      return null
+    }
+
+    const guestRaw = localStorage.getItem('organocat_kanban_guest')
+    if (!guestRaw) return null
+
+    try {
+      const guestData = JSON.parse(guestRaw)
+      if (!this.validateJSON(guestData)) return null
+
+      if (guestData.tasks && guestData.tasks.length > 0) {
+        this.save(guestData, userId)
+        return guestData
+      }
+    } catch {
+      return null
+    }
+
+    return null
   },
 
   save(data: KanbanData, userId?: string | null): void {

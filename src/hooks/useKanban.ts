@@ -1,8 +1,8 @@
-﻿import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import confetti from 'canvas-confetti'
 import type { Column, FilterState, KanbanData, Subtask, Task } from '../types/kanban'
 import { storageService } from '../services/storageService'
-import { INITIAL_DATA } from '../services/seedData'
+import { INITIAL_DATA, DEFAULT_COLUMNS } from '../services/seedData'
 import { useAuth } from './useAuth'
 import { supabaseKanbanService } from '../services/supabaseKanbanService'
 
@@ -63,12 +63,56 @@ export const isReviewColumn = (colId: string) =>
 export const isTrackedColumn = (colId: string) =>
   isProgressColumn(colId) || isReviewColumn(colId)
 
+export function hasCustomColumns(columns: Column[]): boolean {
+  if (!columns || columns.length !== DEFAULT_COLUMNS.length) return true
+  return columns.some((col, idx) => {
+    const def = DEFAULT_COLUMNS[idx]
+    return (
+      !def ||
+      col.id !== def.id ||
+      col.title !== def.title ||
+      col.colorTheme !== def.colorTheme
+    )
+  })
+}
+
 export function useKanban() {
   const { user } = useAuth(false)
   const userId = user?.id ?? null
 
-  const prevUserIdRef = useRef<string | null>(userId)
-  const [data, setData] = useState<KanbanData>(() => storageService.load(userId))
+  const [prevUserId, setPrevUserId] = useState<string | null>(userId)
+
+  // Armazena dados e o dono atual do estado para prevenir sobrescrita indevida do cache
+  const [dataState, setDataState] = useState<{
+    data: KanbanData
+    ownerId: string | null
+  }>(() => ({
+    data: storageService.load(userId),
+    ownerId: userId,
+  }))
+
+  // Carregar IMEDIATAMENTE o cache local ao alternar userId antes de renderizar ou rodar effects
+  if (prevUserId !== userId) {
+    setPrevUserId(userId)
+    setDataState({
+      data: userId ? storageService.load(userId) : INITIAL_DATA,
+      ownerId: userId,
+    })
+  }
+
+  const data = dataState.data
+  const dataOwnerId = dataState.ownerId
+
+  const setData = useCallback(
+    (updater: KanbanData | ((prev: KanbanData) => KanbanData)) => {
+      setDataState((prev) => ({
+        ownerId: userId,
+        data: typeof updater === 'function' ? updater(prev.data) : updater,
+      }))
+    },
+    [userId]
+  )
+
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
     priority: 'all',
@@ -77,45 +121,67 @@ export function useKanban() {
     weekScope: 'this_week',
   })
 
-  // Synchronize with Supabase when user is authenticated or reset on logout
+  // Synchronize with Supabase when user is authenticated
   useEffect(() => {
     let isMounted = true
 
-    // Reset on logout transition (userId was authenticated and is now null)
-    if (prevUserIdRef.current && !userId) {
-      setData(INITIAL_DATA)
-      prevUserIdRef.current = null
-      return
-    }
-
     if (!userId) {
-      prevUserIdRef.current = null
       return
     }
-
-    prevUserIdRef.current = userId
 
     const activeUserId = userId
+    const cachedData = storageService.load(activeUserId)
 
     async function syncData() {
       try {
         const cloudData = await supabaseKanbanService.fetchKanbanData(activeUserId)
         if (!isMounted) return
 
-        // Novo usuário sempre começa com quadro limpo inicial (INITIAL_DATA com 0 tarefas)
-        if (cloudData.columns.length === 0 && cloudData.tasks.length === 0) {
-          setData(INITIAL_DATA)
+        const hasCloudContent = cloudData.columns.length > 0 || cloudData.tasks.length > 0
+
+        if (hasCloudContent) {
+          setDataState({
+            data: {
+              columns:
+                cloudData.columns.length > 0 ? cloudData.columns : INITIAL_DATA.columns,
+              tasks: cloudData.tasks,
+              version: 1,
+            },
+            ownerId: activeUserId,
+          })
           return
         }
 
-        setData({
-          columns:
-            cloudData.columns.length > 0 ? cloudData.columns : INITIAL_DATA.columns,
-          tasks: cloudData.tasks,
-          version: 1,
-        })
+        // Se cloudData estiver vazio (0 colunas e 0 tarefas):
+        const hasCachedTasks = cachedData.tasks.length > 0
+        const hasCustomCols = hasCustomColumns(cachedData.columns)
+
+        if (hasCachedTasks || hasCustomCols) {
+          await supabaseKanbanService.uploadLocalData(
+            activeUserId,
+            cachedData.columns,
+            cachedData.tasks
+          )
+          return
+        }
+
+        // Se cachedData tamb?m estiver vazio: verificar se h? dados em modo visitante
+        const migratedData = storageService.migrateGuestData(activeUserId)
+        if (migratedData && migratedData.tasks.length > 0) {
+          await supabaseKanbanService.uploadLocalData(
+            activeUserId,
+            migratedData.columns,
+            migratedData.tasks
+          )
+          setDataState({ data: migratedData, ownerId: activeUserId })
+          return
+        }
+
+        // Se nada houver, manter INITIAL_DATA
+        setDataState({ data: INITIAL_DATA, ownerId: activeUserId })
       } catch (err) {
         console.error('Erro ao carregar dados do Kanban do Supabase:', err)
+        // N?O alterar setData para INITIAL_DATA! Os dados locais em cachedData continuam preservados no estado e no localStorage.
       }
     }
 
@@ -128,11 +194,13 @@ export function useKanban() {
 
   // Save to localStorage partitioned by userId
   useEffect(() => {
-    if (prevUserIdRef.current !== userId) {
+    // Garantir que n?o salva dados de visitante na chave de um novo usu?rio autenticado
+    // antes que os dados daquele usu?rio tenham sido carregados no estado.
+    if (dataOwnerId !== userId) {
       return
     }
     storageService.save(data, userId)
-  }, [data, userId])
+  }, [data, userId, dataOwnerId])
 
   const triggerCelebration = useCallback(() => {
     try {
@@ -180,7 +248,7 @@ export function useKanban() {
 
       return newTask
     },
-    [userId]
+    [userId, setData]
   )
 
   const updateTask = useCallback(
@@ -202,11 +270,11 @@ export function useKanban() {
 
       if (userId) {
         supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
-          console.error('Erro ao sincronizar atualizaÃ§Ã£o de tarefa no Supabase:', err)
+          console.error('Erro ao sincronizar atualiza??o de tarefa no Supabase:', err)
         })
       }
     },
-    [data.tasks, userId]
+    [data.tasks, userId, setData]
   )
 
   const deleteTask = useCallback(
@@ -222,7 +290,7 @@ export function useKanban() {
         })
       }
     },
-    [userId]
+    [userId, setData]
   )
 
   const restoreTask = useCallback(
@@ -241,7 +309,7 @@ export function useKanban() {
         })
       }
     },
-    [userId]
+    [userId, setData]
   )
 
   const moveTask = useCallback(
@@ -323,7 +391,7 @@ export function useKanban() {
         })
       }
     },
-    [data.tasks, userId, triggerCelebration]
+    [data.tasks, userId, triggerCelebration, setData]
   )
 
   const toggleSubtask = useCallback(
@@ -351,7 +419,7 @@ export function useKanban() {
         })
       }
     },
-    [data.tasks, userId]
+    [data.tasks, userId, setData]
   )
 
   const addSubtask = useCallback(
@@ -383,7 +451,7 @@ export function useKanban() {
         })
       }
     },
-    [data.tasks, userId]
+    [data.tasks, userId, setData]
   )
 
   const removeSubtask = useCallback(
@@ -408,7 +476,7 @@ export function useKanban() {
         })
       }
     },
-    [data.tasks, userId]
+    [data.tasks, userId, setData]
   )
 
   const addColumn = useCallback(
@@ -433,7 +501,7 @@ export function useKanban() {
         }
       })
     },
-    [userId]
+    [userId, setData]
   )
 
   const deleteColumn = useCallback(
@@ -462,7 +530,7 @@ export function useKanban() {
         }
       })
     },
-    [userId]
+    [userId, setData]
   )
 
   const updateColumn = useCallback(
@@ -482,7 +550,7 @@ export function useKanban() {
 
         if (userId) {
           supabaseKanbanService.syncColumns(userId, nextColumns).catch((err) => {
-            console.error('Erro ao sincronizar atualizaÃ§Ã£o de coluna no Supabase:', err)
+            console.error('Erro ao sincronizar atualiza??o de coluna no Supabase:', err)
           })
         }
 
@@ -492,7 +560,7 @@ export function useKanban() {
         }
       })
     },
-    [userId]
+    [userId, setData]
   )
 
   const reorderColumns = useCallback(
@@ -505,11 +573,11 @@ export function useKanban() {
 
       if (userId) {
         supabaseKanbanService.syncColumns(userId, ordered).catch((err) => {
-          console.error('Erro ao sincronizar reordenaÃ§Ã£o de colunas no Supabase:', err)
+          console.error('Erro ao sincronizar reordena??o de colunas no Supabase:', err)
         })
       }
     },
-    [userId]
+    [userId, setData]
   )
 
   const moveColumn = useCallback(
@@ -540,14 +608,14 @@ export function useKanban() {
         }
       })
     },
-    [userId]
+    [userId, setData]
   )
 
   const exportData = useCallback(() => {
     try {
       storageService.exportJSON(data)
     } catch {
-      // Ignorar caso ambiente de teste não suporte download
+      // Ignorar caso ambiente de teste n?o suporte download
     }
     return JSON.stringify(data, null, 2)
   }, [data])
@@ -572,7 +640,7 @@ export function useKanban() {
         return false
       }
     },
-    [userId]
+    [userId, setData]
   )
 
   const resetToSeed = useCallback(() => {
@@ -584,7 +652,7 @@ export function useKanban() {
           console.error('Erro ao sincronizar dados resetados no Supabase:', err)
         })
     }
-  }, [userId])
+  }, [userId, setData])
 
   // All unique tags available in tasks
   const allTags = useMemo(() => {
