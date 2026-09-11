@@ -1,6 +1,9 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Header } from './components/Header'
-import { QuickStats } from './components/QuickStats'
+import { Sidebar, type AppView } from './components/Sidebar'
+import { MetricsView } from './components/metrics'
+import { SettingsView } from './components/settings'
+import { ProfileView } from './components/profile'
 import { PomodoroWidget } from './components/PomodoroWidget'
 import { PomodoroFullscreen } from './components/PomodoroFullscreen'
 import { FilterBar } from './components/FilterBar'
@@ -80,7 +83,7 @@ export const AppContent: React.FC = () => {
     setIsDark((prev) => !prev)
   }, [])
 
-  // Abertura automática do AuthModal na primeira visita caso não esteja logado e não tenha reconhecido modo visitante
+  // Abertura automática do AuthModal na primeira visita
   useEffect(() => {
     if (!authLoading && !user && !isGuestAcknowledged) {
       openAuthModal()
@@ -130,21 +133,55 @@ export const AppContent: React.FC = () => {
     [startFocus]
   )
 
-  // Active view navigation ('kanban' | 'academic')
-  const [activeView, setActiveView] = useState<'kanban' | 'academic'>(() => {
+  // Active view navigation ('kanban' | 'academic' | 'metrics' | 'settings' | 'profile')
+  const [activeView, setActiveView] = useState<AppView>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('dailyflow_active_view')
-      if (saved === 'kanban' || saved === 'academic') {
+      if (
+        saved === 'kanban' ||
+        saved === 'academic' ||
+        saved === 'metrics' ||
+        saved === 'settings' ||
+        saved === 'profile'
+      ) {
         return saved
       }
     }
     return 'kanban'
   })
 
-  // Zen Mode (Immersive full-screen focus in academic studio)
+  // Sidebar Collapse & Mobile Drawer State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('organocat_sidebar_collapsed')
+      return saved === 'true'
+    }
+    return false
+  })
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('organocat_sidebar_collapsed', String(isSidebarCollapsed))
+    }
+  }, [isSidebarCollapsed])
+
+  const toggleSidebarCollapse = useCallback(() => {
+    setIsSidebarCollapsed((prev) => !prev)
+  }, [])
+
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false)
+  const handleToggleSidebar = useCallback(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsMobileSidebarOpen((prev) => !prev)
+    } else {
+      setIsSidebarCollapsed((prev) => !prev)
+    }
+  }, [])
+
+  // Zen Mode
   const [isZenMode, setIsZenMode] = useState(false)
 
-  const handleViewChange = useCallback((view: 'kanban' | 'academic') => {
+  const handleViewChange = useCallback((view: AppView) => {
     setActiveView(view)
     setIsZenMode(false)
     if (typeof window !== 'undefined') {
@@ -152,7 +189,7 @@ export const AppContent: React.FC = () => {
     }
   }, [])
 
-  // Restore header on Escape key when in Zen mode or minimize Pomodoro fullscreen
+  // Escape key handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -160,12 +197,14 @@ export const AppContent: React.FC = () => {
           setIsPomodoroFullscreen(false)
         } else if (isZenMode) {
           setIsZenMode(false)
+        } else if (isMobileSidebarOpen) {
+          setIsMobileSidebarOpen(false)
         }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isPomodoroFullscreen, isZenMode])
+  }, [isPomodoroFullscreen, isZenMode, isMobileSidebarOpen])
 
   // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
@@ -173,7 +212,6 @@ export const AppContent: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [newTaskColumnId, setNewTaskColumnId] = useState<string | undefined>(undefined)
 
-  // Ref for global quick search focus
   const searchInputRef = useRef<HTMLInputElement>(null)
   const academicViewRef = useRef<AcademicViewHandle>(null)
 
@@ -204,8 +242,15 @@ export const AppContent: React.FC = () => {
   )
 
   const handleOpenNewNote = useCallback(() => {
-    academicViewRef.current?.openNewNote()
-  }, [])
+    if (activeView !== 'academic') {
+      handleViewChange('academic')
+      setTimeout(() => {
+        academicViewRef.current?.openNewNote()
+      }, 50)
+    } else {
+      academicViewRef.current?.openNewNote()
+    }
+  }, [activeView, handleViewChange])
 
   const handleFocusSearch = useCallback(() => {
     if (activeView === 'kanban') {
@@ -213,7 +258,7 @@ export const AppContent: React.FC = () => {
         searchInputRef.current.focus()
         searchInputRef.current.select()
       }
-    } else {
+    } else if (activeView === 'academic') {
       academicViewRef.current?.focusSearch()
     }
   }, [activeView])
@@ -225,10 +270,10 @@ export const AppContent: React.FC = () => {
   // Register Global Keyboard Navigation Shortcuts
   useGlobalShortcuts({
     onNewTask: () => {
-      if (activeView === 'kanban') {
-        handleOpenNewTask()
-      } else {
+      if (activeView === 'academic') {
         handleOpenNewNote()
+      } else {
+        handleOpenNewTask()
       }
     },
     onFocusSearch: handleFocusSearch,
@@ -381,7 +426,7 @@ export const AppContent: React.FC = () => {
       isOpen: true,
       title: 'Restaurar Dados Padrão',
       message:
-        'Deseja restaurar o DailyFlow para os dados de demonstração iniciais? Suas alterações locais serão substituídas.',
+        'Deseja restaurar o OrganoCat para os dados de demonstração iniciais? Suas alterações locais serão substituídas.',
       confirmText: 'Restaurar',
       isDanger: true,
       requireConfirmationWord: 'RESTAURAR',
@@ -393,7 +438,7 @@ export const AppContent: React.FC = () => {
   }, [resetToSeed, toast])
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col transition-colors duration-200 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-row transition-colors duration-200 selection:bg-indigo-500 selection:text-white">
       {/* Skip to main content for accessibility */}
       <a
         href="#main-content"
@@ -402,94 +447,145 @@ export const AppContent: React.FC = () => {
         Pular para o conteúdo
       </a>
 
-      {/* App Header (Hidden in Academic Zen Mode) */}
+      {/* Sidebar (Hidden in Academic Zen Mode) */}
       {!isZenMode && (
-        <Header
+        <Sidebar
           activeView={activeView}
           onViewChange={handleViewChange}
-          onNewTask={() => handleOpenNewTask()}
-          onNewNote={handleOpenNewNote}
-          onExport={handleExport}
-          onImport={handleImport}
-          onReset={handleResetData}
-          onOpenShortcuts={handleOpenShortcuts}
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
-          stats={{
-            completedCount: stats.completedCount,
-            total: stats.total,
-            completionRate: stats.completionRate,
-          }}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={toggleSidebarCollapse}
         />
       )}
 
-      {/* Main Content with generous visual breathing room */}
-      <main
-        id="main-content"
-        className={
-          isZenMode
-            ? 'flex-1 w-full p-0 overflow-hidden'
-            : 'flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6'
-        }
-      >
-        {activeView === 'kanban' ? (
-          <>
-            {/* Quick Stats Grid */}
-            <QuickStats stats={stats} />
-
-            {/* Pomodoro Focus Banner */}
-            <PomodoroWidget
-              session={session}
-              onPlayPause={handlePomodoroPlayPause}
-              onReset={resetTimer}
-              onSwitchMode={switchMode}
-              onClearTask={clearFocusedTask}
-              formatTime={formatTime}
-              onUpdateDurations={updateDurations}
-              onToggleSound={toggleSound}
-              onUpdateSettings={updateSettings}
-              onOpenFullscreen={() => setIsPomodoroFullscreen(true)}
-            />
-
-            {/* Filter and Search Bar */}
-            <FilterBar
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              allTags={allTags}
-              totalFiltered={tasks.length}
-              allTasksCount={allTasksCount}
-              searchInputRef={searchInputRef}
-            />
-
-            {/* Kanban Board */}
-            <section aria-label="Quadro Kanban" className="pt-2">
-              <Board
-                columns={columns}
-                tasks={tasks}
-                onNewTaskInColumn={handleOpenNewTask}
-                onEditTask={handleOpenEditTask}
-                onDeleteTask={requestDeleteTask}
-                onMoveTask={handleMoveTask}
-                onToggleSubtask={toggleSubtask}
-                onStartFocus={handleStartFocus}
-                onAddColumn={handleAddColumn}
-                onDeleteColumn={requestDeleteColumn}
-                onMoveColumn={moveColumn}
-                onReorderColumns={reorderColumns}
-                onUpdateColumn={handleUpdateColumn}
-                focusedTaskId={session.taskId}
-              />
-            </section>
-          </>
-        ) : (
-          /* Academic Workspace */
-          <AcademicView
-            ref={academicViewRef}
-            isZenMode={isZenMode}
-            onZenModeChange={setIsZenMode}
+      {/* Main Content Column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* App Header (Hidden in Academic Zen Mode) */}
+        {!isZenMode && (
+          <Header
+            activeView={activeView}
+            onViewChange={handleViewChange}
+            onToggleSidebar={handleToggleSidebar}
+            onNewTask={() => handleOpenNewTask()}
+            onNewNote={handleOpenNewNote}
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
+            stats={{
+              completedCount: stats.completedCount,
+              total: stats.total,
+              completionRate: stats.completionRate,
+            }}
           />
         )}
-      </main>
+
+        {/* Main Viewport Container */}
+        <main
+          id="main-content"
+          className={
+            isZenMode
+              ? 'flex-1 w-full p-0 overflow-hidden'
+              : 'flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7 space-y-6'
+          }
+        >
+          {/* TAB 1: KANBAN */}
+          {activeView === 'kanban' && (
+            <>
+              {/* 1- Cronômetro (PomodoroWidget) */}
+              <PomodoroWidget
+                session={session}
+                onPlayPause={handlePomodoroPlayPause}
+                onReset={resetTimer}
+                onSwitchMode={switchMode}
+                onClearTask={clearFocusedTask}
+                formatTime={formatTime}
+                onUpdateDurations={updateDurations}
+                onToggleSound={toggleSound}
+                onUpdateSettings={updateSettings}
+                onOpenFullscreen={() => setIsPomodoroFullscreen(true)}
+              />
+
+              {/* 2- Filtros (FilterBar) */}
+              <FilterBar
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                allTags={allTags}
+                totalFiltered={tasks.length}
+                allTasksCount={allTasksCount}
+                searchInputRef={searchInputRef}
+              />
+
+              {/* 3- Kanban (Board) */}
+              <section aria-label="Quadro Kanban" className="pt-2">
+                <Board
+                  columns={columns}
+                  tasks={tasks}
+                  onNewTaskInColumn={handleOpenNewTask}
+                  onEditTask={handleOpenEditTask}
+                  onDeleteTask={requestDeleteTask}
+                  onMoveTask={handleMoveTask}
+                  onToggleSubtask={toggleSubtask}
+                  onStartFocus={handleStartFocus}
+                  onAddColumn={handleAddColumn}
+                  onDeleteColumn={requestDeleteColumn}
+                  onMoveColumn={moveColumn}
+                  onReorderColumns={reorderColumns}
+                  onUpdateColumn={handleUpdateColumn}
+                  focusedTaskId={session.taskId}
+                />
+              </section>
+            </>
+          )}
+
+          {/* TAB 2: ESPAÇO ACADÊMICO */}
+          {activeView === 'academic' && (
+            <AcademicView
+              ref={academicViewRef}
+              isZenMode={isZenMode}
+              onZenModeChange={setIsZenMode}
+            />
+          )}
+
+          {/* TAB 3: MÉTRICAS */}
+          {activeView === 'metrics' && (
+            <MetricsView tasks={tasks} columns={columns} allTags={allTags} />
+          )}
+
+          {/* TAB 4: CONFIGURAÇÕES */}
+          {activeView === 'settings' && (
+            <SettingsView
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
+              workMinutes={Math.round(session.workDuration / 60)}
+              breakMinutes={Math.round(session.breakDuration / 60)}
+              isSoundEnabled={session.isSoundEnabled ?? true}
+              catPurrType={session.catPurrType ?? 'none'}
+              catPurrVolume={session.catPurrVolume ?? 0.6}
+              onUpdateDurations={updateDurations}
+              onToggleSound={toggleSound}
+              onUpdateSettings={(settings) => {
+                updateSettings(
+                  settings.workDurationMinutes ?? Math.round(session.workDuration / 60),
+                  settings.breakDurationMinutes ?? Math.round(session.breakDuration / 60),
+                  settings.isSoundEnabled ?? session.isSoundEnabled ?? true,
+                  settings.catPurrType ?? session.catPurrType ?? 'none',
+                  settings.catPurrVolume ?? session.catPurrVolume ?? 0.6
+                )
+              }}
+              onExport={handleExport}
+              onImport={handleImport}
+              onReset={handleResetData}
+              onOpenShortcuts={handleOpenShortcuts}
+              onOpenAcademicSubjects={() => handleViewChange('academic')}
+            />
+          )}
+
+          {/* TAB 5: PERFIL */}
+          {activeView === 'profile' && (
+            <ProfileView tasks={tasks} onOpenAuthModal={() => openAuthModal()} />
+          )}
+        </main>
+      </div>
 
       {/* Fullscreen Pomodoro Timer */}
       {isPomodoroFullscreen && (

@@ -321,15 +321,18 @@ describe('App Global Shortcuts Integration', () => {
     expect(screen.queryByText('Atalhos de Teclado')).not.toBeInTheDocument()
   })
 
-  it('abre o ShortcutsModal ao clicar no botão de atalhos no cabeçalho', () => {
+  it('abre o ShortcutsModal ao navegar para Configurações e clicar no botão de ajuda de atalhos', () => {
     render(<App />)
 
-    const shortcutsHeaderBtn = screen.getByRole('button', {
-      name: /Atalhos de teclado/i,
-    })
-    expect(shortcutsHeaderBtn).toBeInTheDocument()
+    const settingsBtns = screen.getAllByRole('button', { name: 'Configurações' })
+    fireEvent.click(settingsBtns[0])
 
-    fireEvent.click(shortcutsHeaderBtn)
+    const shortcutsBtn = screen.getByRole('button', {
+      name: /Abrir Modal de Ajuda/i,
+    })
+    expect(shortcutsBtn).toBeInTheDocument()
+
+    fireEvent.click(shortcutsBtn)
 
     expect(screen.getByText('Atalhos de Teclado')).toBeInTheDocument()
   })

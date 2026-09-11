@@ -1,15 +1,11 @@
 ﻿import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { Header } from '../components/Header'
+import { Header, type HeaderProps } from '../components/Header'
 import { AuthProvider } from '../context/AuthContext'
 
 describe('Header Component', () => {
-  const defaultProps = {
+  const defaultProps: HeaderProps = {
     onNewTask: vi.fn(),
-    onExport: vi.fn(),
-    onImport: vi.fn(),
-    onReset: vi.fn(),
-    onOpenShortcuts: vi.fn(),
     isDark: false,
     onToggleTheme: vi.fn(),
     stats: {
@@ -17,13 +13,14 @@ describe('Header Component', () => {
       total: 5,
       completionRate: 60,
     },
-    activeView: 'kanban' as 'kanban' | 'academic',
+    activeView: 'kanban',
     onViewChange: vi.fn(),
     onNewNote: vi.fn(),
+    onToggleSidebar: vi.fn(),
   }
 
   const renderHeader = async (props = defaultProps) => {
-    let result: any
+    let result: unknown
     await act(async () => {
       result = render(
         <AuthProvider>
@@ -34,20 +31,27 @@ describe('Header Component', () => {
     return result
   }
 
-  it('renderiza corretamente no modo Kanban com título OrganoCat, tabs e progresso diário', async () => {
+  it('renderiza corretamente no modo Kanban com título OrganoCat, badge, botão da sidebar e progresso diário', async () => {
     await renderHeader()
 
     expect(screen.getByText('OrganoCat')).toBeInTheDocument()
     expect(screen.getByText('Kanban')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Alternar barra lateral' })
+    ).toBeInTheDocument()
     expect(screen.getByText('Progresso Diário:')).toBeInTheDocument()
     expect(screen.getByText('3/5 (60%)')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Criar nova tarefa' })).toBeInTheDocument()
+  })
 
-    const kanbanTab = screen.getByRole('tab', { name: /quadro diário/i })
-    const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
+  it('dispara onToggleSidebar ao clicar no botão de alternar sidebar', async () => {
+    const onToggleSidebar = vi.fn()
+    await renderHeader({ ...defaultProps, onToggleSidebar })
 
-    expect(kanbanTab).toHaveAttribute('aria-selected', 'true')
-    expect(academicTab).toHaveAttribute('aria-selected', 'false')
+    const toggleBtn = screen.getByRole('button', { name: 'Alternar barra lateral' })
+    fireEvent.click(toggleBtn)
+
+    expect(onToggleSidebar).toHaveBeenCalledTimes(1)
   })
 
   it('renderiza o menu de autenticação com botão Entrar / Criar Conta', async () => {
@@ -57,16 +61,6 @@ describe('Header Component', () => {
       await screen.findByRole('button', { name: /entrar ou criar conta/i })
     ).toBeInTheDocument()
     expect(screen.getByText('Entrar / Criar Conta')).toBeInTheDocument()
-  })
-
-  it('chama onViewChange ao clicar nas abas do switcher', async () => {
-    const onViewChange = vi.fn()
-    await renderHeader({ ...defaultProps, onViewChange })
-
-    const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
-    fireEvent.click(academicTab)
-
-    expect(onViewChange).toHaveBeenCalledWith('academic')
   })
 
   it('renderiza corretamente no modo Acadêmico com pill de estudos e botão Nova Anotação', async () => {
@@ -79,12 +73,32 @@ describe('Header Component', () => {
     expect(
       screen.getByRole('button', { name: 'Criar nova anotação' })
     ).toBeInTheDocument()
+  })
 
-    const kanbanTab = screen.getByRole('tab', { name: /quadro diário/i })
-    const academicTab = screen.getByRole('tab', { name: /espaço acadêmico/i })
+  it('renderiza badges corretos para Métricas, Configurações e Perfil', async () => {
+    const { rerender } = render(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="metrics" />
+      </AuthProvider>
+    )
+    expect(screen.getByText('Métricas')).toBeInTheDocument()
+    expect(screen.getByText('Painel Analítico de Produtividade')).toBeInTheDocument()
 
-    expect(kanbanTab).toHaveAttribute('aria-selected', 'false')
-    expect(academicTab).toHaveAttribute('aria-selected', 'true')
+    rerender(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="settings" />
+      </AuthProvider>
+    )
+    expect(screen.getByText('Configurações')).toBeInTheDocument()
+    expect(screen.getByText('Preferências & Personalização')).toBeInTheDocument()
+
+    rerender(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="profile" />
+      </AuthProvider>
+    )
+    expect(screen.getByText('Perfil')).toBeInTheDocument()
+    expect(screen.getByText('Gestão de Perfil & Dados')).toBeInTheDocument()
   })
 
   it('chama onNewNote ao clicar em Nova Anotação no modo acadêmico', async () => {
@@ -115,15 +129,5 @@ describe('Header Component', () => {
     fireEvent.click(themeBtn)
 
     expect(onToggleTheme).toHaveBeenCalledTimes(1)
-  })
-
-  it('chama onOpenShortcuts ao clicar no botão de atalhos', async () => {
-    const onOpenShortcuts = vi.fn()
-    await renderHeader({ ...defaultProps, onOpenShortcuts })
-
-    const shortcutsBtn = screen.getByRole('button', { name: /atalhos de teclado/i })
-    fireEvent.click(shortcutsBtn)
-
-    expect(onOpenShortcuts).toHaveBeenCalledTimes(1)
   })
 })
