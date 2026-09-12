@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import {
   Play,
   Pause,
@@ -85,10 +85,10 @@ export const PomodoroWidget: React.FC<PomodoroWidgetProps> = ({
     <>
       <div
         data-testid="pomodoro-widget"
-        className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border transition-all duration-300 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 ${
+        className={`p-4 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border transition-all duration-300 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 ${
           isNearEnd
             ? 'border-amber-400/80 dark:border-amber-500/80 ring-2 ring-amber-500/60 shadow-lg shadow-amber-500/20 animate-pulse'
-            : 'border-slate-200/70 dark:border-slate-800'
+            : 'border-slate-200/60 dark:border-slate-800/60'
         }`}
       >
         {/* Left info */}
