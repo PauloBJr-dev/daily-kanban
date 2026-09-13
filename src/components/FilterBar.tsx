@@ -83,7 +83,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   // Common button classes for strict visual consistency
   const pillBaseClass =
-    'px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50'
+    'px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50'
   const pillInactiveClass =
     'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/90 dark:hover:bg-slate-800/90'
   const pillActiveClass =
@@ -103,14 +103,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             aria-label="Buscar tarefas ou tags"
             value={filters.searchQuery}
             onChange={(e) => onFilterChange({ searchQuery: e.target.value })}
-            className="w-full pl-9 pr-9 py-2 text-xs bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 focus-visible:border-indigo-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-all"
+            className="w-full pl-9 pr-9 py-2 text-xs bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 transition-all"
           />
           {filters.searchQuery ? (
             <button
               onClick={() => onFilterChange({ searchQuery: '' })}
               aria-label="Limpar busca"
               title="Limpar busca"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -131,7 +131,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 onFilterChange({ priority: e.target.value as FilterPriority })
               }
               aria-label="Filtrar por prioridade"
-              className="text-xs font-medium py-2 pl-3 pr-7 bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer hover:bg-slate-100/90 dark:hover:bg-slate-800/90 transition-all appearance-none"
+              className="text-xs font-medium py-2 pl-3 pr-7 bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer hover:bg-slate-100/90 dark:hover:bg-slate-800/90 transition-all appearance-none"
             >
               {priorities.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -210,7 +210,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded font-mono transition-colors ${
                       isActive
-                        ? 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                        ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold'
                         : 'text-slate-400 dark:text-slate-500 bg-white/80 dark:bg-slate-700/80'
                     }`}
                   >

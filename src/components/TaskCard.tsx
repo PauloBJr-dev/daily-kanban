@@ -191,7 +191,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium tracking-tight ${currentPriority.badgeClass}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-label font-medium tracking-tight ${currentPriority.badgeClass}`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${currentPriority.dotClass}`} />
             {currentPriority.label}
@@ -224,7 +224,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
           {/* Focused badge */}
           {isFocused && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 animate-pulse">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 ring-1 ring-blue-500/20 animate-pulse">
               Foco Ativo
             </span>
           )}
@@ -241,7 +241,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               }}
               title="Iniciar Pomodoro nesta tarefa"
               aria-label={`Iniciar Pomodoro para: ${task.title}`}
-              className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+              className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
             >
               <Play className="w-3.5 h-3.5" />
             </button>
@@ -271,7 +271,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               }}
               title="Mais opções"
               aria-label={`Mais opções para: ${task.title}`}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
             >
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
@@ -321,10 +321,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           }
         }}
         aria-label={`Editar tarefa: ${task.title}`}
-        className={`text-sm font-medium leading-snug cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 rounded-md ${
+        className={`text-sm font-medium leading-snug cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded-md ${
           isDone
             ? 'line-through text-slate-400 dark:text-slate-500'
-            : 'text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400'
+            : 'text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400'
         }`}
       >
         {task.title}
@@ -351,7 +351,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </div>
           <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+              className="h-full bg-blue-600 rounded-full transition-all duration-300"
               style={{ width: `${subtaskProgress}%` }}
             />
           </div>
@@ -379,7 +379,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer ${
                     st.completed
                       ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
-                      : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 bg-white dark:bg-slate-800'
+                      : 'border-slate-300 dark:border-slate-600 hover:border-blue-500 dark:hover:border-blue-400 bg-white dark:bg-slate-800'
                   }`}
                 >
                   {st.completed && <Check className="w-3 h-3 text-white stroke-[3]" />}
@@ -403,7 +403,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 e.stopPropagation()
                 setIsExpanded(!isExpanded)
               }}
-              className="mt-2 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+              className="mt-2 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
             >
               {isExpanded
                 ? 'Ver menos'
@@ -468,7 +468,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 e.stopPropagation()
                 onMove(task.id, nextColumn.id)
               }}
-              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 font-medium active:scale-95 transition-all cursor-pointer min-h-[38px] overflow-hidden ${
+              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-950/50 font-medium active:scale-95 transition-all cursor-pointer min-h-[38px] overflow-hidden ${
                 !prevColumn ? 'w-full' : ''
               }`}
               aria-label={`Mover para ${nextColumn.title}`}

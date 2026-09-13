@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Mobile Drawer Header */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-slate-800/60">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/20">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <div
-                className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shadow-indigo-200 dark:shadow-none shrink-0"
+                className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/20 shrink-0"
                 title={isCollapsed ? 'OrganoCat - DailyFlow Workspace' : undefined}
                 aria-label={isCollapsed ? 'OrganoCat - DailyFlow Workspace' : undefined}
               >
