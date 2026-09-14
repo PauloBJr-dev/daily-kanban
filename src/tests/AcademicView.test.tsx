@@ -72,11 +72,10 @@ describe('AcademicView', () => {
     const statsSection = screen.getByRole('region', {
       name: 'Estatísticas Acadêmicas',
     })
-    expect(within(statsSection).getByText('Total de Anotações')).toBeInTheDocument()
     expect(within(statsSection).getByText('Disciplinas Ativas')).toBeInTheDocument()
-    expect(within(statsSection).getByText('A Revisar')).toBeInTheDocument()
-    expect(within(statsSection).getByText('Dominadas')).toBeInTheDocument()
-    expect(within(statsSection).getByText('Fixadas')).toBeInTheDocument()
+    expect(within(statsSection).getByText('Anotações Criadas')).toBeInTheDocument()
+    expect(within(statsSection).getByText('Revisão Espaçada')).toBeInTheDocument()
+    expect(within(statsSection).getByText('Retenção Estimada')).toBeInTheDocument()
   })
 
   it('renderiza o estado vazio inicial quando não há anotações cadastradas', () => {
@@ -160,7 +159,9 @@ describe('AcademicView', () => {
     fireEvent.click(manageSubjectsBtn)
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Gerenciar Disciplinas')).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByText('Gerenciar Disciplinas')).toBeInTheDocument()
 
     // Close modal
     const closeBtn = screen.getByText('Concluído')

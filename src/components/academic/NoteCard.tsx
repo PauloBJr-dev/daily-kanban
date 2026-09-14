@@ -8,6 +8,8 @@ import {
   Edit2,
   Trash2,
   Bookmark,
+  ChevronRight,
+  CheckCircle2,
 } from 'lucide-react'
 import type { AcademicNote, StudyStatus, Subject } from '../../types/academic'
 import { getSubjectColor } from './academicColors'
@@ -69,10 +71,10 @@ function formatRelativeTime(isoStr: string): string {
     if (diffHours < 24) return `${diffHours}h atrás`
     const diffDays = Math.floor(diffHours / 24)
     if (diffDays === 1) return 'Ontem'
-    if (diffDays < 7) return `${diffDays}d atrás`
+    if (diffDays < 7) return `Há ${diffDays} dias`
     return new Date(isoStr).toLocaleDateString('pt-BR', {
       day: '2-digit',
-      month: '2-digit',
+      month: 'short',
     })
   } catch {
     return ''
@@ -100,8 +102,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         onClick={() => onEdit(note)}
         className={`group relative rounded-2xl bg-white dark:bg-slate-900 border transition-all p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs hover:shadow-md cursor-pointer ${
           note.isPinned
-            ? 'border-indigo-200/90 dark:border-indigo-800/80 ring-1 ring-indigo-500/10'
-            : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+            ? 'border-blue-300 dark:border-blue-800/80 ring-1 ring-blue-500/10'
+            : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 dark:hover:border-blue-500/40'
         }`}
       >
         {/* Left side: Subject & Title & Snippet */}
@@ -109,7 +111,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
             {/* Subject badge */}
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-medium border ${subjectColor.bgSubtle} ${subjectColor.text} ${subjectColor.border}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border ${subjectColor.bgSubtle} ${subjectColor.text} ${subjectColor.border}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${subjectColor.dot}`} />
               <span className="truncate max-w-[140px]">
@@ -130,8 +132,8 @@ export const NoteCard: React.FC<NoteCardProps> = ({
 
             {/* Pinned badge in list mode */}
             {note.isPinned && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md">
-                <Pin className="w-3 h-3 fill-indigo-600 dark:fill-indigo-400" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md">
+                <Pin className="w-3 h-3 fill-blue-600 dark:fill-blue-400" />
                 Fixada
               </span>
             )}
@@ -143,13 +145,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               e.stopPropagation()
               onEdit(note)
             }}
-            className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer truncate"
+            className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer truncate font-sans"
           >
             {note.title}
           </h3>
 
           {/* Snippet */}
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 font-body">
             {note.content}
           </p>
 
@@ -164,7 +166,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                     e.stopPropagation()
                     onSelectTag?.(tag)
                   }}
-                  className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/60 dark:hover:text-blue-300 transition-colors cursor-pointer"
                 >
                   #{tag}
                 </button>
@@ -202,13 +204,13 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               title={note.isPinned ? 'Desafixar' : 'Fixar no topo'}
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                 note.isPinned
-                  ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60'
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60'
                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <Pin
                 className={`w-4 h-4 ${
-                  note.isPinned ? 'fill-indigo-600 dark:fill-indigo-400' : ''
+                  note.isPinned ? 'fill-blue-600 dark:fill-blue-400' : ''
                 }`}
               />
             </button>
@@ -244,44 +246,50 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     )
   }
 
-  // Grid Mode (Standard card layout)
+  // Grid Mode (100% Stitch Card Layout)
   return (
     <div
       onClick={() => onEdit(note)}
-      className={`group relative rounded-2xl bg-white dark:bg-slate-900 border transition-all p-5 flex flex-col justify-between shadow-xs hover:shadow-md cursor-pointer ${
+      className={`group relative rounded-2xl bg-white dark:bg-slate-900 border transition-all p-5 flex flex-col justify-between gap-3.5 shadow-xs hover:shadow-md cursor-pointer ${
         note.isPinned
-          ? 'border-indigo-200 dark:border-indigo-800/80 ring-1 ring-indigo-500/10'
-          : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+          ? 'border-blue-300 dark:border-blue-800/80 ring-1 ring-blue-500/10'
+          : 'border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 dark:hover:border-blue-500/40'
       }`}
     >
       <div>
-        {/* Header: Subject badge, Status badge, Pin button, Quick menu */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
-            {/* Subject badge */}
+        {/* Header: Subject badge + Date / Relative Time + Actions */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Subject badge with dot */}
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${subjectColor.bgSubtle} ${subjectColor.text} ${subjectColor.border}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border ${subjectColor.bgSubtle} ${subjectColor.text} ${subjectColor.border}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${subjectColor.dot}`} />
-              <span className="truncate max-w-[130px]">
+              <span className="truncate max-w-[120px]">
                 {subject ? subject.name : 'Geral'}
               </span>
               {subject?.code && (
-                <span className="text-[10px] opacity-75 font-mono">{subject.code}</span>
+                <span className="text-[10px] opacity-75 font-mono ml-0.5">
+                  {subject.code}
+                </span>
               )}
             </span>
 
-            {/* Status badge */}
+            {/* Status indicator badge */}
             <span
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${currentStatus.badgeClass}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${currentStatus.dotClass}`} />
-              {currentStatus.label}
+              <span>{currentStatus.label}</span>
             </span>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-0.5 shrink-0">
+          {/* Action buttons cluster */}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mr-1 hidden xs:inline">
+              {formatRelativeTime(note.updatedAt)}
+            </span>
+
             {/* Pin button */}
             <button
               type="button"
@@ -293,13 +301,15 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               title={note.isPinned ? 'Desafixar do topo' : 'Fixar no topo'}
               className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                 note.isPinned
-                  ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-60 group-hover:opacity-100'
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-70 group-hover:opacity-100'
               }`}
             >
               <Pin
                 className={`w-3.5 h-3.5 ${
-                  note.isPinned ? 'fill-indigo-600 dark:fill-indigo-400' : ''
+                  note.isPinned
+                    ? 'fill-blue-600 dark:fill-blue-400 text-blue-600 dark:text-blue-400'
+                    : ''
                 }`}
               />
             </button>
@@ -379,22 +389,24 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             e.stopPropagation()
             onEdit(note)
           }}
-          className="text-base font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer leading-snug line-clamp-2"
+          className="font-sans font-bold text-base text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug cursor-pointer line-clamp-2"
         >
           {note.title}
         </h3>
 
-        {/* Content Snippet */}
-        <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">
-          {note.content}
-        </p>
-      </div>
+        {/* Bloco de Preview de Conteúdo (Stitch Snippet Box) */}
+        <div className="mt-3 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800/70 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            Resumo & Conceito:
+          </p>
+          <p className="leading-relaxed line-clamp-3 text-slate-600 dark:text-slate-300 font-sans">
+            {note.content}
+          </p>
+        </div>
 
-      {/* Footer: Tags, Dates, and Relative Time */}
-      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
-        {/* Tags */}
+        {/* Tags in chips arredondados monospaçados no estilo Stitch */}
         {note.tags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex flex-wrap gap-1.5 mt-3">
             {note.tags.map((tag) => (
               <button
                 key={tag}
@@ -403,17 +415,20 @@ export const NoteCard: React.FC<NoteCardProps> = ({
                   e.stopPropagation()
                   onSelectTag?.(tag)
                 }}
-                className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                className="text-[11px] font-medium font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/60 dark:hover:text-blue-300 transition-colors cursor-pointer"
               >
                 #{tag}
               </button>
             ))}
           </div>
         )}
+      </div>
 
-        {/* Dates row */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-          <div className="flex flex-wrap items-center gap-2.5">
+      {/* Footer: Bottom Meta & Quick Action */}
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
+        {/* Exam & Review Dates if configured */}
+        {(note.examDate || note.reviewDate) && (
+          <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-slate-400">
             {note.examDate && (
               <span
                 className="inline-flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400"
@@ -434,12 +449,42 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               </span>
             )}
           </div>
+        )}
 
-          {/* Timestamp */}
-          <span className="inline-flex items-center gap-1 text-slate-400 ml-auto">
-            <Clock className="w-3 h-3" />
-            <span>{formatRelativeTime(note.updatedAt)}</span>
-          </span>
+        {/* Bottom Meta & Action Button Stitch */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            {note.status === 'mastered' ? (
+              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>100% dominado</span>
+              </span>
+            ) : note.status === 'to_review' ? (
+              <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Flashcard pendente</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-sky-600 dark:text-sky-400 font-medium">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Em andamento</span>
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(note)
+            }}
+            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-0.5 cursor-pointer font-sans"
+          >
+            <span>
+              {note.status === 'to_review' ? 'Revisar Agora' : 'Abrir no Editor'}
+            </span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </div>
