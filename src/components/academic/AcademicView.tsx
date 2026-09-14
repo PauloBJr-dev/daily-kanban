@@ -369,19 +369,19 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
         {/* View Header with Title and Actions - Hidden in Zen Mode */}
         {!isZenMode && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80 dark:border-slate-800">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-                  <BookOpen className="w-5 h-5" />
-                </span>
-                <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                <BookOpen className="w-5 h-5" />
+              </span>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
                   Caderno Acadêmico
                 </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Organize suas matérias, conceitos de estudo, datas de prova e cronograma
+                  de revisões.
+                </p>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Organize suas matérias, conceitos de estudo, datas de prova e cronograma
-                de revisões.
-              </p>
             </div>
 
             {/* Global Action Buttons */}
@@ -399,7 +399,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                   aria-pressed={layoutMode === 'grid'}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
                     layoutMode === 'grid'
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
@@ -413,7 +413,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                   aria-pressed={layoutMode === 'studio'}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
                     layoutMode === 'studio'
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold shadow-xs'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
@@ -461,14 +461,24 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                   <RotateCcw className="w-4 h-4" />
                 </button>
 
-                {/* Nova Anotação CTA */}
+                {/* Gerenciar Disciplinas Button (Stitch Action) */}
+                <button
+                  type="button"
+                  onClick={() => setIsSubjectModalOpen(true)}
+                  aria-label="Gerenciar disciplinas no cabeçalho"
+                  className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-xs cursor-pointer"
+                >
+                  Disciplinas
+                </button>
+
+                {/* Nova Anotação CTA Stitch */}
                 <button
                   type="button"
                   onClick={() => handleOpenNewNote()}
                   aria-label="Criar nova anotação"
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs shadow-indigo-200 dark:shadow-none transition-all active:scale-95 cursor-pointer shrink-0"
+                  className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-xs shadow-blue-500/20 transition-all cursor-pointer shrink-0"
                 >
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                  <Plus className="w-4 h-4 shrink-0" />
                   <span className="hidden xs:inline">Nova Anotação</span>
                   <span className="xs:hidden">Nova</span>
                 </button>
@@ -494,12 +504,18 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
           />
         ) : (
           <>
-            {/* Metrics & Quick Statistics */}
+            {/* Metrics & Quick Statistics Stitch */}
             <section aria-label="Estatísticas Acadêmicas">
-              <AcademicStats stats={stats} />
+              <AcademicStats
+                stats={stats}
+                subjects={subjects}
+                onStartReview={() =>
+                  setFilters((prev) => ({ ...prev, status: 'to_review' }))
+                }
+              />
             </section>
 
-            {/* Filter and Search Controls */}
+            {/* Filter and Search Controls Stitch */}
             <section aria-label="Filtros e Busca Acadêmica">
               <AcademicFilterBar
                 filters={filters}
@@ -544,14 +560,14 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                             onlyPinned: false,
                           })
                         }
-                        className="mt-4 px-4 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-xl transition-colors cursor-pointer"
+                        className="mt-4 px-4 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-xl transition-colors cursor-pointer"
                       >
                         Limpar todos os filtros
                       </button>
                     </>
                   ) : (
                     <>
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
                         <FilePlus className="w-6 h-6" />
                       </div>
                       <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
@@ -565,7 +581,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                         <button
                           type="button"
                           onClick={() => handleOpenNewNote()}
-                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Criar Primeira Anotação</span>
@@ -583,20 +599,49 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
                   )}
                 </div>
               ) : viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                  {notes.map((note) => (
-                    <NoteCard
-                      key={note.id}
-                      note={note}
-                      subject={subjectMap.get(note.subjectId)}
-                      viewMode="grid"
-                      onEdit={handleOpenEditNote}
-                      onDelete={requestDeleteNote}
-                      onTogglePin={handleTogglePinNote}
-                      onSelectTag={(tag) => setFilters((prev) => ({ ...prev, tag }))}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                    {notes.map((note) => (
+                      <NoteCard
+                        key={note.id}
+                        note={note}
+                        subject={subjectMap.get(note.subjectId)}
+                        viewMode="grid"
+                        onEdit={handleOpenEditNote}
+                        onDelete={requestDeleteNote}
+                        onTogglePin={handleTogglePinNote}
+                        onSelectTag={(tag) => setFilters((prev) => ({ ...prev, tag }))}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Quick Add / Empty Space Prompt (Stitch Design) */}
+                  <div
+                    onClick={() => handleOpenNewNote()}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleOpenNewNote()
+                      }
+                    }}
+                    className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center hover:border-blue-500/50 transition-all bg-slate-50/50 dark:bg-slate-900/50 flex flex-col items-center justify-center gap-2 cursor-pointer mt-6 group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform shadow-xs">
+                      <FilePlus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold font-sans text-slate-900 dark:text-slate-100">
+                        Criar anotação rápida de aula
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Clique aqui para adicionar novas anotações, fórmulas ou resumos ao
+                        seu caderno.
+                      </p>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="flex flex-col gap-3">
                   {notes.map((note) => (
