@@ -134,7 +134,7 @@ export const Board: React.FC<BoardProps> = ({
               onClick={() => scrollToColumn(col.id)}
               className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium active:scale-95 transition-all cursor-pointer min-h-[36px] overflow-hidden ${
                 isActive
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold shadow-xs ring-1 ring-slate-900/5 dark:ring-white/10'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs ring-1 ring-slate-900/5 dark:ring-white/10'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
               aria-label={`Ir para coluna ${col.title}`}
@@ -147,8 +147,8 @@ export const Board: React.FC<BoardProps> = ({
         })}
       </nav>
 
-      {/* Horizontal Scroll Columns Area */}
-      <div className="flex items-start gap-4 sm:gap-5 overflow-x-auto pb-6 pt-1 px-1 scroll-smooth snap-x snap-mandatory">
+      {/* Horizontal Scroll Columns Area matching Stitch gap-5 items-start */}
+      <div className="flex items-start gap-5 overflow-x-auto pb-6 pt-1 px-0.5 scroll-smooth snap-x snap-mandatory">
         {columns.map((column) => {
           const colTasks = tasks.filter((t) => t.columnId === column.id)
           return (
@@ -177,7 +177,7 @@ export const Board: React.FC<BoardProps> = ({
           {isAddingColumn ? (
             <form
               onSubmit={handleCreateColumn}
-              className="rounded-3xl p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm animate-in fade-in zoom-in-95 duration-150"
+              className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs animate-in fade-in zoom-in-95 duration-150"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -186,7 +186,7 @@ export const Board: React.FC<BoardProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddingColumn(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -199,7 +199,7 @@ export const Board: React.FC<BoardProps> = ({
                 placeholder="Nome da coluna..."
                 value={newColumnTitle}
                 onChange={(e) => setNewColumnTitle(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all mb-3"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-3"
               />
 
               {/* Color theme selection */}
@@ -243,7 +243,7 @@ export const Board: React.FC<BoardProps> = ({
                 <button
                   type="submit"
                   disabled={!newColumnTitle.trim()}
-                  className="flex-1 py-1.5 px-3 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 rounded-xl shadow-xs transition-colors cursor-pointer"
+                  className="flex-1 py-1.5 px-3 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 rounded-xl shadow-xs shadow-blue-500/20 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
                   Criar Coluna
                 </button>
@@ -252,9 +252,9 @@ export const Board: React.FC<BoardProps> = ({
           ) : (
             <button
               onClick={() => setIsAddingColumn(true)}
-              className="w-full min-h-[120px] rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex flex-col items-center justify-center gap-2 transition-all duration-150 group cursor-pointer bg-slate-50/50 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-slate-900/50"
+              className="w-full min-h-[120px] rounded-2xl border-2 border-dashed border-slate-200/80 dark:border-slate-800/80 hover:border-blue-400 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex flex-col items-center justify-center gap-2 transition-all duration-150 group cursor-pointer bg-slate-50/50 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-slate-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
-              <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group-hover:border-indigo-400 group-hover:text-indigo-600 flex items-center justify-center shadow-xs transition-colors">
+              <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group-hover:border-blue-400 group-hover:text-blue-600 flex items-center justify-center shadow-xs transition-colors">
                 <Plus className="w-4 h-4" />
               </div>
               <span className="text-xs font-medium tracking-tight">Adicionar Coluna</span>

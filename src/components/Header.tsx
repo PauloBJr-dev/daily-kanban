@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onToggleSidebar}
             aria-label="Alternar barra lateral"
             title="Alternar barra lateral"
-            className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer shrink-0"
+            className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer shrink-0"
           >
             <PanelLeft className="w-5 h-5" />
           </button>
@@ -101,18 +101,18 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               <div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${stats.completionRate}%` }}
                 />
               </div>
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+              <span className="font-semibold text-blue-600 dark:text-blue-400">
                 {stats.completedCount}/{stats.total} ({stats.completionRate}%)
               </span>
             </>
           )}
           {activeView === 'academic' && (
             <>
-              <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="font-medium text-slate-600 dark:text-slate-300">
                 Espaço de Estudos e Revisões
               </span>
@@ -120,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
           {activeView === 'metrics' && (
             <>
-              <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="font-medium text-slate-600 dark:text-slate-300">
                 Painel Analítico de Produtividade
               </span>
@@ -128,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
           {activeView === 'settings' && (
             <>
-              <SettingsIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <SettingsIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="font-medium text-slate-600 dark:text-slate-300">
                 Preferências & Personalização
               </span>
@@ -136,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
           {activeView === 'profile' && (
             <>
-              <UserIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <UserIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="font-medium text-slate-600 dark:text-slate-300">
                 Gestão de Perfil & Dados
               </span>
@@ -152,7 +152,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onToggleTheme}
             title={isDark ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
             aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            className="p-2 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+            className="p-2 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
           >
             {isDark ? (
               <Sun className="w-4 h-4 text-amber-400" />
@@ -170,12 +170,12 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onNewNote}
               aria-label="Criar nova anotação"
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 min-h-[36px] sm:min-h-[40px] bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-medium rounded-xl shadow-xs shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 min-h-[36px] sm:min-h-[40px] bg-blue-600 hover:bg-blue-700 shadow-xs shadow-blue-500/20 text-white text-xs sm:text-sm font-medium rounded-xl hover:shadow transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Nova Anotação</span>
               <span className="sm:hidden">Nova</span>
-              <kbd className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono bg-indigo-700 text-indigo-100 rounded-md border border-indigo-500/40">
+              <kbd className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono bg-blue-700 text-blue-100 rounded-md border border-blue-500/40">
                 N
               </kbd>
             </button>
@@ -184,12 +184,12 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onNewTask}
               aria-label="Criar nova tarefa"
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 min-h-[36px] sm:min-h-[40px] bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-medium rounded-xl shadow-xs shadow-indigo-200 dark:shadow-none hover:shadow transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 min-h-[36px] sm:min-h-[40px] bg-blue-600 hover:bg-blue-700 shadow-xs shadow-blue-500/20 text-white text-xs sm:text-sm font-medium rounded-xl hover:shadow transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Nova Tarefa</span>
               <span className="sm:hidden">Nova</span>
-              <kbd className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono bg-indigo-700 text-indigo-100 rounded-md border border-indigo-500/40">
+              <kbd className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-mono bg-blue-700 text-blue-100 rounded-md border border-blue-500/40">
                 N
               </kbd>
             </button>
