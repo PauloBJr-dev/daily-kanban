@@ -11,6 +11,7 @@ import {
   Edit2,
   Calendar,
   Check,
+  GripVertical,
 } from 'lucide-react'
 import type { Column, Priority, Task } from '../types/kanban'
 
@@ -122,7 +123,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const isDone = task.columnId === 'col-done' || task.columnId.includes('done')
   const isOverdue = !isDone && task.dueDate ? task.dueDate < todayStr : false
 
-  // Priority styling
+  // Priority styling matching Stitch specification
   const priorityConfig: Record<
     Priority,
     { label: string; badgeClass: string; dotClass: string }
@@ -130,25 +131,25 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     urgent: {
       label: 'Urgente',
       badgeClass:
-        'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 dark:border-rose-900',
-      dotClass: 'bg-rose-500',
+        'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300 border border-red-200/60',
+      dotClass: 'bg-red-500',
     },
     high: {
       label: 'Alta',
       badgeClass:
-        'bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 border border-orange-200/80 dark:border-orange-900',
+        'bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300 border border-orange-200/60',
       dotClass: 'bg-orange-500',
     },
     medium: {
       label: 'Média',
       badgeClass:
-        'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-900',
-      dotClass: 'bg-amber-500',
+        'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200/60',
+      dotClass: 'bg-blue-500',
     },
     low: {
       label: 'Baixa',
       badgeClass:
-        'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700',
+        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/60',
       dotClass: 'bg-slate-400',
     },
   }
@@ -175,29 +176,38 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   }
 
   return (
-    <div
+    <article
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className={`group relative p-4 rounded-2xl bg-white dark:bg-slate-800 transition-all duration-150 select-none cursor-grab active:cursor-grabbing ${
+      className={`group relative p-4 rounded-xl transition-all duration-150 select-none cursor-grab active:cursor-grabbing space-y-3 ${
         isDragging
-          ? 'opacity-40 scale-95 border-2 border-indigo-400 shadow-none'
+          ? 'opacity-40 scale-95 border-2 border-blue-400 shadow-none'
           : isFocused
-            ? 'border-2 border-indigo-500 dark:border-indigo-400 shadow-xs'
-            : 'border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 shadow-xs'
-      } ${isDone ? 'opacity-75 hover:opacity-100' : ''}`}
+            ? 'bg-white dark:bg-slate-900 border-l-4 border-l-blue-600 border-y border-r border-slate-200/80 dark:border-slate-800 shadow-md ring-1 ring-blue-500/20'
+            : 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md'
+      } ${isDone ? 'opacity-80 hover:opacity-100' : ''}`}
     >
-      {/* Top row: Priority badge + Timer badge + Focused badge + Quick actions */}
-      <div className="flex items-center justify-between gap-2 mb-2.5">
+      {/* Top row: Priority badge + Drag Indicator & Quick Actions */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Priority Badge matching Stitch */}
           <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-label font-medium tracking-tight ${currentPriority.badgeClass}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold ${currentPriority.badgeClass}`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${currentPriority.dotClass}`} />
             {currentPriority.label}
           </span>
 
-          {/* Discreet Timer badge */}
+          {/* Active Focus Pill when card is actively focused */}
+          {isFocused && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+              FOCO ATIVO
+            </span>
+          )}
+
+          {/* Timer Badge if time tracked */}
           {totalTrackedSeconds > 0 && (
             <span
               data-testid="task-timer-badge"
@@ -221,57 +231,53 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <span>{formatTrackedTime(totalTrackedSeconds)}</span>
             </span>
           )}
-
-          {/* Focused badge */}
-          {isFocused && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 ring-1 ring-blue-500/20 animate-pulse">
-              Foco Ativo
-            </span>
-          )}
         </div>
 
-        {/* Action icons */}
-        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+        {/* Action icons: Drag Indicator & Dropdown */}
+        <div className="flex items-center gap-1">
           {/* Quick Focus Button */}
           {!isDone && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onStartFocus(task.id, task.title)
               }}
               title="Iniciar Pomodoro nesta tarefa"
               aria-label={`Iniciar Pomodoro para: ${task.title}`}
-              className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+              className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
             >
               <Play className="w-3.5 h-3.5" />
             </button>
           )}
 
-          {/* Quick next column button (Desktop only, mobile uses bottom touch bar) */}
+          {/* Quick next column button (Desktop only) */}
           {nextColumn && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onMove(task.id, nextColumn.id)
               }}
               title={`Avançar para ${nextColumn.title}`}
               aria-label={`Avançar tarefa para ${nextColumn.title}`}
-              className="hidden sm:flex p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 cursor-pointer"
+              className="hidden sm:flex p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 cursor-pointer"
             >
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
 
-          {/* Options Dropdown toggle with click-outside and Escape dismiss */}
+          {/* Options Dropdown toggle */}
           <div className="relative" ref={menuRef}>
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 setShowMenu(!showMenu)
               }}
               title="Mais opções"
               aria-label={`Mais opções para: ${task.title}`}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
             >
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
@@ -282,6 +288,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 className="absolute right-0 top-6 w-36 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 text-xs"
               >
                 <button
+                  type="button"
                   onClick={() => {
                     setShowMenu(false)
                     onEdit(task)
@@ -293,6 +300,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   Editar
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setShowMenu(false)
                     onDelete(task.id)
@@ -306,10 +314,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               </div>
             )}
           </div>
+
+          {/* Drag indicator handle */}
+          <span className="text-slate-300 dark:text-slate-600 group-hover:text-slate-500 transition-colors pointer-events-none">
+            <GripVertical className="w-3.5 h-3.5" />
+          </span>
         </div>
       </div>
 
-      {/* Task Title */}
+      {/* Task Title matching Stitch group-hover:text-blue-600 */}
       <h3
         onClick={() => onEdit(task)}
         tabIndex={0}
@@ -321,10 +334,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           }
         }}
         aria-label={`Editar tarefa: ${task.title}`}
-        className={`text-sm font-medium leading-snug cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded-md ${
+        className={`text-sm font-semibold leading-snug cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded-md ${
           isDone
             ? 'line-through text-slate-400 dark:text-slate-500'
-            : 'text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400'
+            : 'text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'
         }`}
       >
         {task.title}
@@ -332,32 +345,34 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
       {/* Description (brief) */}
       {task.description && (
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
           {task.description}
         </p>
       )}
 
-      {/* Subtasks summary with mini progress bar */}
+      {/* Subtasks Section with progress bar in Stitch blue */}
       {totalSubtasks > 0 && (
-        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/50">
-          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+        <div className="space-y-1.5 pt-1">
+          <div className="flex justify-between items-center text-[11px] font-medium text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1 font-medium">
-              <CheckSquare className="w-3 h-3 text-slate-400" />
+              <CheckSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               Checklist ({completedSubtasks}/{totalSubtasks})
             </span>
-            <span className="font-semibold text-slate-600 dark:text-slate-300">
+            <span className="font-semibold text-slate-700 dark:text-slate-200">
               {Math.round(subtaskProgress)}%
             </span>
           </div>
-          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+
+          {/* Progress bar */}
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
             <div
-              className="h-full bg-blue-600 rounded-full transition-all duration-300"
+              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
               style={{ width: `${subtaskProgress}%` }}
             />
           </div>
 
           {/* Interactive subtasks list */}
-          <div className="mt-2 space-y-1.5">
+          <div className="pt-1 space-y-1.5">
             {visibleSubtasks.map((st) => (
               <div
                 key={st.id}
@@ -403,7 +418,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 e.stopPropagation()
                 setIsExpanded(!isExpanded)
               }}
-              className="mt-2 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+              className="mt-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
             >
               {isExpanded
                 ? 'Ver menos'
@@ -413,20 +428,47 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       )}
 
-      {/* Footer: Due Date */}
-      {task.dueDate && (
-        <div className="mt-3 pt-2 flex items-center justify-end text-xs">
+      {/* Tags Chips matching Stitch (without #) */}
+      {task.tags && task.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-0.5">
+          {task.tags.map((tag) => (
+            <span
+              key={tag}
+              className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Card Footer: Timer & Due Date */}
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-1 text-[11px] font-medium">
+          {task.pomodoroMinutesSpent ? (
+            <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium">
+              <Clock className="w-3.5 h-3.5" />
+              {task.pomodoroMinutesSpent}m foco
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
+              <Clock className="w-3.5 h-3.5" />1 pomodoro
+            </span>
+          )}
+        </div>
+
+        {task.dueDate && (
           <div
             className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md ${
               isOverdue
-                ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 dark:border-rose-900'
+                ? 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200/80 dark:border-red-900'
                 : isToday
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/80 dark:border-blue-900'
                   : 'text-slate-500 dark:text-slate-400'
             }`}
           >
             {isOverdue ? (
-              <AlertCircle className="w-3 h-3 text-rose-500" />
+              <AlertCircle className="w-3 h-3 text-red-500" />
             ) : isToday ? (
               <Clock className="w-3 h-3 text-blue-500" />
             ) : (
@@ -434,13 +476,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             )}
             <span>{isOverdue ? 'Atrasado' : isToday ? 'Hoje' : task.dueDate}</span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Mobile Touch Quick Move Controls */}
       {(prevColumn || nextColumn) && (
         <div
-          className={`sm:hidden pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs ${
+          className={`sm:hidden pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs ${
             prevColumn && nextColumn
               ? 'grid grid-cols-2 gap-2'
               : 'flex items-center justify-end'
@@ -479,6 +521,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
       )}
-    </div>
+    </article>
   )
 }

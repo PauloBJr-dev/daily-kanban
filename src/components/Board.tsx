@@ -134,7 +134,7 @@ export const Board: React.FC<BoardProps> = ({
               onClick={() => scrollToColumn(col.id)}
               className={`flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium active:scale-95 transition-all cursor-pointer min-h-[36px] overflow-hidden ${
                 isActive
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold shadow-xs ring-1 ring-slate-900/5 dark:ring-white/10'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs ring-1 ring-slate-900/5 dark:ring-white/10'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
               aria-label={`Ir para coluna ${col.title}`}
@@ -147,8 +147,8 @@ export const Board: React.FC<BoardProps> = ({
         })}
       </nav>
 
-      {/* Horizontal Scroll Columns Area */}
-      <div className="flex items-start gap-4 sm:gap-6 overflow-x-auto pb-6 pt-1 px-1 scroll-smooth snap-x snap-mandatory">
+      {/* Horizontal Scroll Columns Area matching Stitch gap-5 items-start */}
+      <div className="flex items-start gap-5 overflow-x-auto pb-6 pt-1 px-0.5 scroll-smooth snap-x snap-mandatory">
         {columns.map((column) => {
           const colTasks = tasks.filter((t) => t.columnId === column.id)
           return (
@@ -186,7 +186,7 @@ export const Board: React.FC<BoardProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddingColumn(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

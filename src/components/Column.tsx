@@ -1,10 +1,6 @@
 ﻿import React, { useState } from 'react'
 import {
   Plus,
-  Circle,
-  Clock,
-  PauseCircle,
-  CheckCircle2,
   Trash2,
   ArrowLeft,
   ArrowRight,
@@ -80,61 +76,51 @@ export const Column: React.FC<ColumnProps> = ({
     { id: 'slate', label: 'Neutro', colorClass: 'bg-slate-500' },
   ]
 
-  // Header styles per column theme
+  // Header styles per column theme aligned with Stitch specifications
   const themeConfig: Record<
     ColumnType['colorTheme'],
     {
       dotColor: string
       badgeClass: string
-      headerIcon: React.ReactNode
       dropHighlight: string
+      isPulse?: boolean
     }
   > = {
     blue: {
-      dotColor: 'bg-blue-500',
-      badgeClass:
-        'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-100 dark:border-blue-900',
-      headerIcon: <Circle className="w-3.5 h-3.5 text-blue-500" />,
+      dotColor: 'bg-blue-600',
+      badgeClass: 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
       dropHighlight:
         'border-blue-400 bg-blue-50/20 dark:bg-blue-950/20 ring-2 ring-blue-400/30',
     },
     amber: {
       dotColor: 'bg-amber-500',
-      badgeClass:
-        'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-100 dark:border-amber-900',
-      headerIcon: <Clock className="w-3.5 h-3.5 text-amber-500" />,
+      badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300',
       dropHighlight:
         'border-amber-400 bg-amber-50/20 dark:bg-amber-950/20 ring-2 ring-amber-400/30',
+      isPulse: true,
     },
     purple: {
       dotColor: 'bg-purple-500',
       badgeClass:
-        'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-100 dark:border-purple-900',
-      headerIcon: <PauseCircle className="w-3.5 h-3.5 text-purple-500" />,
+        'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300',
       dropHighlight:
         'border-purple-400 bg-purple-50/20 dark:bg-purple-950/20 ring-2 ring-purple-400/30',
     },
     emerald: {
       dotColor: 'bg-emerald-500',
-      badgeClass:
-        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900',
-      headerIcon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />,
+      badgeClass: 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
       dropHighlight:
         'border-emerald-400 bg-emerald-50/20 dark:bg-emerald-950/20 ring-2 ring-emerald-400/30',
     },
     rose: {
       dotColor: 'bg-rose-500',
-      badgeClass:
-        'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-100 dark:border-rose-900',
-      headerIcon: <Circle className="w-3.5 h-3.5 text-rose-500" />,
+      badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300',
       dropHighlight:
         'border-rose-400 bg-rose-50/20 dark:bg-rose-950/20 ring-2 ring-rose-400/30',
     },
     slate: {
-      dotColor: 'bg-slate-500',
-      badgeClass:
-        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-      headerIcon: <Circle className="w-3.5 h-3.5 text-slate-500" />,
+      dotColor: 'bg-slate-400 dark:bg-slate-500',
+      badgeClass: 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
       dropHighlight:
         'border-slate-400 bg-slate-100/30 dark:bg-slate-800/30 ring-2 ring-slate-400/30',
     },
@@ -232,10 +218,10 @@ export const Column: React.FC<ColumnProps> = ({
       onDrop={handleDrop}
       role="region"
       aria-label={`Coluna ${column.title}`}
-      className={`relative flex flex-col shrink-0 w-[86vw] max-w-[340px] sm:w-80 sm:max-w-sm rounded-3xl p-3.5 snap-center transition-all duration-200 ${
+      className={`relative flex flex-col shrink-0 w-[86vw] max-w-[340px] sm:w-80 sm:max-w-sm rounded-2xl p-3.5 sm:p-4 snap-center transition-all duration-200 ${
         isDragOver
           ? `${currentTheme.dropHighlight} scale-[1.01]`
-          : 'bg-slate-100/60 dark:bg-slate-900/50 border border-slate-200/50 dark:border-slate-800/60'
+          : 'bg-slate-100/60 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 space-y-3.5'
       }`}
     >
       {/* Visual Drop Indicators for Column Reordering */}
@@ -254,7 +240,7 @@ export const Column: React.FC<ColumnProps> = ({
 
       {/* Column Header */}
       {isEditing ? (
-        <div className="p-2 mb-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
+        <div className="p-2.5 mb-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
           <input
             type="text"
             autoFocus
@@ -315,21 +301,27 @@ export const Column: React.FC<ColumnProps> = ({
         <div
           draggable={!isEditing}
           onDragStart={handleColumnDragStart}
-          className="flex items-center justify-between px-2 py-2 mb-2 select-none cursor-grab active:cursor-grabbing group/header"
+          className="flex items-center justify-between px-1 py-1 select-none cursor-grab active:cursor-grabbing group/header"
         >
+          {/* Left indicator dot + Title + Counter badge */}
           <div className="flex items-center gap-2 min-w-0">
             <GripVertical className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 opacity-0 group-hover/header:opacity-100 transition-opacity shrink-0" />
-            {currentTheme.headerIcon}
-            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+            <div
+              className={`w-2.5 h-2.5 rounded-full shrink-0 ${currentTheme.dotColor} ${
+                currentTheme.isPulse ? 'animate-pulse' : ''
+              }`}
+            />
+            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight truncate">
               {column.title}
             </h2>
             <span
-              className={`text-xs font-semibold min-w-[22px] h-5.5 px-2 inline-flex items-center justify-center rounded-full border shrink-0 ${currentTheme.badgeClass}`}
+              className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${currentTheme.badgeClass}`}
             >
               {tasks.length}
             </span>
           </div>
 
+          {/* Right Action Buttons */}
           <div
             className="flex items-center gap-0.5 shrink-0"
             onClick={(e) => e.stopPropagation()}
@@ -341,7 +333,7 @@ export const Column: React.FC<ColumnProps> = ({
                 onClick={() => onMoveColumn(column.id, 'left')}
                 title="Mover coluna para esquerda"
                 aria-label={`Mover coluna ${column.title} para a esquerda`}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+                className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
               </button>
@@ -354,7 +346,7 @@ export const Column: React.FC<ColumnProps> = ({
                 onClick={() => onMoveColumn(column.id, 'right')}
                 title="Mover coluna para direita"
                 aria-label={`Mover coluna ${column.title} para a direita`}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+                className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
               >
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -371,7 +363,7 @@ export const Column: React.FC<ColumnProps> = ({
                 }}
                 title="Editar coluna"
                 aria-label={`Editar coluna ${column.title}`}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+                className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
               >
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
@@ -383,7 +375,7 @@ export const Column: React.FC<ColumnProps> = ({
               onClick={() => onNewTaskInColumn(column.id)}
               title="Adicionar tarefa nesta coluna"
               aria-label={`Adicionar tarefa na coluna ${column.title}`}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+              className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -395,7 +387,7 @@ export const Column: React.FC<ColumnProps> = ({
                 onClick={() => onDeleteColumn(column.id)}
                 title="Excluir coluna"
                 aria-label={`Excluir coluna ${column.title}`}
-                className="p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer"
+                className="p-1 rounded text-slate-300 hover:text-rose-500 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -405,7 +397,7 @@ export const Column: React.FC<ColumnProps> = ({
       )}
 
       {/* Task Cards Container */}
-      <div className="flex-1 flex flex-col gap-3 min-h-[140px] overflow-y-auto p-1.5">
+      <div className="flex-1 flex flex-col gap-3 min-h-[140px] overflow-y-auto p-0.5">
         {tasks.map((task) => (
           <TaskCard
             key={task.id}
@@ -424,7 +416,7 @@ export const Column: React.FC<ColumnProps> = ({
         {isDragOver && (
           <div
             data-testid="drop-indicator"
-            className="py-3.5 px-4 border-2 border-dashed border-blue-400 bg-blue-50/30 dark:bg-blue-950/30 ring-2 ring-blue-400/20 rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 animate-pulse select-none transition-all duration-200 shadow-xs"
+            className="py-3 px-4 border-2 border-dashed border-blue-400 bg-blue-50/40 dark:bg-blue-950/40 ring-2 ring-blue-400/20 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 animate-pulse select-none transition-all duration-200 shadow-xs"
           >
             <div className="w-2 h-2 rounded-full bg-blue-500" />
             <span>Solte para mover para {column.title}</span>
@@ -433,7 +425,7 @@ export const Column: React.FC<ColumnProps> = ({
 
         {/* Empty state hint */}
         {tasks.length === 0 && !isDragOver && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200/70 dark:border-slate-800/80 rounded-2xl text-center select-none">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-200/70 dark:border-slate-800/80 rounded-xl text-center select-none">
             <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
               Nenhuma tarefa aqui
             </p>
@@ -450,15 +442,15 @@ export const Column: React.FC<ColumnProps> = ({
         )}
       </div>
 
-      {/* Bottom Add button */}
+      {/* Bottom Add button matching Stitch */}
       <button
         type="button"
         onClick={() => onNewTaskInColumn(column.id)}
         aria-label={`Adicionar tarefa na coluna ${column.title}`}
-        className="mt-3 w-full py-2 px-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-white/50 dark:hover:bg-slate-800/40 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+        className="w-full py-2 border border-dashed border-slate-300/80 dark:border-slate-700 hover:border-blue-500 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl flex items-center justify-center gap-1 transition-colors mt-auto cursor-pointer"
       >
         <Plus className="w-3.5 h-3.5" />
-        <span>Adicionar tarefa</span>
+        <span>Adicionar Tarefa</span>
       </button>
     </div>
   )

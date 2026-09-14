@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Header } from './components/Header'
 import { Sidebar, type AppView } from './components/Sidebar'
 import { MetricsView } from './components/metrics'
@@ -6,6 +6,7 @@ import { SettingsView } from './components/settings'
 import { ProfileView } from './components/profile'
 import { PomodoroWidget } from './components/PomodoroWidget'
 import { PomodoroFullscreen } from './components/PomodoroFullscreen'
+import { DailyFocusBanner } from './components/DailyFocusBanner'
 import { FilterBar } from './components/FilterBar'
 import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
@@ -203,6 +204,7 @@ export const AppContent: React.FC = () => {
       }
     }
     window.addEventListener('keydown', handleKeyDown)
+
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isPomodoroFullscreen, isZenMode, isMobileSidebarOpen])
 
@@ -437,8 +439,20 @@ export const AppContent: React.FC = () => {
     })
   }, [resetToSeed, toast])
 
+  const totalFocusMinutes = useMemo(() => {
+    return tasks.reduce((sum, t) => {
+      let mins = t.pomodoroMinutesSpent || 0
+      if (t.timeTracked) {
+        const trackedSecs =
+          (t.timeTracked.inProgressSeconds || 0) + (t.timeTracked.inReviewSeconds || 0)
+        mins += Math.floor(trackedSecs / 60)
+      }
+      return sum + mins
+    }, 0)
+  }, [tasks])
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-row transition-colors duration-200 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#f7f9fb] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-row transition-colors duration-200 selection:bg-blue-500 selection:text-white">
       {/* Skip to main content for accessibility */}
       <a
         href="#main-content"
@@ -503,6 +517,21 @@ export const AppContent: React.FC = () => {
                 onToggleSound={toggleSound}
                 onUpdateSettings={updateSettings}
                 onOpenFullscreen={() => setIsPomodoroFullscreen(true)}
+              />
+
+              {/* Hero / Daily Focus Summary Banner */}
+              <DailyFocusBanner
+                stats={{
+                  total: stats.total,
+                  completedCount: stats.completedCount,
+                  completionRate: stats.completionRate,
+                }}
+                focusMinutesSpent={totalFocusMinutes}
+                pomodoroSession={{
+                  mode: session.mode,
+                  timeLeft: session.timeLeft,
+                  isRunning: session.isRunning,
+                }}
               />
 
               {/* 2- Filtros (FilterBar) */}
