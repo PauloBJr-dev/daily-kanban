@@ -114,14 +114,8 @@ export async function deleteTask(taskId: string): Promise<void> {
 }
 
 export async function deleteColumn(columnId: string): Promise<void> {
-  const { error: tasksErr } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('column_id', columnId)
-  if (tasksErr) {
-    console.error('Erro ao deletar tarefas da coluna no Supabase:', tasksErr)
-  }
-
+  // Deleção em cascata nativa do PostgreSQL (ACID: Atomicidade e Consistência)
+  // A exclusão da coluna aciona a remoção em cascata de todas as tarefas associadas via fk_tasks_kanban_columns
   const { error } = await supabase.from('kanban_columns').delete().eq('id', columnId)
   if (error) {
     console.error('Erro ao deletar coluna no Supabase:', error)
