@@ -11,8 +11,12 @@ export const storageService = {
     try {
       let raw = localStorage.getItem(key)
       if (!raw) {
-        const dfKey = userId ? `dailyflow_kanban_user_${userId}` : 'dailyflow_kanban_guest'
-        const ocKey = userId ? `organocat_kanban_user_${userId}` : 'organocat_kanban_guest'
+        const dfKey = userId
+          ? `dailyflow_kanban_user_${userId}`
+          : 'dailyflow_kanban_guest'
+        const ocKey = userId
+          ? `organocat_kanban_user_${userId}`
+          : 'organocat_kanban_guest'
         raw = localStorage.getItem(dfKey) ?? localStorage.getItem(ocKey)
         if (raw) {
           try {

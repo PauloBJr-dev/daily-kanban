@@ -11,8 +11,12 @@ export const academicStorageService = {
     try {
       let raw = localStorage.getItem(key)
       if (!raw) {
-        const dfKey = userId ? `dailyflow_academic_user_${userId}` : 'dailyflow_academic_guest'
-        const ocKey = userId ? `organocat_academic_user_${userId}` : 'organocat_academic_guest'
+        const dfKey = userId
+          ? `dailyflow_academic_user_${userId}`
+          : 'dailyflow_academic_guest'
+        const ocKey = userId
+          ? `organocat_academic_user_${userId}`
+          : 'organocat_academic_guest'
         raw = localStorage.getItem(dfKey) ?? localStorage.getItem(ocKey)
         if (raw) {
           try {
