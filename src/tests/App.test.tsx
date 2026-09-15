@@ -1,7 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { App } from '../App'
 import { academicStorageService } from '../services/academicStorageService'
+import { userPreferencesService } from '../services/userPreferencesService'
+import { pomodoroSessionService } from '../services/pomodoroSessionService'
+import * as useAuthModule from '../hooks/useAuth'
+import type { User } from '@supabase/supabase-js'
 
 describe('App Integration', () => {
   beforeEach(() => {
@@ -350,5 +354,58 @@ describe('App Integration', () => {
     expect(
       screen.queryByRole('dialog', { name: /cronômetro pomodoro em tela cheia/i })
     ).not.toBeInTheDocument()
+  })
+  it('carrega preferências e restaura sessão pomodoro ativa do Supabase ao detectar usuário autenticado', async () => {
+    const mockUser: Partial<User> = {
+      id: 'user-synced-123',
+      email: 'sync@organy.app',
+    }
+
+    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+      user: mockUser as User,
+      session: null,
+      loading: false,
+      isConfigured: true,
+      authModalInitialTab: undefined,
+      signInWithGoogle: vi.fn(),
+      signOut: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      signInWithPassword: vi.fn(),
+      continueAsGuest: vi.fn(),
+      isGuestAcknowledged: true,
+      isAuthModalOpen: false,
+      openAuthModal: vi.fn(),
+      closeAuthModal: vi.fn(),
+    })
+
+    const fetchPrefsSpy = vi
+      .spyOn(userPreferencesService, 'fetchUserPreferences')
+      .mockResolvedValueOnce({
+        theme: 'dark',
+        activeView: 'metrics',
+        sidebarCollapsed: true,
+        pomodoro: {
+          workDurationMinutes: 50,
+          breakDurationMinutes: 10,
+        },
+      })
+
+    const fetchActiveSessionSpy = vi
+      .spyOn(pomodoroSessionService, 'fetchActiveSession')
+      .mockResolvedValueOnce({
+        taskId: null,
+        taskTitle: 'Foco no Escritório',
+        mode: 'work',
+        startedAt: new Date().toISOString(),
+        durationSeconds: 1500,
+        isRunning: true,
+      })
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(fetchPrefsSpy).toHaveBeenCalledWith('user-synced-123')
+      expect(fetchActiveSessionSpy).toHaveBeenCalledWith('user-synced-123')
+    })
   })
 })

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import type { PomodoroSession, CatPurrType } from '../types/kanban'
+import type { ActivePomodoroSession } from '../services/pomodoroSessionService'
 import {
   playWorkCompleteSound,
   playBreakCompleteSound,
@@ -16,6 +17,21 @@ const DEFAULT_BREAK_TIME = 5 * 60 // 5 minutes
 const DEFAULT_DOCUMENT_TITLE = 'Organy - Organização e estudos'
 const DEFAULT_CAT_PURR_TYPE: CatPurrType = 'none'
 const DEFAULT_CAT_PURR_VOLUME = 0.6
+
+export interface PomodoroSessionCompletedEvent {
+  taskId?: string | null
+  taskTitle?: string | null
+  mode: 'work' | 'break'
+  durationMinutes: number
+  completedAt: string
+}
+
+export interface UsePomodoroOptions {
+  onTaskMinuteLogged?: (taskId: string, minutes: number) => void
+  onActiveSessionChange?: (session: ActivePomodoroSession | null) => void
+  onSessionCompleted?: (event: PomodoroSessionCompletedEvent) => void
+  initialActiveSession?: ActivePomodoroSession | null
+}
 
 interface PomodoroSettings {
   workDuration: number
@@ -76,11 +92,30 @@ const loadSettings = (): PomodoroSettings => {
 }
 
 export function usePomodoro(
-  onTaskMinuteLogged?: (taskId: string, minutes: number) => void
+  optionsOrTaskLogged?: ((taskId: string, minutes: number) => void) | UsePomodoroOptions
 ) {
+  const options: UsePomodoroOptions =
+    typeof optionsOrTaskLogged === 'function'
+      ? { onTaskMinuteLogged: optionsOrTaskLogged }
+      : optionsOrTaskLogged || {}
+
   const [initialSettings] = useState<PomodoroSettings>(loadSettings)
 
+  const originalTitleRef = useRef<string>(
+    typeof document !== 'undefined' && document.title
+      ? document.title
+      : DEFAULT_DOCUMENT_TITLE
+  )
+  const completedTitleRef = useRef<string | null>(null)
+  const targetEndTimeRef = useRef<number | null>(null)
+
+  const callbacksRef = useRef(options)
+  useEffect(() => {
+    callbacksRef.current = options
+  })
+
   const [isUserPaused, setIsUserPaused] = useState<boolean>(false)
+
   const [session, setSession] = useState<PomodoroSession>(() => ({
     taskId: null,
     taskTitle: undefined,
@@ -93,14 +128,6 @@ export function usePomodoro(
     catPurrType: initialSettings.catPurrType,
     catPurrVolume: initialSettings.catPurrVolume,
   }))
-
-  const originalTitleRef = useRef<string>(
-    typeof document !== 'undefined' && document.title
-      ? document.title
-      : DEFAULT_DOCUMENT_TITLE
-  )
-  const completedTitleRef = useRef<string | null>(null)
-  const targetEndTimeRef = useRef<number | null>(null)
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -142,7 +169,7 @@ export function usePomodoro(
     formatTime,
   ])
 
-  // Restaura t?tulo e interrompe ?udio ao desmontar o componente
+  // Restaura título e interrompe áudio ao desmontar o componente
   useEffect(() => {
     return () => {
       stopCatPurr()
@@ -152,7 +179,7 @@ export function usePomodoro(
     }
   }, [])
 
-  // Gerenciamento ac?stico do ronrom de gato durante a pausa (break)
+  // Gerenciamento acústico do ronrom de gato durante a pausa (break)
   useEffect(() => {
     const shouldPurr =
       session.isRunning &&
@@ -209,9 +236,20 @@ export function usePomodoro(
           document.title = '🎉 Foco Concluído! Parabéns! | Organy'
         }
 
-        if (prev.taskId && onTaskMinuteLogged) {
-          onTaskMinuteLogged(prev.taskId, Math.round(prev.workDuration / 60))
+        if (prev.taskId && callbacksRef.current.onTaskMinuteLogged) {
+          callbacksRef.current.onTaskMinuteLogged(
+            prev.taskId,
+            Math.round(prev.workDuration / 60)
+          )
         }
+
+        callbacksRef.current.onSessionCompleted?.({
+          taskId: prev.taskId,
+          taskTitle: prev.taskTitle,
+          mode: 'work',
+          durationMinutes: Math.round(prev.workDuration / 60),
+          completedAt: new Date().toISOString(),
+        })
       } else {
         if (prev.isSoundEnabled ?? true) {
           playBreakCompleteSound()
@@ -225,7 +263,17 @@ export function usePomodoro(
         if (typeof document !== 'undefined') {
           document.title = '⏰ Pausa Finalizada! Pronto para Estudar? | Organy'
         }
+
+        callbacksRef.current.onSessionCompleted?.({
+          taskId: prev.taskId,
+          taskTitle: prev.taskTitle,
+          mode: 'break',
+          durationMinutes: Math.round(prev.breakDuration / 60),
+          completedAt: new Date().toISOString(),
+        })
       }
+
+      callbacksRef.current.onActiveSessionChange?.(null)
 
       return {
         ...prev,
@@ -234,7 +282,7 @@ export function usePomodoro(
         isRunning: false,
       }
     })
-  }, [onTaskMinuteLogged])
+  }, [])
 
   // Ticker de alta precisão baseado em Date.now() delta
   const tick = useCallback(() => {
@@ -274,7 +322,6 @@ export function usePomodoro(
       targetEndTimeRef.current = Date.now() + timeLeftRef.current * 1000
     }
 
-    // Tenta inicializar Web Worker inline para evitar throttling agressivo em background
     let workerTimer: {
       start: () => void
       stop: () => void
@@ -326,7 +373,6 @@ export function usePomodoro(
       workerTimer = null
     }
 
-    // Fallback garantido via setInterval se Web Worker não estiver disponível (ex: jsdom / restrições de CSP)
     if (!workerTimer) {
       fallbackInterval = setInterval(() => {
         tick()
@@ -380,7 +426,18 @@ export function usePomodoro(
       requestPermission().catch(() => {})
     }
     setSession((prev) => {
-      targetEndTimeRef.current = Date.now() + prev.timeLeft * 1000
+      const durationSeconds = prev.timeLeft
+      targetEndTimeRef.current = Date.now() + durationSeconds * 1000
+      const activeState: ActivePomodoroSession = {
+        taskId: taskId !== undefined ? taskId : prev.taskId,
+        taskTitle: taskTitle !== undefined ? taskTitle : prev.taskTitle,
+        mode: 'work',
+        startedAt: new Date().toISOString(),
+        durationSeconds,
+        isRunning: true,
+        pausedTimeLeft: null,
+      }
+      callbacksRef.current.onActiveSessionChange?.(activeState)
       return {
         ...prev,
         taskId: taskId ?? prev.taskId,
@@ -395,7 +452,19 @@ export function usePomodoro(
     targetEndTimeRef.current = null
     completedTitleRef.current = null
     setIsUserPaused(true)
-    setSession((prev) => ({ ...prev, isRunning: false }))
+    setSession((prev) => {
+      const activeState: ActivePomodoroSession = {
+        taskId: prev.taskId,
+        taskTitle: prev.taskTitle,
+        mode: prev.mode,
+        startedAt: null,
+        durationSeconds: prev.mode === 'work' ? prev.workDuration : prev.breakDuration,
+        isRunning: false,
+        pausedTimeLeft: prev.timeLeft,
+      }
+      callbacksRef.current.onActiveSessionChange?.(activeState)
+      return { ...prev, isRunning: false }
+    })
   }, [])
 
   const resumeFocus = useCallback(() => {
@@ -409,7 +478,18 @@ export function usePomodoro(
       requestPermission().catch(() => {})
     }
     setSession((prev) => {
-      targetEndTimeRef.current = Date.now() + prev.timeLeft * 1000
+      const durationSeconds = prev.timeLeft
+      targetEndTimeRef.current = Date.now() + durationSeconds * 1000
+      const activeState: ActivePomodoroSession = {
+        taskId: prev.taskId,
+        taskTitle: prev.taskTitle,
+        mode: prev.mode,
+        startedAt: new Date().toISOString(),
+        durationSeconds,
+        isRunning: true,
+        pausedTimeLeft: null,
+      }
+      callbacksRef.current.onActiveSessionChange?.(activeState)
       return { ...prev, isRunning: true }
     })
   }, [])
@@ -421,6 +501,7 @@ export function usePomodoro(
     if (typeof document !== 'undefined') {
       document.title = originalTitleRef.current
     }
+    callbacksRef.current.onActiveSessionChange?.(null)
     setSession((prev) => ({
       ...prev,
       isRunning: false,
@@ -435,6 +516,7 @@ export function usePomodoro(
     if (typeof document !== 'undefined') {
       document.title = originalTitleRef.current
     }
+    callbacksRef.current.onActiveSessionChange?.(null)
     setSession((prev) => ({
       ...prev,
       mode,
@@ -444,11 +526,91 @@ export function usePomodoro(
   }, [])
 
   const clearFocusedTask = useCallback(() => {
-    setSession((prev) => ({
-      ...prev,
-      taskId: null,
-      taskTitle: undefined,
-    }))
+    setSession((prev) => {
+      if (prev.isRunning) {
+        callbacksRef.current.onActiveSessionChange?.({
+          taskId: null,
+          taskTitle: null,
+          mode: prev.mode,
+          startedAt: new Date().toISOString(),
+          durationSeconds: prev.timeLeft,
+          isRunning: true,
+          pausedTimeLeft: null,
+        })
+      }
+      return {
+        ...prev,
+        taskId: null,
+        taskTitle: undefined,
+      }
+    })
+  }, [])
+
+  const restoreActiveSession = useCallback((persisted: ActivePomodoroSession | null) => {
+    if (!persisted) return
+
+    completedTitleRef.current = null
+
+    if (persisted.isRunning && persisted.startedAt) {
+      const elapsed = Math.floor(
+        (Date.now() - new Date(persisted.startedAt).getTime()) / 1000
+      )
+      const remainingSeconds = Math.max(0, persisted.durationSeconds - elapsed)
+
+      if (remainingSeconds > 0) {
+        targetEndTimeRef.current = Date.now() + remainingSeconds * 1000
+        setIsUserPaused(false)
+        setSession((prev) => ({
+          ...prev,
+          taskId: persisted.taskId,
+          taskTitle: persisted.taskTitle ?? undefined,
+          mode: persisted.mode,
+          timeLeft: remainingSeconds,
+          isRunning: true,
+        }))
+      } else {
+        // A contagem terminou enquanto o usuário estava longe ou trocou de máquina
+        targetEndTimeRef.current = null
+        setIsUserPaused(false)
+        const isWorkEnding = persisted.mode === 'work'
+        const nextMode = isWorkEnding ? 'break' : 'work'
+
+        callbacksRef.current.onSessionCompleted?.({
+          taskId: persisted.taskId,
+          taskTitle: persisted.taskTitle,
+          mode: persisted.mode,
+          durationMinutes: Math.round(persisted.durationSeconds / 60),
+          completedAt: new Date().toISOString(),
+        })
+
+        callbacksRef.current.onActiveSessionChange?.(null)
+
+        setSession((prev) => ({
+          ...prev,
+          taskId: isWorkEnding ? prev.taskId : null,
+          taskTitle: isWorkEnding ? prev.taskTitle : undefined,
+          mode: nextMode,
+          timeLeft: nextMode === 'work' ? prev.workDuration : prev.breakDuration,
+          isRunning: false,
+        }))
+      }
+    } else {
+      targetEndTimeRef.current = null
+      const timeLeft =
+        typeof persisted.pausedTimeLeft === 'number'
+          ? persisted.pausedTimeLeft
+          : persisted.durationSeconds
+
+      setIsUserPaused(true)
+      setSession((prev) => ({
+        ...prev,
+        taskId: persisted.taskId,
+        taskTitle: persisted.taskTitle ?? undefined,
+        mode: persisted.mode,
+        timeLeft,
+        isRunning: false,
+      }))
+    }
   }, [])
 
   const updateDurations = useCallback((workMinutes: number, breakMinutes: number) => {
@@ -570,5 +732,6 @@ export function usePomodoro(
     updateDurations,
     toggleSound,
     updateSettings,
+    restoreActiveSession,
   }
 }

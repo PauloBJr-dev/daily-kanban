@@ -32,6 +32,10 @@ export interface AcademicViewProps {
   className?: string
   isZenMode?: boolean
   onZenModeChange?: (isZen: boolean) => void
+  layoutMode?: 'grid' | 'studio'
+  onLayoutModeChange?: (mode: 'grid' | 'studio') => void
+  viewMode?: 'grid' | 'list'
+  onViewModeChange?: (mode: 'grid' | 'list') => void
 }
 
 export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewProps>(
@@ -40,6 +44,10 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       className = '',
       isZenMode: propIsZenMode,
       onZenModeChange: propOnZenModeChange,
+      layoutMode: propLayoutMode,
+      onLayoutModeChange: propOnLayoutModeChange,
+      viewMode: propViewMode,
+      onViewModeChange: propOnViewModeChange,
     } = props
     const {
       subjects,
@@ -80,6 +88,7 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
 
     // Layout mode: 'grid' (standard cards) or 'studio' (immersive split editor)
     const [layoutMode, setLayoutMode] = useState<'grid' | 'studio'>(() => {
+      if (propLayoutMode) return propLayoutMode
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('dailyflow_academic_layout_mode')
         if (saved === 'grid' || saved === 'studio') return saved
@@ -87,23 +96,31 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       return 'grid'
     })
 
+    const [prevLayoutProp, setPrevLayoutProp] = useState(propLayoutMode)
+    if (propLayoutMode && propLayoutMode !== prevLayoutProp) {
+      setPrevLayoutProp(propLayoutMode)
+      setLayoutMode(propLayoutMode)
+    }
+
     const handleLayoutModeChange = useCallback(
       (mode: 'grid' | 'studio') => {
         setLayoutMode(mode)
         if (typeof window !== 'undefined') {
           localStorage.setItem('dailyflow_academic_layout_mode', mode)
         }
+        propOnLayoutModeChange?.(mode)
         if (mode === 'grid') {
           handleZenModeChange(false)
         }
       },
-      [handleZenModeChange]
+      [handleZenModeChange, propOnLayoutModeChange]
     )
 
     const [activeStudioNoteId, setActiveStudioNoteId] = useState<string | null>(null)
 
     // View mode (grid or list)
     const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+      if (propViewMode) return propViewMode
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('dailyflow_academic_view_mode')
         if (saved === 'grid' || saved === 'list') return saved
@@ -111,12 +128,22 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       return 'grid'
     })
 
-    const handleViewModeChange = useCallback((mode: 'grid' | 'list') => {
-      setViewMode(mode)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('dailyflow_academic_view_mode', mode)
-      }
-    }, [])
+    const [prevViewProp, setPrevViewProp] = useState(propViewMode)
+    if (propViewMode && propViewMode !== prevViewProp) {
+      setPrevViewProp(propViewMode)
+      setViewMode(propViewMode)
+    }
+
+    const handleViewModeChange = useCallback(
+      (mode: 'grid' | 'list') => {
+        setViewMode(mode)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('dailyflow_academic_view_mode', mode)
+        }
+        propOnViewModeChange?.(mode)
+      },
+      [propOnViewModeChange]
+    )
 
     // Modals state
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
