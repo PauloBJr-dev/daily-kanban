@@ -11,8 +11,10 @@ describe('academicStorageService', () => {
 
   it('retorna INITIAL_ACADEMIC_DATA quando o localStorage está vazio', () => {
     const data = academicStorageService.load()
-    expect(data.subjects).toHaveLength(INITIAL_ACADEMIC_DATA.subjects.length)
-    expect(data.notes).toHaveLength(INITIAL_ACADEMIC_DATA.notes.length)
+    expect(data.subjects).toHaveLength(0)
+    expect(data.subjects).toEqual([])
+    expect(data.notes).toHaveLength(0)
+    expect(data.notes).toEqual([])
     expect(data.version).toBe(INITIAL_ACADEMIC_DATA.version)
   })
 

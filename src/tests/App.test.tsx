@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { App } from '../App'
 import { academicStorageService } from '../services/academicStorageService'
 
@@ -27,7 +27,9 @@ describe('App Integration', () => {
     fireEvent.click(continueBtn)
 
     // Modal fecha e usuário vê o aplicativo
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
     expect(localStorage.getItem('organocat_guest_acknowledged')).toBe('true')
   })
 

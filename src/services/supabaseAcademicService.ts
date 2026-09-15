@@ -76,15 +76,8 @@ export async function syncSubject(userId: string, subject: Subject): Promise<voi
 }
 
 export async function deleteSubject(subjectId: string): Promise<void> {
-  const { error: notesErr } = await supabase
-    .from('academic_notes')
-    .delete()
-    .eq('subject_id', subjectId)
-
-  if (notesErr) {
-    console.error('Erro ao deletar notas da disciplina no Supabase:', notesErr)
-  }
-
+  // Deleção em cascata nativa do PostgreSQL (ACID: Atomicidade e Consistência)
+  // A exclusão da disciplina aciona a remoção em cascata de todas as notas associadas via fk_notes_subjects
   const { error } = await supabase.from('subjects').delete().eq('id', subjectId)
 
   if (error) {

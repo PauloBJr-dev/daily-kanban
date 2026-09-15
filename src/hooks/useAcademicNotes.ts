@@ -61,10 +61,7 @@ export function useAcademicNotes() {
         }
 
         setData({
-          subjects:
-            cloudData.subjects.length > 0
-              ? cloudData.subjects
-              : INITIAL_ACADEMIC_DATA.subjects,
+          subjects: cloudData.subjects,
           notes: cloudData.notes,
           version: 1,
         })
@@ -89,11 +86,15 @@ export function useAcademicNotes() {
   }, [data, userId])
 
   const addNote = useCallback(
-    (noteInput: Omit<AcademicNote, 'id' | 'createdAt' | 'updatedAt'>): AcademicNote => {
+    (
+      noteInput: Omit<AcademicNote, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }
+    ): AcademicNote => {
       const now = new Date().toISOString()
       const newNote: AcademicNote = {
         ...noteInput,
-        id: `note-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        id:
+          noteInput.id ||
+          `note-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         createdAt: now,
         updatedAt: now,
       }
@@ -210,10 +211,12 @@ export function useAcademicNotes() {
   )
 
   const addSubject = useCallback(
-    (subjectInput: Omit<Subject, 'id'>): Subject => {
+    (subjectInput: Omit<Subject, 'id'> & { id?: string }): Subject => {
       const newSubject: Subject = {
         ...subjectInput,
-        id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        id:
+          subjectInput.id ||
+          `sub-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       }
 
       setData((prev) => ({

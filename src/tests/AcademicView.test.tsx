@@ -1,9 +1,47 @@
 ﻿import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { AcademicView } from '../components/academic/AcademicView'
-import { DEFAULT_SUBJECTS } from '../services/academicSeedData'
+import type { Subject } from '../types/academic'
 import { academicStorageService } from '../services/academicStorageService'
 import type { AcademicNote } from '../types/academic'
+
+const sampleSubjects: Subject[] = [
+  {
+    id: 'sub-calc',
+    name: 'Cálculo Diferencial e Integral',
+    color: 'indigo',
+    code: 'MAT-101',
+    icon: 'Calculator',
+  },
+  {
+    id: 'sub-eda',
+    name: 'Estruturas de Dados e Algoritmos',
+    color: 'emerald',
+    code: 'CC-201',
+    icon: 'Binary',
+  },
+  {
+    id: 'sub-redes',
+    name: 'Redes de Computadores',
+    color: 'sky',
+    code: 'CC-302',
+    icon: 'Network',
+  },
+  {
+    id: 'sub-bd',
+    name: 'Banco de Dados',
+    color: 'amber',
+    code: 'CC-204',
+    icon: 'Database',
+  },
+  {
+    id: 'sub-ia',
+    name: 'Inteligência Artificial',
+    color: 'purple',
+    code: 'CC-401',
+    icon: 'Brain',
+  },
+]
 
 const sampleNotes: AcademicNote[] = [
   {
@@ -59,7 +97,7 @@ describe('AcademicView', () => {
     localStorage.setItem(
       academicStorageService.getStorageKey(),
       JSON.stringify({
-        subjects: DEFAULT_SUBJECTS,
+        subjects: sampleSubjects,
         notes: sampleNotes,
         version: 1,
       })

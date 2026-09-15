@@ -50,28 +50,18 @@ describe('useAcademicNotes', () => {
     it('inicializa com os dados padrão e calcula estatísticas corretamente', () => {
       const { result } = renderHook(() => useAcademicNotes())
 
-      expect(result.current.subjects.length).toBe(INITIAL_ACADEMIC_DATA.subjects.length)
-      expect(result.current.allNotesCount).toBe(INITIAL_ACADEMIC_DATA.notes.length)
-      expect(result.current.notes.length).toBe(INITIAL_ACADEMIC_DATA.notes.length)
-
-      const expectedPinned = INITIAL_ACADEMIC_DATA.notes.filter((n) => n.isPinned).length
-      const expectedToReview = INITIAL_ACADEMIC_DATA.notes.filter(
-        (n) => n.status === 'to_review'
-      ).length
-      const expectedInProgress = INITIAL_ACADEMIC_DATA.notes.filter(
-        (n) => n.status === 'in_progress'
-      ).length
-      const expectedMastered = INITIAL_ACADEMIC_DATA.notes.filter(
-        (n) => n.status === 'mastered'
-      ).length
+      expect(result.current.subjects.length).toBe(0)
+      expect(result.current.subjects).toEqual([])
+      expect(result.current.allNotesCount).toBe(0)
+      expect(result.current.notes.length).toBe(0)
 
       expect(result.current.stats).toEqual({
-        totalNotes: INITIAL_ACADEMIC_DATA.notes.length,
-        toReviewCount: expectedToReview,
-        inProgressCount: expectedInProgress,
-        masteredCount: expectedMastered,
-        subjectsCount: INITIAL_ACADEMIC_DATA.subjects.length,
-        pinnedCount: expectedPinned,
+        totalNotes: 0,
+        toReviewCount: 0,
+        inProgressCount: 0,
+        masteredCount: 0,
+        subjectsCount: 0,
+        pinnedCount: 0,
       })
 
       expect(result.current.allTags.length).toBe(0)
@@ -79,6 +69,10 @@ describe('useAcademicNotes', () => {
 
     it('permite adicionar uma nova nota com campos preenchidos', () => {
       const { result } = renderHook(() => useAcademicNotes())
+
+      act(() => {
+        result.current.addSubject({ id: 'sub-calc', name: 'Cálculo', color: 'indigo' })
+      })
 
       let addedNote: unknown
       act(() => {
@@ -102,6 +96,10 @@ describe('useAcademicNotes', () => {
 
     it('permite atualizar e deletar uma nota', () => {
       const { result } = renderHook(() => useAcademicNotes())
+
+      act(() => {
+        result.current.addSubject({ id: 'sub-calc', name: 'Cálculo', color: 'indigo' })
+      })
 
       let noteToUpdate: AcademicNote | undefined
       act(() => {
@@ -137,6 +135,10 @@ describe('useAcademicNotes', () => {
 
     it('permite alternar o status de fixação (pin) de uma nota', () => {
       const { result } = renderHook(() => useAcademicNotes())
+
+      act(() => {
+        result.current.addSubject({ id: 'sub-calc', name: 'Cálculo', color: 'indigo' })
+      })
 
       let note: AcademicNote | undefined
       act(() => {
@@ -214,6 +216,17 @@ describe('useAcademicNotes', () => {
       const { result } = renderHook(() => useAcademicNotes())
 
       act(() => {
+        result.current.addSubject({
+          id: 'sub-eda',
+          name: 'Estrutura de Dados',
+          color: 'emerald',
+        })
+        result.current.addSubject({ id: 'sub-redes', name: 'Redes', color: 'sky' })
+        result.current.addSubject({
+          id: 'sub-ia',
+          name: 'Inteligência Artificial',
+          color: 'purple',
+        })
         result.current.addNote({
           title: 'Algoritmos em Grafos: Dijkstra',
           content: 'Caminho mínimo em grafos ponderados.',
@@ -275,6 +288,12 @@ describe('useAcademicNotes', () => {
       const { result } = renderHook(() => useAcademicNotes())
 
       act(() => {
+        result.current.addSubject({ id: 'sub-calc', name: 'Cálculo', color: 'indigo' })
+        result.current.addSubject({
+          id: 'sub-eda',
+          name: 'Estruturas de Dados',
+          color: 'emerald',
+        })
         result.current.addNote({
           title: 'Nota de Cálculo',
           content: 'Derivadas',
@@ -342,6 +361,7 @@ describe('useAcademicNotes', () => {
       const { result } = renderHook(() => useAcademicNotes())
 
       act(() => {
+        result.current.addSubject({ id: 'sub-calc', name: 'Cálculo', color: 'indigo' })
         result.current.addNote({
           title: 'Nota Antiga Não Fixada',
           content: '',
@@ -424,6 +444,10 @@ describe('useAcademicNotes', () => {
       const { result } = renderHook(() => useAcademicNotes())
       const exportSpy = vi.spyOn(academicStorageService, 'exportJSON')
 
+      act(() => {
+        result.current.addSubject({ id: 'sub-calc', name: 'Cálculo', color: 'indigo' })
+      })
+
       let note: AcademicNote | undefined
       act(() => {
         note = result.current.addNote({
@@ -500,7 +524,8 @@ describe('useAcademicNotes', () => {
       const { result } = renderHook(() => useAcademicNotes(), { wrapper: AuthWrapper })
 
       await waitFor(() => {
-        expect(result.current.subjects.length).toBe(INITIAL_ACADEMIC_DATA.subjects.length)
+        expect(result.current.subjects.length).toBe(0)
+        expect(result.current.subjects).toEqual([])
         expect(result.current.notes.length).toBe(0)
       })
 
@@ -566,16 +591,15 @@ describe('useAcademicNotes', () => {
       await waitFor(() => {
         expect(result.current.notes).toHaveLength(0)
         expect(result.current.allNotesCount).toBe(0)
-        expect(result.current.subjects).toHaveLength(
-          INITIAL_ACADEMIC_DATA.subjects.length
-        )
+        expect(result.current.subjects).toHaveLength(0)
+        expect(result.current.subjects).toEqual([])
       })
     })
 
     it('dispara syncNote em background de forma otimista ao adicionar e atualizar anotação', async () => {
       vi.spyOn(supabaseAcademicService, 'fetchAcademicData').mockResolvedValueOnce({
-        subjects: INITIAL_ACADEMIC_DATA.subjects,
-        notes: INITIAL_ACADEMIC_DATA.notes,
+        subjects: [{ id: 'sub-calc', name: 'Cálculo', color: 'indigo' }],
+        notes: [],
         version: 1,
       })
       const syncNoteSpy = vi
@@ -585,7 +609,8 @@ describe('useAcademicNotes', () => {
       const { result } = renderHook(() => useAcademicNotes(), { wrapper: AuthWrapper })
 
       await waitFor(() => {
-        expect(result.current.allNotesCount).toBe(INITIAL_ACADEMIC_DATA.notes.length)
+        expect(result.current.subjects.length).toBe(1)
+        expect(result.current.allNotesCount).toBe(0)
       })
 
       let addedNote: any
@@ -635,7 +660,7 @@ describe('useAcademicNotes', () => {
       }
 
       vi.spyOn(supabaseAcademicService, 'fetchAcademicData').mockResolvedValueOnce({
-        subjects: INITIAL_ACADEMIC_DATA.subjects,
+        subjects: [{ id: 'sub-calc', name: 'Cálculo', color: 'indigo' }],
         notes: [cloudNote],
         version: 1,
       })
@@ -675,7 +700,7 @@ describe('useAcademicNotes', () => {
       const { result } = renderHook(() => useAcademicNotes(), { wrapper: AuthWrapper })
 
       await waitFor(() => {
-        expect(result.current.subjects.length).toBe(INITIAL_ACADEMIC_DATA.subjects.length)
+        expect(result.current.subjects.length).toBe(0)
       })
 
       let addedSub: any

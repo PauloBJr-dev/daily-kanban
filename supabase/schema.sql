@@ -83,8 +83,23 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     pomodoro_minutes_spent INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (id, user_id)
+    PRIMARY KEY (id, user_id),
+    CONSTRAINT fk_tasks_kanban_columns FOREIGN KEY (column_id, user_id) REFERENCES public.kanban_columns(id, user_id) ON DELETE CASCADE
 );
+
+-- Adicionar chave estrangeira para kanban_columns com deleção em cascata
+DO $
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_tasks_kanban_columns'
+    ) THEN
+        ALTER TABLE public.tasks
+            ADD CONSTRAINT fk_tasks_kanban_columns
+            FOREIGN KEY (column_id, user_id)
+            REFERENCES public.kanban_columns(id, user_id)
+            ON DELETE CASCADE;
+    END IF;
+END $;
 
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 
@@ -132,8 +147,23 @@ CREATE TABLE IF NOT EXISTS public.academic_notes (
     review_date TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (id, user_id)
+    PRIMARY KEY (id, user_id),
+    CONSTRAINT fk_notes_subjects FOREIGN KEY (subject_id, user_id) REFERENCES public.subjects(id, user_id) ON DELETE CASCADE
 );
+
+-- Adicionar chave estrangeira para subjects com deleção em cascata
+DO $
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_notes_subjects'
+    ) THEN
+        ALTER TABLE public.academic_notes
+            ADD CONSTRAINT fk_notes_subjects
+            FOREIGN KEY (subject_id, user_id)
+            REFERENCES public.subjects(id, user_id)
+            ON DELETE CASCADE;
+    END IF;
+END $;
 
 ALTER TABLE public.academic_notes ENABLE ROW LEVEL SECURITY;
 
