@@ -47,7 +47,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [isGuestAcknowledged, setIsGuestAcknowledged] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
-    return localStorage.getItem('organocat_guest_acknowledged') === 'true'
+    return (
+      (localStorage.getItem('organy_guest_acknowledged') ??
+        localStorage.getItem('dailyflow_guest_acknowledged') ??
+        localStorage.getItem('organocat_guest_acknowledged')) === 'true'
+    )
   })
 
   const openAuthModal = useCallback((initialTab?: 'signin' | 'signup' | unknown) => {
@@ -63,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const continueAsGuest = useCallback(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('organocat_guest_acknowledged', 'true')
+      localStorage.setItem('organy_guest_acknowledged', 'true')
     }
     setIsGuestAcknowledged(true)
     setIsAuthModalOpen(false)
@@ -164,7 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(data.user)
           setIsGuestAcknowledged(true)
           if (typeof window !== 'undefined') {
-            localStorage.setItem('organocat_guest_acknowledged', 'true')
+            localStorage.setItem('organy_guest_acknowledged', 'true')
           }
           setIsAuthModalOpen(false)
           return { error: null }
@@ -182,7 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(signInRes.data.user)
             setIsGuestAcknowledged(true)
             if (typeof window !== 'undefined') {
-              localStorage.setItem('organocat_guest_acknowledged', 'true')
+              localStorage.setItem('organy_guest_acknowledged', 'true')
             }
             setIsAuthModalOpen(false)
             return { error: null }
@@ -232,7 +236,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.user)
         setIsGuestAcknowledged(true)
         if (typeof window !== 'undefined') {
-          localStorage.setItem('organocat_guest_acknowledged', 'true')
+          localStorage.setItem('organy_guest_acknowledged', 'true')
         }
         setIsAuthModalOpen(false)
         return { error: null }

@@ -43,11 +43,13 @@ describe('AuthModal Component', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('renderiza o título OrganoCat, abas Criar Conta e Entrar, e bloco explicativo de armazenamento local', () => {
+  it('renderiza o título Organy, abas Criar Conta e Entrar, e bloco explicativo de armazenamento local', () => {
     render(<AuthModal isOpen={true} onClose={mockCloseAuthModal} />)
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('OrganoCat')).toBeInTheDocument()
+    expect(screen.getByText('Organy')).toBeInTheDocument()
+    expect(screen.getByText('Organização e estudos')).toBeInTheDocument()
+    expect(screen.queryByText('OrganoCat')).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Criar Conta' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Entrar' })).toBeInTheDocument()
 

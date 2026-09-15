@@ -63,12 +63,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     (user?.user_metadata?.full_name as string) ||
     (user?.user_metadata?.name as string) ||
     user?.email?.split('@')[0] ||
-    'Visitante OrganoCat'
+    'Visitante Organy'
 
   const displayEmail = user?.email || 'Navegador Local (Sem vínculo com conta)'
 
   const initials = useMemo(() => {
-    if (!displayName) return 'OC'
+    if (!displayName || displayName === 'Visitante Organy') return 'OR'
     const parts = displayName.trim().split(/\s+/)
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
@@ -94,7 +94,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const kanbanData = storageService.load(user?.id ?? null)
       const academicData = academicStorageService.load(user?.id ?? null)
       const fullBackup = {
-        app: 'DailyFlow (OrganoCat)',
+        app: 'Organy',
         version: '1.0',
         exportedAt: new Date().toISOString(),
         user: user ? { id: user.id, email: user.email } : { mode: 'guest' },
@@ -124,7 +124,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const handleClearCacheConfirm = () => {
     try {
       // Clear non-critical caches & session preferences
+      localStorage.removeItem('organy_pomodoro_session')
       localStorage.removeItem('organocat_pomodoro_session')
+      localStorage.removeItem('dailyflow_pomodoro_session')
+      localStorage.removeItem('organy_active_tab')
       localStorage.removeItem('dailyflow_active_tab')
       toast.success('Cache local e preferências temporárias limpos com sucesso!')
       setIsClearCacheModalOpen(false)

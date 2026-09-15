@@ -120,7 +120,7 @@ describe('AuthContext & useAuth', () => {
     })
 
     expect(result.current.isGuestAcknowledged).toBe(true)
-    expect(localStorage.getItem('organocat_guest_acknowledged')).toBe('true')
+    expect(localStorage.getItem('organy_guest_acknowledged')).toBe('true')
   })
 
   it('rejeita signUpWithPassword quando o serviço de autenticação não estiver configurado', async () => {
@@ -144,7 +144,7 @@ describe('AuthContext & useAuth', () => {
     expect(res.error?.message).toBe('Serviço de autenticação não configurado.')
     expect(result.current.user).toBeNull()
     expect(result.current.session).toBeNull()
-    expect(localStorage.getItem('organocat_local_user')).toBeNull()
+    expect(localStorage.getItem('organy_local_user')).toBeNull()
   })
 
   it('rejeita signInWithPassword quando o serviço de autenticação não estiver configurado', async () => {
@@ -166,7 +166,7 @@ describe('AuthContext & useAuth', () => {
     )
     expect(result.current.user).toBeNull()
     expect(result.current.session).toBeNull()
-    expect(localStorage.getItem('organocat_local_user')).toBeNull()
+    expect(localStorage.getItem('organy_local_user')).toBeNull()
   })
 
   it('executa signUpWithPassword com sucesso com Supabase configurado', async () => {

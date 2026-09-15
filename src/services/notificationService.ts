@@ -1,5 +1,5 @@
 /**
- * Serviço de notificações do navegador para o OrganoCat Pomodoro.
+ * Serviço de notificações do navegador para o Organy Pomodoro.
  * Lida com permissões, checagens de compatibilidade e disparo de alertas visuais no SO.
  */
 

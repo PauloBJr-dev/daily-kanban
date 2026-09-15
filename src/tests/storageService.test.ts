@@ -4,6 +4,33 @@ import { INITIAL_DATA } from '../services/seedData'
 import type { KanbanData } from '../types/kanban'
 
 describe('storageService', () => {
+  it('carrega dados legados de organocat_kanban_guest ou dailyflow_kanban_guest como fallback', () => {
+    const legacyData = {
+      columns: [{ id: 'col-leg', title: 'Coluna Legada', order: 0, colorTheme: 'blue' }],
+      tasks: [
+        {
+          id: 'task-leg',
+          title: 'Tarefa Legada',
+          columnId: 'col-leg',
+          priority: 'medium',
+          tags: [],
+          subtasks: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      version: 1,
+    }
+    localStorage.setItem('organocat_kanban_guest', JSON.stringify(legacyData))
+
+    const loaded = storageService.load(null)
+    expect(loaded.columns).toHaveLength(1)
+    expect(loaded.columns[0].title).toBe('Coluna Legada')
+    expect(loaded.tasks[0].title).toBe('Tarefa Legada')
+    // Deve ter persistido na chave oficial do Organy
+    expect(localStorage.getItem('organy_kanban_guest')).not.toBeNull()
+  })
+
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
@@ -16,11 +43,9 @@ describe('storageService', () => {
   })
 
   it('retorna as chaves corretas de storage para usu?rio e visitante', () => {
-    expect(storageService.getStorageKey('user-abc')).toBe(
-      'organocat_kanban_user_user-abc'
-    )
-    expect(storageService.getStorageKey(null)).toBe('organocat_kanban_guest')
-    expect(storageService.getStorageKey(undefined)).toBe('organocat_kanban_guest')
+    expect(storageService.getStorageKey('user-abc')).toBe('organy_kanban_user_user-abc')
+    expect(storageService.getStorageKey(null)).toBe('organy_kanban_guest')
+    expect(storageService.getStorageKey(undefined)).toBe('organy_kanban_guest')
   })
 
   it('salva e recupera os dados com sucesso no modo visitante padr?o', () => {
@@ -42,7 +67,7 @@ describe('storageService', () => {
     }
 
     storageService.save(customData)
-    expect(localStorage.getItem('organocat_kanban_guest')).not.toBeNull()
+    expect(localStorage.getItem('organy_kanban_guest')).not.toBeNull()
 
     const loaded = storageService.load()
     expect(loaded.columns).toHaveLength(1)
@@ -104,13 +129,13 @@ describe('storageService', () => {
 
     // Limpar user-1 n?o afeta user-2 nem convidado
     storageService.clear('user-1')
-    expect(localStorage.getItem('organocat_kanban_user_user-1')).toBeNull()
+    expect(localStorage.getItem('organy_kanban_user_user-1')).toBeNull()
     expect(storageService.load('user-2').tasks[0].title).toBe('Tarefa Usu?rio 2')
     expect(storageService.load(null).columns[0].title).toBe('Coluna Convidado')
 
     // Limpar visitante
     storageService.clear(null)
-    expect(localStorage.getItem('organocat_kanban_guest')).toBeNull()
+    expect(localStorage.getItem('organy_kanban_guest')).toBeNull()
   })
 
   it('valida corretamente objetos de KanbanData', () => {
@@ -146,7 +171,7 @@ describe('storageService', () => {
       expect(loaded.tasks[0].title).toBe('Tarefa Legada')
 
       // Verifica se foi salvo na chave nova e removido da legada
-      expect(localStorage.getItem('organocat_kanban_user_user-migrado')).not.toBeNull()
+      expect(localStorage.getItem('organy_kanban_user_user-migrado')).not.toBeNull()
       expect(localStorage.getItem('dailyflow_kanban_data_v1')).toBeNull()
     })
 

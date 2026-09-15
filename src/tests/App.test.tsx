@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { App } from '../App'
 import { academicStorageService } from '../services/academicStorageService'
@@ -6,11 +6,11 @@ import { academicStorageService } from '../services/academicStorageService'
 describe('App Integration', () => {
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('organocat_guest_acknowledged', 'true')
+    localStorage.setItem('organy_guest_acknowledged', 'true')
   })
 
   it('abre automaticamente o AuthModal na primeira visita quando usuário não está logado e não consentiu', async () => {
-    localStorage.removeItem('organocat_guest_acknowledged')
+    localStorage.removeItem('organy_guest_acknowledged')
     render(<App />)
 
     // Modal de autenticação abre na primeira visita
@@ -30,19 +30,17 @@ describe('App Integration', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    expect(localStorage.getItem('organocat_guest_acknowledged')).toBe('true')
+    expect(localStorage.getItem('organy_guest_acknowledged')).toBe('true')
   })
 
-  it('renderiza o cabeçalho OrganoCat, pomodoro widget, filtros e colunas do quadro na visão Kanban', async () => {
+  it('renderiza o cabeçalho Organy, pomodoro widget, filtros e colunas do quadro na visão Kanban', async () => {
     render(<App />)
 
     // Header & Sidebar
     expect(
       screen.getByRole('heading', { level: 1, name: /quadro kanban/i })
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole('heading', { level: 2, name: /organocat/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: /organy/i })).toBeInTheDocument()
     expect(screen.getByText('Nova Tarefa')).toBeInTheDocument()
     expect(
       await screen.findByRole('button', { name: /entrar ou criar conta/i })

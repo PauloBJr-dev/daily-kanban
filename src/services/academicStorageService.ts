@@ -3,13 +3,29 @@ import { INITIAL_ACADEMIC_DATA } from './academicSeedData'
 
 export const academicStorageService = {
   getStorageKey(userId?: string | null): string {
-    return userId ? `organocat_academic_user_${userId}` : 'organocat_academic_guest'
+    return userId ? `organy_academic_user_${userId}` : 'organy_academic_guest'
   },
 
   load(userId?: string | null): AcademicData {
     const key = this.getStorageKey(userId)
     try {
-      const raw = localStorage.getItem(key)
+      let raw = localStorage.getItem(key)
+      if (!raw) {
+        const dfKey = userId ? `dailyflow_academic_user_${userId}` : 'dailyflow_academic_guest'
+        const ocKey = userId ? `organocat_academic_user_${userId}` : 'organocat_academic_guest'
+        raw = localStorage.getItem(dfKey) ?? localStorage.getItem(ocKey)
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw)
+            if (this.validateJSON(parsed)) {
+              localStorage.setItem(key, raw)
+              return parsed
+            }
+          } catch {
+            // Ignora falha de parse
+          }
+        }
+      }
       if (!raw) {
         return INITIAL_ACADEMIC_DATA
       }

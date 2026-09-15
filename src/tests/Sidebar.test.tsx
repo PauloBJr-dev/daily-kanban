@@ -26,6 +26,35 @@ describe('Sidebar Component', () => {
     expect(screen.getAllByRole('button', { name: 'Perfil' })[0]).toBeInTheDocument()
   })
 
+  it('renderiza o branding oficial Organy, subtítulo e rodapé em conformidade com o Stitch Design System', () => {
+    render(<Sidebar {...defaultProps} isMobileOpen={true} />)
+
+    // Título Organy desktop e mobile
+    const organyHeadings = screen.getAllByText('Organy')
+    expect(organyHeadings.length).toBeGreaterThanOrEqual(1)
+
+    // Subtítulo oficial
+    const subtitles = screen.getAllByText('Organização e estudos')
+    expect(subtitles.length).toBeGreaterThanOrEqual(1)
+
+    // Rodapé
+    const footers = screen.getAllByText('Organy • Organização e estudos')
+    expect(footers.length).toBeGreaterThanOrEqual(1)
+
+    // Zero resquício de OrganoCat
+    expect(screen.queryByText(/organocat/i)).not.toBeInTheDocument()
+  })
+
+  it('aplica o estilo primário cobalto do Stitch na aba ativa', () => {
+    render(<Sidebar {...defaultProps} activeView="kanban" />)
+
+    const kanbanBtns = screen.getAllByRole('button', { name: 'Kanban' })
+    expect(kanbanBtns[0]).toHaveClass('bg-blue-50')
+    expect(kanbanBtns[0]).toHaveClass('text-blue-600')
+    expect(kanbanBtns[0]).toHaveClass('ring-blue-500/20')
+    expect(kanbanBtns[0]).not.toHaveClass('bg-indigo-500/10')
+  })
+
   it('marca a aba ativa com aria-current="page"', () => {
     render(<Sidebar {...defaultProps} activeView="metrics" />)
 

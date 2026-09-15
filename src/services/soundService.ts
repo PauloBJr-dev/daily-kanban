@@ -1,5 +1,5 @@
 /**
- * Serviço de áudio sintetizado para o OrganoCat Pomodoro.
+ * Serviço de áudio sintetizado para o Organy Pomodoro.
  * Utiliza a Web Audio API nativa sem downloads externos nem dependências de rede.
  * Inclui síntese de ronrom de gato (Cat Purr) procedural com 3 variações acústicas.
  */

@@ -55,7 +55,7 @@ describe('ProfileView Component', () => {
     render(<ProfileView tasks={mockTasks} academicNotesCount={3} />)
 
     expect(screen.getByText('Perfil & Sincronização')).toBeInTheDocument()
-    expect(screen.getByText('Visitante OrganoCat')).toBeInTheDocument()
+    expect(screen.getByText('Visitante Organy')).toBeInTheDocument()
     expect(screen.getByText('Modo Visitante Local')).toBeInTheDocument()
     expect(
       screen.getByText('Navegador Local (Sem vínculo com conta)')
@@ -98,7 +98,7 @@ describe('ProfileView Component', () => {
     vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
       user: {
         id: 'user-123',
-        email: 'paulo@organocat.dev',
+        email: 'paulo@organy.dev',
         user_metadata: { full_name: 'Paulo Dev' },
         app_metadata: {},
         aud: 'authenticated',
@@ -122,7 +122,7 @@ describe('ProfileView Component', () => {
     render(<ProfileView tasks={mockTasks} academicNotesCount={5} />)
 
     expect(screen.getByText('Paulo Dev')).toBeInTheDocument()
-    expect(screen.getByText('paulo@organocat.dev')).toBeInTheDocument()
+    expect(screen.getByText('paulo@organy.dev')).toBeInTheDocument()
     expect(screen.getByText('Sincronização Nuvem Supabase')).toBeInTheDocument()
 
     const signOutBtn = screen.getByRole('button', { name: /Sair da Conta/i })
