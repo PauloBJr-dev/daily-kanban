@@ -4,6 +4,42 @@ import { INITIAL_ACADEMIC_DATA } from '../services/academicSeedData'
 import type { AcademicData } from '../types/academic'
 
 describe('academicStorageService', () => {
+  it('carrega dados legados de organocat_academic_guest ou dailyflow_academic_guest como fallback', () => {
+    const legacyData = {
+      subjects: [
+        {
+          id: 'sub-leg',
+          name: 'História',
+          color: 'amber',
+          code: 'HIS-101',
+          icon: 'Book',
+        },
+      ],
+      notes: [
+        {
+          id: 'note-leg',
+          title: 'Roma Antiga',
+          content: 'República e Império.',
+          subjectId: 'sub-leg',
+          status: 'completed',
+          tags: ['História'],
+          isPinned: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      version: 1,
+    }
+    localStorage.setItem('organocat_academic_guest', JSON.stringify(legacyData))
+
+    const loaded = academicStorageService.load(null)
+    expect(loaded.subjects).toHaveLength(1)
+    expect(loaded.subjects[0].name).toBe('História')
+    expect(loaded.notes[0].title).toBe('Roma Antiga')
+    // Deve ter persistido na chave oficial do Organy
+    expect(localStorage.getItem('organy_academic_guest')).not.toBeNull()
+  })
+
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
@@ -20,12 +56,10 @@ describe('academicStorageService', () => {
 
   it('retorna as chaves corretas de storage para usuário e visitante', () => {
     expect(academicStorageService.getStorageKey('user-academic-1')).toBe(
-      'organocat_academic_user_user-academic-1'
+      'organy_academic_user_user-academic-1'
     )
-    expect(academicStorageService.getStorageKey(null)).toBe('organocat_academic_guest')
-    expect(academicStorageService.getStorageKey(undefined)).toBe(
-      'organocat_academic_guest'
-    )
+    expect(academicStorageService.getStorageKey(null)).toBe('organy_academic_guest')
+    expect(academicStorageService.getStorageKey(undefined)).toBe('organy_academic_guest')
   })
 
   it('salva e recupera os dados acadêmicos com sucesso no modo visitante padrão', () => {
@@ -56,7 +90,7 @@ describe('academicStorageService', () => {
     }
 
     academicStorageService.save(customData)
-    expect(localStorage.getItem('organocat_academic_guest')).not.toBeNull()
+    expect(localStorage.getItem('organy_academic_guest')).not.toBeNull()
 
     const loaded = academicStorageService.load()
     expect(loaded.subjects).toHaveLength(1)
@@ -120,16 +154,16 @@ describe('academicStorageService', () => {
 
     // Clear user-u1
     academicStorageService.clear('user-u1')
-    expect(localStorage.getItem('organocat_academic_user_user-u1')).toBeNull()
+    expect(localStorage.getItem('organy_academic_user_user-u1')).toBeNull()
     expect(academicStorageService.load('user-u2').subjects[0].name).toBe(
       'Química Orgânica'
     )
 
     // Clear guest
     academicStorageService.save(u1Data, null)
-    expect(localStorage.getItem('organocat_academic_guest')).not.toBeNull()
+    expect(localStorage.getItem('organy_academic_guest')).not.toBeNull()
     academicStorageService.clear(null)
-    expect(localStorage.getItem('organocat_academic_guest')).toBeNull()
+    expect(localStorage.getItem('organy_academic_guest')).toBeNull()
   })
 
   it('retorna INITIAL_ACADEMIC_DATA se o JSON no localStorage for corrompido ou inválido', () => {

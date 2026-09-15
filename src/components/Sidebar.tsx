@@ -79,10 +79,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div>
                 <span className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                  OrganoCat
+                  Organy
                 </span>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  DailyFlow Workspace
+                  Organização e estudos
                 </p>
               </div>
             </div>
@@ -109,14 +109,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   aria-current={isActive ? 'page' : undefined}
                   className={`w-full h-10 flex items-center gap-3 px-3 rounded-xl text-[13px] font-medium transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400 font-semibold ring-1 ring-indigo-500/20'
+                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 font-semibold ring-1 ring-blue-500/20'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/40'
                   }`}
                 >
                   <Icon
                     className={`w-5 h-5 shrink-0 ${
                       isActive
-                        ? 'text-indigo-600 dark:text-indigo-400'
+                        ? 'text-blue-600 dark:text-blue-400'
                         : 'text-slate-400 dark:text-slate-500'
                     }`}
                   />
@@ -129,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Mobile Footer note */}
         <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-400 dark:text-slate-500 text-center">
-          OrganoCat • Produtividade Elegante
+          Organy • Organização e estudos
         </div>
       </aside>
 
@@ -154,18 +154,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <div
                 className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shadow-blue-500/20 shrink-0"
-                title={isCollapsed ? 'OrganoCat - DailyFlow Workspace' : undefined}
-                aria-label={isCollapsed ? 'OrganoCat - DailyFlow Workspace' : undefined}
+                title={isCollapsed ? 'Organy - Organização e estudos' : undefined}
+                aria-label={isCollapsed ? 'Organy - Organização e estudos' : undefined}
               >
                 <Sparkles className="w-5 h-5" />
               </div>
               {!isCollapsed && (
                 <div className="overflow-hidden whitespace-nowrap animate-in fade-in duration-200">
                   <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                    OrganoCat
+                    Organy
                   </h2>
                   <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">
-                    DailyFlow Workspace
+                    Organização e estudos
                   </p>
                 </div>
               )}
@@ -189,14 +189,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
                   } ${
                     isActive
-                      ? 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400 font-semibold ring-1 ring-indigo-500/20'
+                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 font-semibold ring-1 ring-blue-500/20'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/40'
                   }`}
                 >
                   <Icon
                     className={`w-5 h-5 shrink-0 ${
                       isActive
-                        ? 'text-indigo-600 dark:text-indigo-400'
+                        ? 'text-blue-600 dark:text-blue-400'
                         : 'text-slate-400 dark:text-slate-500'
                     }`}
                   />

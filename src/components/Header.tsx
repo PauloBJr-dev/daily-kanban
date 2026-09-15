@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl sticky top-0 z-30 transition-colors duration-200">
       <div className="w-full px-6 lg:px-8 py-2.5 sm:py-0 sm:h-16 flex items-center justify-between gap-3">
-        {/* Left: Sidebar Toggle Button + Active Screen Title (No OrganoCat duplicate) */}
+        {/* Left: Sidebar Toggle Button + Active Screen Title (No Organy duplicate) */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Sidebar Toggle Button */}
           <button

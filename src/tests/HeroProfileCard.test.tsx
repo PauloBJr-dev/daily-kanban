@@ -9,15 +9,15 @@ describe('HeroProfileCard Component', () => {
     render(
       <HeroProfileCard
         user={null}
-        displayName="Visitante OrganoCat"
+        displayName="Visitante Organy"
         displayEmail="Navegador Local (Sem vínculo com conta)"
-        initials="OC"
+        initials="OR"
         avatarUrl={null}
         onAuthAction={onAuthAction}
       />
     )
 
-    expect(screen.getByText('Visitante OrganoCat')).toBeInTheDocument()
+    expect(screen.getByText('Visitante Organy')).toBeInTheDocument()
     expect(
       screen.getByText('Navegador Local (Sem vínculo com conta)')
     ).toBeInTheDocument()
@@ -41,7 +41,7 @@ describe('HeroProfileCard Component', () => {
     const onChangePassword = vi.fn()
     const mockUser = {
       id: 'user-1',
-      email: 'alex@organocat.dev',
+      email: 'alex@organy.dev',
       user_metadata: { full_name: 'Alexandre Silva' },
       app_metadata: {},
       aud: 'authenticated',
@@ -52,7 +52,7 @@ describe('HeroProfileCard Component', () => {
       <HeroProfileCard
         user={mockUser}
         displayName="Alexandre Silva"
-        displayEmail="alex@organocat.dev"
+        displayEmail="alex@organy.dev"
         initials="AS"
         avatarUrl={null}
         onAuthAction={onAuthAction}
@@ -61,7 +61,7 @@ describe('HeroProfileCard Component', () => {
     )
 
     expect(screen.getByText('Alexandre Silva')).toBeInTheDocument()
-    expect(screen.getByText('alex@organocat.dev')).toBeInTheDocument()
+    expect(screen.getByText('alex@organy.dev')).toBeInTheDocument()
     expect(screen.getByText('Sincronização Nuvem Supabase')).toBeInTheDocument()
 
     const changePassBtn = screen.getByRole('button', { name: /Alterar Senha/i })

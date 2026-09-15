@@ -3,13 +3,33 @@ import { INITIAL_DATA } from './seedData'
 
 export const storageService = {
   getStorageKey(userId?: string | null): string {
-    return userId ? `organocat_kanban_user_${userId}` : 'organocat_kanban_guest'
+    return userId ? `organy_kanban_user_${userId}` : 'organy_kanban_guest'
   },
 
   load(userId?: string | null): KanbanData {
     const key = this.getStorageKey(userId)
     try {
-      const raw = localStorage.getItem(key)
+      let raw = localStorage.getItem(key)
+      if (!raw) {
+        const dfKey = userId
+          ? `dailyflow_kanban_user_${userId}`
+          : 'dailyflow_kanban_guest'
+        const ocKey = userId
+          ? `organocat_kanban_user_${userId}`
+          : 'organocat_kanban_guest'
+        raw = localStorage.getItem(dfKey) ?? localStorage.getItem(ocKey)
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw)
+            if (this.validateJSON(parsed)) {
+              localStorage.setItem(key, raw)
+              return parsed
+            }
+          } catch {
+            // Ignora falha de parse
+          }
+        }
+      }
       if (!raw) {
         const legacyRaw = localStorage.getItem('dailyflow_kanban_data_v1')
         if (legacyRaw) {
@@ -45,7 +65,10 @@ export const storageService = {
       return null
     }
 
-    const guestRaw = localStorage.getItem('organocat_kanban_guest')
+    const guestRaw =
+      localStorage.getItem('organy_kanban_guest') ??
+      localStorage.getItem('dailyflow_kanban_guest') ??
+      localStorage.getItem('organocat_kanban_guest')
     if (!guestRaw) return null
 
     try {

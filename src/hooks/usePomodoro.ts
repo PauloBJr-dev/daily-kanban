@@ -13,7 +13,7 @@ export const POMODORO_SETTINGS_KEY = 'dailyflow_pomodoro_settings'
 
 const DEFAULT_WORK_TIME = 25 * 60 // 25 minutes
 const DEFAULT_BREAK_TIME = 5 * 60 // 5 minutes
-const DEFAULT_DOCUMENT_TITLE = 'OrganoCat Kanban'
+const DEFAULT_DOCUMENT_TITLE = 'Organy - Organização e estudos'
 const DEFAULT_CAT_PURR_TYPE: CatPurrType = 'none'
 const DEFAULT_CAT_PURR_VOLUME = 0.6
 
@@ -80,6 +80,7 @@ export function usePomodoro(
 ) {
   const [initialSettings] = useState<PomodoroSettings>(loadSettings)
 
+  const [isUserPaused, setIsUserPaused] = useState<boolean>(false)
   const [session, setSession] = useState<PomodoroSession>(() => ({
     taskId: null,
     taskTitle: undefined,
@@ -114,17 +115,32 @@ export function usePomodoro(
     if (session.isRunning) {
       completedTitleRef.current = null
       if (session.timeLeft <= 5 && session.timeLeft > 0) {
-        document.title = `⚡ (${formatTime(session.timeLeft)}) Quase lá! | OrganoCat`
+        document.title = `⚡ (${formatTime(session.timeLeft)}) Reta Final! Quase lá! | Organy`
+      } else if (session.mode === 'work') {
+        if (session.taskTitle) {
+          document.title = `(${formatTime(session.timeLeft)}) 📖 ${session.taskTitle} | Organy`
+        } else {
+          document.title = `(${formatTime(session.timeLeft)}) 🎯 Foco & Estudos | Organy`
+        }
       } else {
-        const modeLabel = session.mode === 'work' ? '🎯 Foco' : '☕ Pausa'
-        document.title = `(${formatTime(session.timeLeft)}) ${modeLabel} | OrganoCat`
+        document.title = `(${formatTime(session.timeLeft)}) ☕ Pausa Revigorante | Organy`
       }
+    } else if (isUserPaused) {
+      completedTitleRef.current = null
+      document.title = `⏸️ (${formatTime(session.timeLeft)}) Pausado | Organy`
     } else if (completedTitleRef.current) {
       document.title = completedTitleRef.current
     } else {
       document.title = originalTitleRef.current
     }
-  }, [session.isRunning, session.timeLeft, session.mode, formatTime])
+  }, [
+    session.isRunning,
+    session.timeLeft,
+    session.mode,
+    session.taskTitle,
+    isUserPaused,
+    formatTime,
+  ])
 
   // Restaura t?tulo e interrompe ?udio ao desmontar o componente
   useEffect(() => {
@@ -187,9 +203,10 @@ export function usePomodoro(
         } catch {
           // Silencia falhas caso canvas não esteja disponível
         }
-        completedTitleRef.current = '⏰ Foco Concluído! | OrganoCat'
+        completedTitleRef.current = '🎉 Foco Concluído! Parabéns! | Organy'
+        setIsUserPaused(false)
         if (typeof document !== 'undefined') {
-          document.title = '⏰ Foco Concluído! | OrganoCat'
+          document.title = '🎉 Foco Concluído! Parabéns! | Organy'
         }
 
         if (prev.taskId && onTaskMinuteLogged) {
@@ -203,9 +220,10 @@ export function usePomodoro(
           body: 'Sua pausa terminou. Pronto para mais um ciclo de foco produtivo?',
           icon: '/vite.svg',
         })
-        completedTitleRef.current = '⏰ Pausa Finalizada! | OrganoCat'
+        completedTitleRef.current = '⏰ Pausa Finalizada! Pronto para Estudar? | Organy'
+        setIsUserPaused(false)
         if (typeof document !== 'undefined') {
-          document.title = '⏰ Pausa Finalizada! | OrganoCat'
+          document.title = '⏰ Pausa Finalizada! Pronto para Estudar? | Organy'
         }
       }
 
@@ -353,6 +371,7 @@ export function usePomodoro(
 
   const startFocus = useCallback((taskId?: string, taskTitle?: string) => {
     completedTitleRef.current = null
+    setIsUserPaused(false)
     if (
       typeof window !== 'undefined' &&
       'Notification' in window &&
@@ -375,14 +394,13 @@ export function usePomodoro(
   const pauseFocus = useCallback(() => {
     targetEndTimeRef.current = null
     completedTitleRef.current = null
-    if (typeof document !== 'undefined') {
-      document.title = originalTitleRef.current
-    }
+    setIsUserPaused(true)
     setSession((prev) => ({ ...prev, isRunning: false }))
   }, [])
 
   const resumeFocus = useCallback(() => {
     completedTitleRef.current = null
+    setIsUserPaused(false)
     if (
       typeof window !== 'undefined' &&
       'Notification' in window &&
@@ -399,6 +417,7 @@ export function usePomodoro(
   const resetTimer = useCallback(() => {
     targetEndTimeRef.current = null
     completedTitleRef.current = null
+    setIsUserPaused(false)
     if (typeof document !== 'undefined') {
       document.title = originalTitleRef.current
     }
@@ -412,6 +431,7 @@ export function usePomodoro(
   const switchMode = useCallback((mode: 'work' | 'break') => {
     targetEndTimeRef.current = null
     completedTitleRef.current = null
+    setIsUserPaused(false)
     if (typeof document !== 'undefined') {
       document.title = originalTitleRef.current
     }

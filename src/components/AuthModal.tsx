@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
+  Sparkles,
   X,
-  Cat,
   User,
   Mail,
   Lock,
@@ -197,7 +197,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           <div className="inline-flex items-center justify-center p-3.5 bg-blue-50 dark:bg-blue-950/60 rounded-2xl text-blue-600 dark:text-blue-400 mb-3 ring-8 ring-blue-500/10">
-            <Cat className="w-8 h-8" />
+            <Sparkles className="w-8 h-8" />
           </div>
 
           <div className="flex items-center justify-center gap-2">
@@ -205,10 +205,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               id="auth-modal-title"
               className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight"
             >
-              DailyFlow
+              Organy
             </h2>
             <span className="text-xs font-semibold px-2.5 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 rounded-full">
-              OrganoCat
+              Organização e estudos
             </span>
           </div>
 

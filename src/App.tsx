@@ -154,7 +154,10 @@ export const AppContent: React.FC = () => {
   // Sidebar Collapse & Mobile Drawer State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('organocat_sidebar_collapsed')
+      const saved =
+        localStorage.getItem('organy_sidebar_collapsed') ??
+        localStorage.getItem('dailyflow_sidebar_collapsed') ??
+        localStorage.getItem('organocat_sidebar_collapsed')
       return saved === 'true'
     }
     return false
@@ -162,7 +165,7 @@ export const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('organocat_sidebar_collapsed', String(isSidebarCollapsed))
+      localStorage.setItem('organy_sidebar_collapsed', String(isSidebarCollapsed))
     }
   }, [isSidebarCollapsed])
 
@@ -428,7 +431,7 @@ export const AppContent: React.FC = () => {
       isOpen: true,
       title: 'Restaurar Dados Padrão',
       message:
-        'Deseja restaurar o OrganoCat para os dados de demonstração iniciais? Suas alterações locais serão substituídas.',
+        'Deseja restaurar o Organy para os dados de demonstração iniciais? Suas alterações locais serão substituídas.',
       confirmText: 'Restaurar',
       isDanger: true,
       requireConfirmationWord: 'RESTAURAR',
