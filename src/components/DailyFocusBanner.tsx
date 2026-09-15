@@ -1,5 +1,7 @@
-﻿import React, { useMemo } from 'react'
-import { Timer, TrendingUp, Coffee } from 'lucide-react'
+import React, { useMemo, useState } from 'react'
+import { Play, Pause, RotateCcw, Maximize2, Settings, X } from 'lucide-react'
+import type { PomodoroSession, CatPurrType } from '../types/kanban'
+import { PomodoroSettingsModal } from './PomodoroSettingsModal'
 
 export interface DailyFocusBannerProps {
   stats: {
@@ -8,26 +10,39 @@ export interface DailyFocusBannerProps {
     completionRate: number
   }
   focusMinutesSpent?: number
-  pomodoroSession?: {
-    mode: 'work' | 'break'
-    timeLeft: number
-    isRunning: boolean
-  }
+  pomodoroSession?:
+    | {
+        mode: 'work' | 'break'
+        timeLeft: number
+        isRunning: boolean
+        taskTitle?: string | null
+        taskId?: string | null
+        workDuration?: number
+        breakDuration?: number
+        isSoundEnabled?: boolean
+        catPurrType?: CatPurrType
+        catPurrVolume?: number
+      }
+    | PomodoroSession
+  onPlayPause?: () => void
+  onReset?: () => void
+  onSwitchMode?: (mode: 'work' | 'break') => void
+  onClearTask?: () => void
+  formatTime?: (seconds: number) => string
+  onOpenFullscreen?: () => void
+  onUpdateDurations?: (workMinutes: number, breakMinutes: number) => void
+  onToggleSound?: () => void
+  onUpdateSettings?: (
+    workMinutes: number,
+    breakMinutes: number,
+    soundEnabled: boolean,
+    catPurrType: CatPurrType,
+    catPurrVolume: number
+  ) => void
 }
 
 /**
- * Calculates the ISO week number for a given date.
- */
-function getISOWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
-}
-
-/**
- * Formats a Date object into a readable Portuguese string: "Quinta-feira, 24 de Outubro"
+ * Formata um objeto Date para uma string legível em português: "Quinta-feira, 24 de Outubro"
  */
 function formatCurrentDate(date: Date): string {
   const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' })
@@ -40,161 +55,319 @@ function formatCurrentDate(date: Date): string {
   return `${capitalizedWeekday}, ${day} de ${capitalizedMonth}`
 }
 
-/**
- * Formats focus minutes into "Xh Ym" or "Ym"
- */
-function formatFocusTime(minutes: number): string {
-  if (minutes <= 0) return '0m'
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
-  if (hours > 0) {
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
-  }
-  return `${mins}m`
-}
-
 export const DailyFocusBanner: React.FC<DailyFocusBannerProps> = ({
   stats,
-  focusMinutesSpent = 0,
   pomodoroSession,
+  onPlayPause,
+  onReset,
+  onSwitchMode,
+  onClearTask,
+  formatTime,
+  onOpenFullscreen,
+  onUpdateDurations,
+  onToggleSound,
+  onUpdateSettings,
 }) => {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const today = useMemo(() => new Date(), [])
   const dateString = useMemo(() => formatCurrentDate(today), [today])
-  const weekNumber = useMemo(() => getISOWeekNumber(today), [today])
 
   const completionRate = Math.min(100, Math.max(0, Math.round(stats.completionRate || 0)))
 
-  // Dynamic productivity badge based on completion
+  // Tag de ritmo dinâmico ou constante
   const productivityBadge =
     completionRate >= 50 || stats.completedCount > 3
       ? 'Produtividade Alta'
       : 'Ritmo Constante'
 
-  // Pomodoro status text
-  const breakStatusText = useMemo(() => {
-    if (!pomodoroSession) return 'em 25 min'
-    if (pomodoroSession.isRunning) {
-      const minutesRemaining = Math.max(1, Math.ceil(pomodoroSession.timeLeft / 60))
-      if (pomodoroSession.mode === 'work') {
-        return `em ${minutesRemaining} min`
+  // Dados da sessão pomodoro
+  const isWork = pomodoroSession ? pomodoroSession.mode === 'work' : true
+  const isRunning = pomodoroSession ? pomodoroSession.isRunning : false
+  const timeLeft = pomodoroSession ? pomodoroSession.timeLeft : 25 * 60
+
+  const workDuration =
+    pomodoroSession && 'workDuration' in pomodoroSession && pomodoroSession.workDuration
+      ? pomodoroSession.workDuration
+      : 25 * 60
+
+  const breakDuration =
+    pomodoroSession && 'breakDuration' in pomodoroSession && pomodoroSession.breakDuration
+      ? pomodoroSession.breakDuration
+      : 5 * 60
+
+  const workMinutes = Math.round(workDuration / 60)
+  const breakMinutes = Math.round(breakDuration / 60)
+
+  const defaultFormat = (sec: number) => {
+    const mins = Math.floor(sec / 60)
+    const secs = sec % 60
+    return `${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`
+  }
+
+  const formattedDigitalTime = useMemo(() => {
+    if (formatTime) {
+      const raw = formatTime(timeLeft)
+      if (raw.includes(':')) {
+        const parts = raw.split(':')
+        return `${parts[0]} : ${parts[1]}`
       }
-      return `Pausa (${minutesRemaining}m)`
+      return raw
     }
-    return 'Pausa em 25m'
-  }, [pomodoroSession])
+    return defaultFormat(timeLeft)
+  }, [formatTime, timeLeft])
+
+  const statusText = useMemo(() => {
+    if (!isRunning) return 'Pronto para iniciar ciclo'
+    if (isWork) return 'Em foco ativo'
+    return 'Em pausa revigorante'
+  }, [isRunning, isWork])
+
+  const handleSaveSettings = (
+    newWorkMinutes: number,
+    newBreakMinutes: number,
+    newSoundEnabled: boolean,
+    newCatPurrType: CatPurrType,
+    newCatPurrVolume: number
+  ) => {
+    if (onUpdateSettings) {
+      onUpdateSettings(
+        newWorkMinutes,
+        newBreakMinutes,
+        newSoundEnabled,
+        newCatPurrType,
+        newCatPurrVolume
+      )
+    } else {
+      if (onUpdateDurations) {
+        onUpdateDurations(newWorkMinutes, newBreakMinutes)
+      }
+      if (
+        onToggleSound &&
+        pomodoroSession &&
+        'isSoundEnabled' in pomodoroSession &&
+        (pomodoroSession.isSoundEnabled ?? true) !== newSoundEnabled
+      ) {
+        onToggleSound()
+      }
+    }
+  }
 
   return (
-    <section
-      aria-label="Resumo do Foco Diário"
-      className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden transition-all duration-200"
-    >
-      {/* Subtle blur background effect from Stitch */}
-      <div
-        aria-hidden="true"
-        className="absolute -right-12 -top-12 w-64 h-64 bg-blue-100/40 dark:bg-blue-900/20 rounded-full blur-3xl pointer-events-none"
+    <>
+      <section
+        aria-label="Resumo do Foco Diário"
+        className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs p-6 lg:p-7 relative overflow-hidden transition-all duration-200"
+      >
+        {/* Subtle blur background glow */}
+        <div
+          aria-hidden="true"
+          className="absolute -right-12 -top-12 w-64 h-64 bg-blue-100/40 dark:bg-blue-900/20 rounded-full blur-3xl pointer-events-none"
+        />
+
+        {/* Monolithic 50/50 Symmetrical Grid */}
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch">
+          {/* LADO ESQUERDO: Foco Diário & Progresso Linear */}
+          <div className="flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300">
+                  {productivityBadge}
+                </span>
+              </div>
+
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                Foco Diário: {dateString}
+              </h1>
+
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
+                Você completou{' '}
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {stats.completedCount} de {stats.total}
+                </span>{' '}
+                tarefas planejadas para hoje.{' '}
+                {completionRate >= 50
+                  ? 'Excelente ritmo!'
+                  : 'Mantenha a consistência nos seus objetivos!'}
+              </p>
+            </div>
+
+            {/* Barra de Progresso Linear Ultrafina no Rodapé */}
+            <div className="pt-2 space-y-2 border-t border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>
+                  Progresso diário • {stats.completedCount} de {stats.total} tarefas
+                  concluídas hoje ({completionRate}%)
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${completionRate}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* LADO DIREITO: Console Integrado do Pomodoro */}
+          <div className="flex flex-col justify-between space-y-4 lg:border-l lg:border-slate-200/70 lg:dark:border-slate-800 lg:pl-8">
+            {/* Topo: Pílulas de Modo & Botão Settings */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => onSwitchMode?.('work')}
+                  aria-label={`Ativar modo de foco de ${workMinutes} minutos`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                    isWork
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {workMinutes}m Foco
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSwitchMode?.('break')}
+                  aria-label={`Ativar modo de pausa de ${breakMinutes} minutos`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                    !isWork
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {breakMinutes}m Pausa
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                aria-label="Configurações do Pomodoro"
+                title="Configurações do Pomodoro"
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Centro: Display Digital Grande & Botões de Ação */}
+            <div className="flex items-center justify-between gap-4 py-1">
+              <div>
+                <div
+                  data-testid="pomodoro-digital-display"
+                  className="text-3xl sm:text-4xl font-mono font-bold tracking-tight text-slate-900 dark:text-slate-100 tabular-nums"
+                >
+                  {formattedDigitalTime}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isRunning ? 'bg-blue-600 animate-pulse' : 'bg-slate-400'
+                    }`}
+                  />
+                  <span>● {statusText}</span>
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex items-center gap-2">
+                {/* Reset */}
+                <button
+                  type="button"
+                  onClick={onReset}
+                  aria-label="Reiniciar cronômetro"
+                  title="Reiniciar tempo"
+                  className="p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+
+                {/* Play/Pause circular em azul cobalto */}
+                <button
+                  type="button"
+                  onClick={onPlayPause}
+                  aria-label={isRunning ? 'Pausar cronômetro' : 'Iniciar foco'}
+                  title={isRunning ? 'Pausar (P)' : 'Iniciar Foco (P)'}
+                  className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md flex items-center justify-center transition-all active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                >
+                  {isRunning ? (
+                    <Pause className="w-5 h-5" />
+                  ) : (
+                    <Play className="w-5 h-5 ml-0.5" />
+                  )}
+                </button>
+
+                {/* Fullscreen */}
+                {onOpenFullscreen && (
+                  <button
+                    type="button"
+                    onClick={onOpenFullscreen}
+                    aria-label="Expandir para tela cheia"
+                    title="Tela Cheia"
+                    className="p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Rodapé: Indicador de Tarefa Vinculada Nivelado */}
+            <div className="pt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800/80 min-h-[33px]">
+              <div className="flex items-center gap-1.5 truncate max-w-[280px]">
+                {pomodoroSession &&
+                'taskTitle' in pomodoroSession &&
+                pomodoroSession.taskTitle ? (
+                  <>
+                    <span className="truncate font-medium text-slate-900 dark:text-slate-100">
+                      📖 {pomodoroSession.taskTitle}
+                    </span>
+                    {onClearTask && (
+                      <button
+                        type="button"
+                        onClick={onClearTask}
+                        title="Desvincular tarefa"
+                        aria-label="Desvincular tarefa do timer"
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <span className="italic text-slate-400 dark:text-slate-500">
+                    📖 Nenhuma tarefa vinculada (foco livre)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Modal de Configurações do Pomodoro */}
+      <PomodoroSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentWorkMinutes={workMinutes}
+        currentBreakMinutes={breakMinutes}
+        isSoundEnabled={
+          pomodoroSession && 'isSoundEnabled' in pomodoroSession
+            ? (pomodoroSession.isSoundEnabled ?? true)
+            : true
+        }
+        currentCatPurrType={
+          pomodoroSession && 'catPurrType' in pomodoroSession
+            ? (pomodoroSession.catPurrType ?? 'none')
+            : 'none'
+        }
+        currentCatPurrVolume={
+          pomodoroSession && 'catPurrVolume' in pomodoroSession
+            ? (pomodoroSession.catPurrVolume ?? 0.6)
+            : 0.6
+        }
+        onSave={handleSaveSettings}
       />
-
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-        {/* Left: Headline & Status */}
-        <div className="space-y-1.5 max-w-xl">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300">
-              {productivityBadge}
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Sprint Semanal {weekNumber}
-            </span>
-          </div>
-
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Foco Diário: {dateString}
-          </h1>
-
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
-            Você completou{' '}
-            <span className="font-semibold text-blue-600 dark:text-blue-400">
-              {stats.completedCount} de {stats.total}
-            </span>{' '}
-            tarefas planejadas para hoje.{' '}
-            {completionRate >= 50
-              ? 'Excelente ritmo!'
-              : 'Mantenha a consistência nos seus objetivos!'}
-          </p>
-        </div>
-
-        {/* Right: Progress Radial & Compact Metric Badges */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 lg:gap-6 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-700/50">
-          {/* Radial-style Progress Summary */}
-          <div className="flex items-center gap-3 pr-2 sm:border-r border-slate-200/60 dark:border-slate-700/60">
-            <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
-              <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-slate-200 dark:text-slate-700"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3.5"
-                />
-                <path
-                  className="text-blue-600 dark:text-blue-500 transition-all duration-500"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeDasharray={`${completionRate}, 100`}
-                  strokeLinecap="round"
-                  strokeWidth="3.5"
-                />
-              </svg>
-              <span className="absolute text-xs font-bold text-slate-800 dark:text-slate-100">
-                {completionRate}%
-              </span>
-            </div>
-            <div>
-              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Conclusão
-              </div>
-              <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                {stats.completedCount}/{stats.total} concluídas
-              </div>
-            </div>
-          </div>
-
-          {/* Micro Metric Chips */}
-          <div className="grid grid-cols-3 gap-2">
-            {/* 1. Foco */}
-            <div className="px-3 py-2 bg-white dark:bg-slate-900/90 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                <Timer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Foco
-              </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                {formatFocusTime(focusMinutesSpent)}
-              </div>
-            </div>
-
-            {/* 2. Desempenho */}
-            <div className="px-3 py-2 bg-white dark:bg-slate-900/90 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />{' '}
-                Desempenho
-              </div>
-              <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                +{completionRate}%
-              </div>
-            </div>
-
-            {/* 3. Intervalo */}
-            <div className="px-3 py-2 bg-white dark:bg-slate-900/90 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                <Coffee className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />{' '}
-                Intervalo
-              </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                {breakStatusText}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    </>
   )
 }

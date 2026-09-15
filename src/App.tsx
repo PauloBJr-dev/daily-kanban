@@ -4,7 +4,6 @@ import { Sidebar, type AppView } from './components/Sidebar'
 import { MetricsView } from './components/metrics'
 import { SettingsView } from './components/settings'
 import { ProfileView } from './components/profile'
-import { PomodoroWidget } from './components/PomodoroWidget'
 import { PomodoroFullscreen } from './components/PomodoroFullscreen'
 import { DailyFocusBanner } from './components/DailyFocusBanner'
 import { FilterBar } from './components/FilterBar'
@@ -644,11 +643,17 @@ export const AppContent: React.FC = () => {
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={toggleSidebarCollapse}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
         />
       )}
 
       {/* Main Content Column */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div
+        className={`flex-1 flex flex-col min-w-0 transition-[padding] duration-300 ${
+          isZenMode ? 'md:pl-0' : isSidebarCollapsed ? 'md:pl-[68px]' : 'md:pl-64'
+        }`}
+      >
         {/* App Header (Hidden in Academic Zen Mode) */}
         {!isZenMode && (
           <Header
@@ -679,9 +684,15 @@ export const AppContent: React.FC = () => {
           {/* TAB 1: KANBAN */}
           {activeView === 'kanban' && (
             <>
-              {/* 1- Cronômetro (PomodoroWidget) */}
-              <PomodoroWidget
-                session={session}
+              {/* Monolithic Daily Focus Banner & Integrated Pomodoro */}
+              <DailyFocusBanner
+                stats={{
+                  total: stats.total,
+                  completedCount: stats.completedCount,
+                  completionRate: stats.completionRate,
+                }}
+                focusMinutesSpent={totalFocusMinutes}
+                pomodoroSession={session}
                 onPlayPause={handlePomodoroPlayPause}
                 onReset={resetTimer}
                 onSwitchMode={switchMode}
@@ -691,21 +702,6 @@ export const AppContent: React.FC = () => {
                 onToggleSound={toggleSound}
                 onUpdateSettings={updateSettings}
                 onOpenFullscreen={() => setIsPomodoroFullscreen(true)}
-              />
-
-              {/* Hero / Daily Focus Summary Banner */}
-              <DailyFocusBanner
-                stats={{
-                  total: stats.total,
-                  completedCount: stats.completedCount,
-                  completionRate: stats.completionRate,
-                }}
-                focusMinutesSpent={totalFocusMinutes}
-                pomodoroSession={{
-                  mode: session.mode,
-                  timeLeft: session.timeLeft,
-                  isRunning: session.isRunning,
-                }}
               />
 
               {/* 2- Filtros (FilterBar) */}

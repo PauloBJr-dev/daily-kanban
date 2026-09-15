@@ -123,10 +123,10 @@ export const UserMenu: React.FC = () => {
           <img
             src={avatarUrl}
             alt={displayName}
-            className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700 shrink-0"
           />
         ) : (
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center shadow-xs shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center shadow-xs shrink-0">
             {initials}
           </div>
         )}
@@ -154,10 +154,10 @@ export const UserMenu: React.FC = () => {
               <img
                 src={avatarUrl}
                 alt={displayName}
-                className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 dark:ring-slate-700 shrink-0"
               />
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 dark:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-9 h-9 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center shrink-0 shadow-xs">
                 {initials}
               </div>
             )}

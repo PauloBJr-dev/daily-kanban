@@ -51,11 +51,16 @@ describe('App Integration', () => {
     ).toBeInTheDocument()
 
     // Kanban com ordem estrita:
-    // 1. Cronômetro Pomodoro
-    expect(screen.getByText('Bloco de Foco Diário')).toBeInTheDocument()
+    // 1. Banner Monolítico de Foco Diário & Pomodoro Integrado
+    expect(
+      screen.getByRole('heading', { level: 1, name: /foco diário:/i })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('pomodoro-digital-display')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /iniciar foco/i })).toBeInTheDocument()
 
-    // 2. Filtros
-    expect(screen.getByPlaceholderText('Buscar tarefas...')).toBeInTheDocument()
+    // 2. Filtros Minimalistas do Stitch
+    expect(screen.getByText('Filtros:')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /ordenar por prazo/i })).toBeInTheDocument()
 
     // 3. Colunas do Quadro Kanban
     expect(screen.getByText('A Fazer')).toBeInTheDocument()
@@ -85,7 +90,7 @@ describe('App Integration', () => {
   it('alterna tema escuro e claro ao clicar no botão de tema', () => {
     render(<App />)
 
-    const themeToggleBtn = screen.getByTitle(/Ativar Modo/i)
+    const themeToggleBtn = screen.getAllByTitle(/Ativar Modo/i)[0]
     fireEvent.click(themeToggleBtn)
 
     expect(localStorage.getItem('dailyflow_theme')).toBeDefined()
@@ -104,8 +109,9 @@ describe('App Integration', () => {
     ).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Perfil' })[0]).toBeInTheDocument()
 
-    // Pill central exibe progresso diário no modo Kanban
-    expect(screen.getByText('Progresso Diário:')).toBeInTheDocument()
+    // Progresso diário agora está no banner monolítico, não no Header
+    expect(screen.queryByText('Progresso Diário:')).not.toBeInTheDocument()
+    expect(screen.getByText(/progresso diário •/i)).toBeInTheDocument()
   })
 
   it('alterna para a visão de Métricas e exibe os KPIs e painel analítico', () => {

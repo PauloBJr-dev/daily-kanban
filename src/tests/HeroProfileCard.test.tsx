@@ -74,4 +74,21 @@ describe('HeroProfileCard Component', () => {
     fireEvent.click(signOutBtn)
     expect(onAuthAction).toHaveBeenCalledTimes(1)
   })
+
+  it('renderiza o avatar em formato perfeitamente circular (rounded-full)', () => {
+    const { container } = render(
+      <HeroProfileCard
+        user={null}
+        displayName="Visitante Organy"
+        displayEmail="local@organy.dev"
+        initials="VO"
+        avatarUrl={null}
+        onAuthAction={vi.fn()}
+      />
+    )
+
+    const avatarDiv = container.querySelector('.rounded-full.bg-linear-to-tr')
+    expect(avatarDiv).toBeInTheDocument()
+    expect(avatarDiv).toHaveClass('w-20', 'h-20', 'rounded-full')
+  })
 })

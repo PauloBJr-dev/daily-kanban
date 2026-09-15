@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 vi.mock('canvas-confetti', () => ({
   default: vi.fn(),
@@ -310,7 +310,7 @@ describe('Weekly Smart Filter (Filtro Semanal Inteligente)', () => {
     })
   })
 
-  describe('Componente FilterBar - Interface Zen e Controles Semanais', () => {
+  describe('Componente FilterBar - Barra de Filtros Minimalista do Stitch', () => {
     const defaultFilters: FilterState = {
       searchQuery: '',
       priority: 'all',
@@ -319,105 +319,61 @@ describe('Weekly Smart Filter (Filtro Semanal Inteligente)', () => {
       weekScope: 'this_week',
     }
 
-    it('renderiza os botões de filtro semanal (Esta Semana, Semana Passada, Todas)', () => {
+    it('renderiza o prefixo Filtros: e as 5 pílulas existentes em formato plano', () => {
       const onFilterChange = vi.fn()
+      render(<FilterBar filters={defaultFilters} onFilterChange={onFilterChange} />)
+
+      expect(screen.getByText('Filtros:')).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Filtrar tarefas: Todas' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Filtrar tarefas: Hoje' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Filtrar tarefas: Atrasadas' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Filtrar tarefas: Próximas' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Filtrar tarefas: Concluídas' })
+      ).toBeInTheDocument()
+    })
+
+    it('chama onFilterChange com o escopo selecionado ao clicar nas pílulas', () => {
+      const onFilterChange = vi.fn()
+      render(<FilterBar filters={defaultFilters} onFilterChange={onFilterChange} />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Filtrar tarefas: Hoje' }))
+      expect(onFilterChange).toHaveBeenCalledWith({ scope: 'today' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Filtrar tarefas: Atrasadas' }))
+      expect(onFilterChange).toHaveBeenCalledWith({ scope: 'overdue' })
+    })
+
+    it('renderiza o botão minimalista Ordenar por Prazo e dispara onToggleSortByDueDate', () => {
+      const onToggleSortByDueDate = vi.fn()
       render(
         <FilterBar
           filters={defaultFilters}
-          onFilterChange={onFilterChange}
-          totalFiltered={5}
-          allTasksCount={5}
+          onFilterChange={vi.fn()}
+          onToggleSortByDueDate={onToggleSortByDueDate}
         />
       )
 
-      const weeklyGroup = screen.getByLabelText('Filtro semanal do Kanban')
-      expect(weeklyGroup).toBeInTheDocument()
-      expect(within(weeklyGroup).getByText('Esta Semana')).toBeInTheDocument()
-      expect(within(weeklyGroup).getByText('Semana Passada')).toBeInTheDocument()
-      expect(within(weeklyGroup).getByText('Todas')).toBeInTheDocument()
+      const sortBtn = screen.getByRole('button', { name: 'Ordenar por Prazo' })
+      expect(sortBtn).toBeInTheDocument()
+      fireEvent.click(sortBtn)
+      expect(onToggleSortByDueDate).toHaveBeenCalledTimes(1)
     })
 
-    it('chama onFilterChange com weekScope ao clicar nos botões semanais', () => {
-      const onFilterChange = vi.fn()
-      render(
-        <FilterBar
-          filters={defaultFilters}
-          onFilterChange={onFilterChange}
-          totalFiltered={5}
-          allTasksCount={5}
-        />
-      )
+    it('removeu completamente o card pesado, o campo de busca embutido e os seletores legados', () => {
+      render(<FilterBar filters={defaultFilters} onFilterChange={vi.fn()} />)
 
-      const lastWeekBtn = screen.getByRole('button', {
-        name: /Filtrar por Semana Passada/i,
-      })
-      fireEvent.click(lastWeekBtn)
-      expect(onFilterChange).toHaveBeenCalledWith({ weekScope: 'last_week' })
-
-      const allBtn = screen.getByRole('button', {
-        name: /Filtrar por Todas/i,
-      })
-      fireEvent.click(allBtn)
-      expect(onFilterChange).toHaveBeenCalledWith({ weekScope: 'all' })
-    })
-
-    it('removeu completamente o seletor de tags e não renderiza tags no FilterBar', () => {
-      const onFilterChange = vi.fn()
-      render(
-        <FilterBar
-          filters={defaultFilters}
-          onFilterChange={onFilterChange}
-          allTags={['Urgente', 'Trabalho', 'Estudos']}
-          totalFiltered={5}
-          allTasksCount={5}
-        />
-      )
-
-      // Não deve existir select de tags nem texto "Todas Etiquetas"
-      expect(screen.queryByLabelText(/Filtrar por etiqueta/i)).not.toBeInTheDocument()
-      expect(screen.queryByText(/Todas Etiquetas/i)).not.toBeInTheDocument()
-    })
-
-    it('input de busca exibe placeholder "Buscar tarefas..." sem menção a tags', () => {
-      const onFilterChange = vi.fn()
-      render(
-        <FilterBar
-          filters={defaultFilters}
-          onFilterChange={onFilterChange}
-          totalFiltered={5}
-          allTasksCount={5}
-        />
-      )
-
-      const input = screen.getByPlaceholderText('Buscar tarefas...')
-      expect(input).toBeInTheDocument()
-      expect(screen.queryByPlaceholderText(/tags/i)).not.toBeInTheDocument()
-    })
-
-    it('botão limpar filtros restaura weekScope para "this_week"', () => {
-      const onFilterChange = vi.fn()
-      render(
-        <FilterBar
-          filters={{
-            ...defaultFilters,
-            weekScope: 'last_week',
-          }}
-          onFilterChange={onFilterChange}
-          totalFiltered={3}
-          allTasksCount={5}
-        />
-      )
-
-      const clearBtn = screen.getByRole('button', { name: /Limpar todos os filtros/i })
-      fireEvent.click(clearBtn)
-
-      expect(onFilterChange).toHaveBeenCalledWith({
-        searchQuery: '',
-        priority: 'all',
-        tag: null,
-        scope: 'all',
-        weekScope: 'this_week',
-      })
+      expect(screen.queryByPlaceholderText(/buscar tarefas/i)).not.toBeInTheDocument()
+      expect(screen.queryByLabelText(/filtrar por prioridade/i)).not.toBeInTheDocument()
+      expect(screen.queryByLabelText(/filtro semanal do kanban/i)).not.toBeInTheDocument()
     })
   })
 })

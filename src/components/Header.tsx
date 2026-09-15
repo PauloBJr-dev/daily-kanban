@@ -1,8 +1,6 @@
 ﻿import React from 'react'
 import {
   Plus,
-  Sun,
-  Moon,
   PanelLeft,
   BookOpen,
   BarChart3,
@@ -18,9 +16,9 @@ export interface HeaderProps {
   onImport?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onReset?: () => void
   onOpenShortcuts?: () => void
-  isDark: boolean
-  onToggleTheme: () => void
-  stats: {
+  isDark?: boolean
+  onToggleTheme?: () => void
+  stats?: {
     completedCount: number
     total: number
     completionRate: number
@@ -49,9 +47,6 @@ const getViewTitle = (view: AppView): string => {
 
 export const Header: React.FC<HeaderProps> = ({
   onNewTask,
-  isDark,
-  onToggleTheme,
-  stats,
   activeView,
   onNewNote,
   onToggleSidebar,
@@ -92,78 +87,46 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Center Progress Pill / Context Indicator (Hidden on small screens) */}
-        <div className="hidden md:flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-xs">
-          {activeView === 'kanban' && (
-            <>
-              <span className="text-slate-600 dark:text-slate-300 font-medium">
-                Progresso Diário:
-              </span>
-              <div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${stats.completionRate}%` }}
-                />
-              </div>
-              <span className="font-semibold text-blue-600 dark:text-blue-400">
-                {stats.completedCount}/{stats.total} ({stats.completionRate}%)
-              </span>
-            </>
-          )}
-          {activeView === 'academic' && (
-            <>
-              <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="font-medium text-slate-600 dark:text-slate-300">
-                Espaço de Estudos e Revisões
-              </span>
-            </>
-          )}
-          {activeView === 'metrics' && (
-            <>
-              <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="font-medium text-slate-600 dark:text-slate-300">
-                Painel Analítico de Produtividade
-              </span>
-            </>
-          )}
-          {activeView === 'settings' && (
-            <>
-              <SettingsIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="font-medium text-slate-600 dark:text-slate-300">
-                Preferências & Personalização
-              </span>
-            </>
-          )}
-          {activeView === 'profile' && (
-            <>
-              <UserIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="font-medium text-slate-600 dark:text-slate-300">
-                Gestão de Perfil & Dados
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Right Controls: Theme Toggle, UserMenu, Main Action Button */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Theme Toggle Button */}
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            title={isDark ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
-            aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            className="p-2 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
-          >
-            {isDark ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4" />
+        {/* Center Context Indicator for non-kanban views (Hidden on small screens) */}
+        {activeView !== 'kanban' && (
+          <div className="hidden md:flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+            {activeView === 'academic' && (
+              <>
+                <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  Espaço de Estudos e Revisões
+                </span>
+              </>
             )}
-          </button>
+            {activeView === 'metrics' && (
+              <>
+                <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  Painel Analítico de Produtividade
+                </span>
+              </>
+            )}
+            {activeView === 'settings' && (
+              <>
+                <SettingsIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  Preferências & Personalização
+                </span>
+              </>
+            )}
+            {activeView === 'profile' && (
+              <>
+                <UserIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  Gestão de Perfil & Dados
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
-          {/* User Menu */}
-          <UserMenu />
-
+        {/* Right Controls: Main Action Button first, UserMenu on far right */}
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Main Action Button (Nova Tarefa or Nova Anotação) */}
           {activeView === 'academic' ? (
             <button
@@ -194,6 +157,9 @@ export const Header: React.FC<HeaderProps> = ({
               </kbd>
             </button>
           )}
+
+          {/* User Menu with Round Avatar on the far right */}
+          <UserMenu />
         </div>
       </div>
     </header>

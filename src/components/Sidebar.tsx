@@ -9,6 +9,8 @@ import {
   PanelLeftOpen,
   X,
   Sparkles,
+  Sun,
+  Moon,
 } from 'lucide-react'
 
 export type AppView = 'kanban' | 'academic' | 'metrics' | 'settings' | 'profile'
@@ -20,6 +22,8 @@ export interface SidebarProps {
   onCloseMobile: () => void
   isCollapsed: boolean
   onToggleCollapse: () => void
+  isDark?: boolean
+  onToggleTheme?: () => void
 }
 
 interface NavItem {
@@ -44,6 +48,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   isCollapsed,
   onToggleCollapse,
+  isDark,
+  onToggleTheme,
 }) => {
   const handleItemClick = (id: AppView) => {
     onViewChange(id)
@@ -128,15 +134,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Mobile Footer note */}
-        <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-400 dark:text-slate-500 text-center">
-          Organy • Organização e estudos
+        <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/60 space-y-3">
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              title={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              className="w-full h-10 flex items-center justify-center gap-2 rounded-xl text-xs font-medium bg-slate-200/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              {isDark ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
+              <span>{isDark ? 'Modo Claro' : 'Modo Escuro'}</span>
+            </button>
+          )}
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 text-center">
+            Organy • Organização e estudos
+          </div>
         </div>
       </aside>
 
       {/* Desktop Collapsible Sidebar */}
       <aside
         aria-label="Navegação Principal"
-        className={`hidden md:flex flex-col justify-between sticky top-0 h-screen shrink-0 border-r border-slate-200/60 dark:border-slate-800/60 bg-slate-50/80 dark:bg-[#0b0f19]/90 backdrop-blur-2xl transition-[width] duration-300 ease-in-out z-20 ${
+        className={`hidden md:flex flex-col justify-between fixed top-0 left-0 h-screen shrink-0 border-r border-slate-200/60 dark:border-slate-800/60 bg-slate-50/80 dark:bg-[#0b0f19]/90 backdrop-blur-2xl transition-[width] duration-300 ease-in-out z-20 ${
           isCollapsed ? 'w-[68px]' : 'w-64'
         }`}
       >
@@ -212,7 +236,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Footer with Collapse/Expand button */}
-        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60">
+        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 space-y-1.5">
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              title={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              className={`w-full h-10 flex items-center rounded-xl text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer ${
+                isCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3'
+              }`}
+            >
+              {isDark ? (
+                <Sun className="w-4 h-4 text-amber-400 shrink-0" />
+              ) : (
+                <Moon className="w-4 h-4 shrink-0" />
+              )}
+              {!isCollapsed && (
+                <span className="truncate whitespace-nowrap">
+                  {isDark ? 'Modo Claro' : 'Modo Escuro'}
+                </span>
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={onToggleCollapse}
