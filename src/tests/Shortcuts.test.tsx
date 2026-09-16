@@ -266,18 +266,26 @@ describe('App Global Shortcuts Integration', () => {
   it('não abre o modal de Nova Tarefa ao pressionar "n" dentro de um input', () => {
     render(<App />)
 
-    const searchInput = screen.getByLabelText('Buscar tarefas ou tags')
-    searchInput.focus()
+    // Abre o modal de tarefa e foca no campo de texto
+    fireEvent.keyDown(window, { key: 'n' })
+    const titleInput = screen.getByPlaceholderText(
+      'Ex: Revisar layout da nova landing page'
+    )
+    titleInput.focus()
 
-    fireEvent.keyDown(searchInput, { key: 'n' })
+    fireEvent.keyDown(titleInput, { key: 'n' })
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // Permanece com o mesmo modal aberto sem duplicar
+    expect(screen.getAllByRole('dialog').length).toBe(1)
   })
 
-  it('foca na barra de pesquisa ao pressionar "/"', () => {
+  it('foca na barra de pesquisa acadêmica ao pressionar "/" no Espaço Acadêmico', () => {
     render(<App />)
 
-    const searchInput = screen.getByLabelText('Buscar tarefas ou tags')
+    const academicBtn = screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0]
+    fireEvent.click(academicBtn)
+
+    const searchInput = screen.getByLabelText('Buscar anotações acadêmicas')
     expect(document.activeElement).not.toBe(searchInput)
 
     fireEvent.keyDown(window, { key: '/' })

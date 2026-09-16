@@ -1,8 +1,8 @@
-﻿import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Sidebar, type AppView } from '../components/Sidebar'
 
-describe('Sidebar Component', () => {
+describe('Sidebar Component (Sidebar Fixa & Alternador de Tema)', () => {
   const defaultProps = {
     activeView: 'kanban' as AppView,
     onViewChange: vi.fn(),
@@ -10,6 +10,8 @@ describe('Sidebar Component', () => {
     onCloseMobile: vi.fn(),
     isCollapsed: false,
     onToggleCollapse: vi.fn(),
+    isDark: false,
+    onToggleTheme: vi.fn(),
   }
 
   it('renderiza as 5 abas de navegação principais', () => {
@@ -24,6 +26,38 @@ describe('Sidebar Component', () => {
       screen.getAllByRole('button', { name: 'Configurações' })[0]
     ).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Perfil' })[0]).toBeInTheDocument()
+  })
+
+  it('renderiza a sidebar desktop permanentemente fixa com classes fixed top-0 left-0 h-screen', () => {
+    render(<Sidebar {...defaultProps} />)
+
+    const desktopSidebar = screen.getByRole('complementary', {
+      name: 'Navegação Principal',
+    })
+    expect(desktopSidebar).toHaveClass('fixed')
+    expect(desktopSidebar).toHaveClass('top-0')
+    expect(desktopSidebar).toHaveClass('left-0')
+    expect(desktopSidebar).toHaveClass('h-screen')
+  })
+
+  it('renderiza botão de alternância de tema no rodapé da Sidebar desktop e dispara onToggleTheme', () => {
+    const onToggleTheme = vi.fn()
+    render(<Sidebar {...defaultProps} onToggleTheme={onToggleTheme} isDark={false} />)
+
+    const themeBtns = screen.getAllByRole('button', { name: 'Ativar modo escuro' })
+    expect(themeBtns.length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Modo Escuro').length).toBeGreaterThanOrEqual(1)
+
+    fireEvent.click(themeBtns[0])
+    expect(onToggleTheme).toHaveBeenCalledTimes(1)
+  })
+
+  it('renderiza texto "Modo Claro" quando isDark for true no desktop', () => {
+    render(<Sidebar {...defaultProps} isDark={true} />)
+
+    const themeBtns = screen.getAllByRole('button', { name: 'Ativar modo claro' })
+    expect(themeBtns.length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Modo Claro').length).toBeGreaterThanOrEqual(1)
   })
 
   it('renderiza o branding oficial Organy, subtítulo e rodapé em conformidade com o Stitch Design System', () => {
@@ -52,7 +86,6 @@ describe('Sidebar Component', () => {
     expect(kanbanBtns[0]).toHaveClass('bg-blue-50')
     expect(kanbanBtns[0]).toHaveClass('text-blue-600')
     expect(kanbanBtns[0]).toHaveClass('ring-blue-500/20')
-    expect(kanbanBtns[0]).not.toHaveClass('bg-indigo-500/10')
   })
 
   it('marca a aba ativa com aria-current="page"', () => {

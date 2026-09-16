@@ -45,10 +45,10 @@ export const HeroProfileCard: React.FC<HeroProfileCardProps> = ({
             <img
               src={avatarUrl}
               alt={`Foto de perfil de ${displayName}`}
-              className="w-20 h-20 rounded-2xl object-cover ring-4 ring-slate-100 dark:ring-slate-800 shadow-md"
+              className="w-20 h-20 rounded-full object-cover ring-4 ring-slate-100 dark:ring-slate-800 shadow-md"
             />
           ) : (
-            <div className="w-20 h-20 rounded-2xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-extrabold text-2xl tracking-wider shadow-md ring-4 ring-slate-100 dark:ring-slate-800">
+            <div className="w-20 h-20 rounded-full bg-linear-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-extrabold text-2xl tracking-wider shadow-md ring-4 ring-slate-100 dark:ring-slate-800">
               {user ? initials : <Sparkles className="w-8 h-8 text-blue-100" />}
             </div>
           )}

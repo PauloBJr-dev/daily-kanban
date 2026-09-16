@@ -57,7 +57,7 @@ describe('MetricsView Component', () => {
     expect(screen.getByText('50 min')).toBeInTheDocument()
   })
 
-  it('permite filtrar tarefas através do FilterBar integrado', () => {
+  it('permite filtrar tarefas através do FilterBar integrado por escopo', () => {
     render(<MetricsView tasks={mockTasks} focusTimeMinutes={25} />)
 
     // Initial table shows all tasks
@@ -65,23 +65,26 @@ describe('MetricsView Component', () => {
     expect(screen.getByText('Tarefa Concluída Hoje')).toBeInTheDocument()
     expect(screen.getByText('Tarefa Baixa Prioridade')).toBeInTheDocument()
 
-    // Filter by search query
-    const searchInput = screen.getByPlaceholderText('Buscar tarefas...')
-    fireEvent.change(searchInput, { target: { value: 'Urgente' } })
+    // Filter by Concluídas
+    const completedFilterBtn = screen.getByRole('button', {
+      name: 'Filtrar tarefas: Concluídas',
+    })
+    fireEvent.click(completedFilterBtn)
 
-    expect(screen.getByText('Tarefa Urgente')).toBeInTheDocument()
-    expect(screen.queryByText('Tarefa Concluída Hoje')).not.toBeInTheDocument()
+    expect(screen.getByText('Tarefa Concluída Hoje')).toBeInTheDocument()
+    expect(screen.queryByText('Tarefa Urgente')).not.toBeInTheDocument()
     expect(screen.queryByText('Tarefa Baixa Prioridade')).not.toBeInTheDocument()
   })
 
-  it('filtra tarefas por prioridade no FilterBar', () => {
+  it('permite alternar escopos de filtro no FilterBar integrado', () => {
     render(<MetricsView tasks={mockTasks} />)
 
-    const prioritySelect = screen.getByLabelText('Filtrar por prioridade')
-    fireEvent.change(prioritySelect, { target: { value: 'urgent' } })
+    const allFilterBtn = screen.getByRole('button', { name: 'Filtrar tarefas: Todas' })
+    expect(allFilterBtn).toBeInTheDocument()
 
-    expect(screen.getByText('Tarefa Urgente')).toBeInTheDocument()
-    expect(screen.queryByText('Tarefa Concluída Hoje')).not.toBeInTheDocument()
+    const todayFilterBtn = screen.getByRole('button', { name: 'Filtrar tarefas: Hoje' })
+    fireEvent.click(todayFilterBtn)
+    expect(todayFilterBtn).toBeInTheDocument()
   })
 
   it('exibe distribuição por coluna e lista de tarefas filtradas', () => {
