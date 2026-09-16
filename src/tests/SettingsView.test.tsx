@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SettingsView } from '../components/settings/SettingsView'
+import { userPreferencesService } from '../services/userPreferencesService'
 
 describe('SettingsView Component', () => {
   const defaultProps = {
@@ -89,5 +90,30 @@ describe('SettingsView Component', () => {
     fireEvent.click(shortcutsBtn)
 
     expect(onOpenShortcuts).toHaveBeenCalledTimes(1)
+  })
+  it('sincroniza preferências no userPreferencesService ao salvar ou alterar duração com userId', () => {
+    const syncSpy = vi
+      .spyOn(userPreferencesService, 'syncUserPreferences')
+      .mockResolvedValue()
+    const saveLocalSpy = vi.spyOn(userPreferencesService, 'saveLocalPreferences')
+
+    render(<SettingsView {...defaultProps} userId="user-custom" />)
+
+    const preset50Btn = screen.getByRole('button', {
+      name: /Selecionar 50 minutos de foco/i,
+    })
+    fireEvent.click(preset50Btn)
+
+    expect(saveLocalSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pomodoro: expect.objectContaining({ workDurationMinutes: 50 }),
+      })
+    )
+    expect(syncSpy).toHaveBeenCalledWith(
+      'user-custom',
+      expect.objectContaining({
+        pomodoro: expect.objectContaining({ workDurationMinutes: 50 }),
+      })
+    )
   })
 })

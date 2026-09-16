@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react'
 import type { CatPurrType } from '../../types/kanban'
 import { soundService } from '../../services/soundService'
+import { userPreferencesService } from '../../services/userPreferencesService'
+import { useAuth } from '../../hooks/useAuth'
 import { SettingsHeader } from './SettingsHeader'
 import { PomodoroSection } from './PomodoroSection'
 import { NotificationsSection } from './NotificationsSection'
@@ -10,6 +12,7 @@ import { ShortcutsSection } from './ShortcutsSection'
 import { AcademicSection } from './AcademicSection'
 
 export interface SettingsViewProps {
+  userId?: string
   isDark: boolean
   onToggleTheme: () => void
   workMinutes: number
@@ -34,6 +37,7 @@ export interface SettingsViewProps {
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
+  userId: propUserId,
   isDark,
   onToggleTheme,
   workMinutes: propWorkMinutes,
@@ -88,11 +92,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }, [])
 
+  const auth = useAuth(false)
+  const currentUserId = propUserId || auth?.user?.id
+
   const handleWorkMinutesChange = (mins: number) => {
     const valid = Math.max(1, Math.min(180, mins))
     setWorkMinutes(valid)
     onUpdateDurations(valid, breakMinutes)
     onUpdateSettings?.({ workDurationMinutes: valid })
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: { workDurationMinutes: valid },
+    })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: { workDurationMinutes: valid },
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
   }
 
   const handleBreakMinutesChange = (mins: number) => {
@@ -100,29 +117,70 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setBreakMinutes(valid)
     onUpdateDurations(workMinutes, valid)
     onUpdateSettings?.({ breakDurationMinutes: valid })
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: { breakDurationMinutes: valid },
+    })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: { breakDurationMinutes: valid },
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
   }
 
   const handleSelectPurr = (type: CatPurrType) => {
     soundService.stopCatPurr()
     setCatPurrType(type)
     onUpdateSettings?.({ catPurrType: type })
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: { catPurrType: type },
+    })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: { catPurrType: type },
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
   }
 
   const handleVolumeChange = (vol: number) => {
     const valid = Math.max(0.05, Math.min(1, vol))
     setCatPurrVolume(valid)
     onUpdateSettings?.({ catPurrVolume: valid })
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: { catPurrVolume: valid },
+    })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: { catPurrVolume: valid },
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
   }
 
   const handleManualSave = () => {
     onUpdateDurations(workMinutes, breakMinutes)
-    onUpdateSettings?.({
+    const settings = {
       workDurationMinutes: workMinutes,
       breakDurationMinutes: breakMinutes,
       isSoundEnabled,
       catPurrType,
       catPurrVolume,
+    }
+    onUpdateSettings?.(settings)
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: settings,
     })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: settings,
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
   }
 
   return (

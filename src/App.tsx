@@ -19,6 +19,11 @@ import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import { ToastProvider, useToast } from './hooks/useToast'
+import { userPreferencesService } from './services/userPreferencesService'
+import {
+  pomodoroSessionService,
+  type ActivePomodoroSession,
+} from './services/pomodoroSessionService'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import type { Task, Column } from './types/kanban'
@@ -81,8 +86,16 @@ export const AppContent: React.FC = () => {
   }, [isDark])
 
   const toggleTheme = useCallback(() => {
-    setIsDark((prev) => !prev)
-  }, [])
+    setIsDark((prev) => {
+      const next = !prev
+      if (user) {
+        userPreferencesService
+          .syncUserPreferences(user.id, { theme: next ? 'dark' : 'light' })
+          .catch((err) => console.error('Erro ao sincronizar tema:', err))
+      }
+      return next
+    })
+  }, [user])
 
   // Abertura automática do AuthModal na primeira visita
   useEffect(() => {
@@ -101,6 +114,40 @@ export const AppContent: React.FC = () => {
     [tasks, updateTask]
   )
 
+  const handleActiveSessionChange = useCallback(
+    (activeSession: ActivePomodoroSession | null) => {
+      if (!user) return
+      pomodoroSessionService
+        .saveActiveSession(user.id, activeSession)
+        .catch((err) =>
+          console.error('Erro ao sincronizar timer ativo no Supabase:', err)
+        )
+    },
+    [user]
+  )
+
+  const handleSessionCompleted = useCallback(
+    (record: {
+      taskId?: string | null
+      mode: 'work' | 'break'
+      durationMinutes: number
+      completedAt: string
+    }) => {
+      if (!user) return
+      pomodoroSessionService
+        .logCompletedSession(user.id, {
+          taskId: record.taskId,
+          mode: record.mode,
+          durationMinutes: record.durationMinutes,
+          completedAt: record.completedAt,
+        })
+        .catch((err) =>
+          console.error('Erro ao registrar sessão pomodoro concluída no Supabase:', err)
+        )
+    },
+    [user]
+  )
+
   const {
     session,
     startFocus,
@@ -113,7 +160,12 @@ export const AppContent: React.FC = () => {
     updateDurations,
     toggleSound,
     updateSettings,
-  } = usePomodoro(handleTaskMinuteLogged)
+    restoreActiveSession,
+  } = usePomodoro({
+    onTaskMinuteLogged: handleTaskMinuteLogged,
+    onActiveSessionChange: handleActiveSessionChange,
+    onSessionCompleted: handleSessionCompleted,
+  })
 
   const [isPomodoroFullscreen, setIsPomodoroFullscreen] = useState(false)
 
@@ -170,8 +222,16 @@ export const AppContent: React.FC = () => {
   }, [isSidebarCollapsed])
 
   const toggleSidebarCollapse = useCallback(() => {
-    setIsSidebarCollapsed((prev) => !prev)
-  }, [])
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev
+      if (user) {
+        userPreferencesService
+          .syncUserPreferences(user.id, { sidebarCollapsed: next })
+          .catch((err) => console.error('Erro ao sincronizar sidebarCollapsed:', err))
+      }
+      return next
+    })
+  }, [user])
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false)
   const handleToggleSidebar = useCallback(() => {
@@ -185,13 +245,124 @@ export const AppContent: React.FC = () => {
   // Zen Mode
   const [isZenMode, setIsZenMode] = useState(false)
 
-  const handleViewChange = useCallback((view: AppView) => {
-    setActiveView(view)
-    setIsZenMode(false)
+  const handleViewChange = useCallback(
+    (view: AppView) => {
+      setActiveView(view)
+      setIsZenMode(false)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('dailyflow_active_view', view)
+      }
+      if (user) {
+        userPreferencesService
+          .syncUserPreferences(user.id, { activeView: view })
+          .catch((err) => console.error('Erro ao sincronizar activeView:', err))
+      }
+    },
+    [user]
+  )
+
+  const [academicLayoutMode, setAcademicLayoutMode] = useState<'grid' | 'studio'>(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('dailyflow_active_view', view)
+      const saved = localStorage.getItem('dailyflow_academic_layout_mode')
+      if (saved === 'grid' || saved === 'studio') return saved
     }
-  }, [])
+    return 'grid'
+  })
+
+  const [academicViewMode, setAcademicViewMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dailyflow_academic_view_mode')
+      if (saved === 'grid' || saved === 'list') return saved
+    }
+    return 'grid'
+  })
+
+  const handleAcademicLayoutModeChange = useCallback(
+    (mode: 'grid' | 'studio') => {
+      setAcademicLayoutMode(mode)
+      if (user) {
+        userPreferencesService
+          .syncUserPreferences(user.id, { academicLayoutMode: mode })
+          .catch((err) => console.error('Erro ao sincronizar academicLayoutMode:', err))
+      }
+    },
+    [user]
+  )
+
+  const handleAcademicViewModeChange = useCallback(
+    (mode: 'grid' | 'list') => {
+      setAcademicViewMode(mode)
+      if (user) {
+        userPreferencesService
+          .syncUserPreferences(user.id, { academicViewMode: mode })
+          .catch((err) => console.error('Erro ao sincronizar academicViewMode:', err))
+      }
+    },
+    [user]
+  )
+
+  const sessionRef = useRef(session)
+  useEffect(() => {
+    sessionRef.current = session
+  }, [session])
+
+  // Sincronização e Restauração de Preferências e Sessão Pomodoro Ativa Cross-Device
+  useEffect(() => {
+    if (!user) return
+
+    let isMounted = true
+
+    // 1. Carregar preferências do Supabase
+    userPreferencesService
+      .fetchUserPreferences(user.id)
+      .then((prefs) => {
+        if (!isMounted || !prefs) return
+
+        if (prefs.theme) {
+          setIsDark(prefs.theme === 'dark')
+        }
+        if (prefs.sidebarCollapsed !== undefined) {
+          setIsSidebarCollapsed(prefs.sidebarCollapsed)
+        }
+        if (prefs.activeView) {
+          setActiveView(prefs.activeView)
+        }
+        if (prefs.academicLayoutMode) {
+          setAcademicLayoutMode(prefs.academicLayoutMode)
+        }
+        if (prefs.academicViewMode) {
+          setAcademicViewMode(prefs.academicViewMode)
+        }
+        if (prefs.pomodoro) {
+          const current = sessionRef.current
+          updateSettings(
+            prefs.pomodoro.workDurationMinutes ?? Math.round(current.workDuration / 60),
+            prefs.pomodoro.breakDurationMinutes ?? Math.round(current.breakDuration / 60),
+            prefs.pomodoro.isSoundEnabled ?? current.isSoundEnabled ?? true,
+            prefs.pomodoro.catPurrType ?? current.catPurrType ?? 'none',
+            prefs.pomodoro.catPurrVolume ?? current.catPurrVolume ?? 0.6
+          )
+        }
+      })
+      .catch((err) => {
+        console.error('Falha ao carregar preferências do usuário no Supabase:', err)
+      })
+
+    // 2. Restaurar Sessão Ativa de Pomodoro Cross-Device
+    pomodoroSessionService
+      .fetchActiveSession(user.id)
+      .then((activeSession) => {
+        if (!isMounted || !activeSession) return
+        restoreActiveSession(activeSession)
+      })
+      .catch((err) => {
+        console.error('Falha ao restaurar sessão ativa de Pomodoro:', err)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [user, restoreActiveSession, updateSettings])
 
   // Escape key handler
   useEffect(() => {
@@ -575,6 +746,10 @@ export const AppContent: React.FC = () => {
               ref={academicViewRef}
               isZenMode={isZenMode}
               onZenModeChange={setIsZenMode}
+              layoutMode={academicLayoutMode}
+              onLayoutModeChange={handleAcademicLayoutModeChange}
+              viewMode={academicViewMode}
+              onViewModeChange={handleAcademicViewModeChange}
             />
           )}
 
@@ -586,6 +761,7 @@ export const AppContent: React.FC = () => {
           {/* TAB 4: CONFIGURAÇÕES */}
           {activeView === 'settings' && (
             <SettingsView
+              userId={user?.id}
               isDark={isDark}
               onToggleTheme={toggleTheme}
               workMinutes={Math.round(session.workDuration / 60)}
@@ -596,13 +772,31 @@ export const AppContent: React.FC = () => {
               onUpdateDurations={updateDurations}
               onToggleSound={toggleSound}
               onUpdateSettings={(settings) => {
-                updateSettings(
-                  settings.workDurationMinutes ?? Math.round(session.workDuration / 60),
-                  settings.breakDurationMinutes ?? Math.round(session.breakDuration / 60),
-                  settings.isSoundEnabled ?? session.isSoundEnabled ?? true,
-                  settings.catPurrType ?? session.catPurrType ?? 'none',
-                  settings.catPurrVolume ?? session.catPurrVolume ?? 0.6
-                )
+                const workMins =
+                  settings.workDurationMinutes ?? Math.round(session.workDuration / 60)
+                const breakMins =
+                  settings.breakDurationMinutes ?? Math.round(session.breakDuration / 60)
+                const isSound = settings.isSoundEnabled ?? session.isSoundEnabled ?? true
+                const purrType = settings.catPurrType ?? session.catPurrType ?? 'none'
+                const purrVol = settings.catPurrVolume ?? session.catPurrVolume ?? 0.6
+
+                updateSettings(workMins, breakMins, isSound, purrType, purrVol)
+
+                if (user) {
+                  userPreferencesService
+                    .syncUserPreferences(user.id, {
+                      pomodoro: {
+                        workDurationMinutes: workMins,
+                        breakDurationMinutes: breakMins,
+                        isSoundEnabled: isSound,
+                        catPurrType: purrType,
+                        catPurrVolume: purrVol,
+                      },
+                    })
+                    .catch((err) =>
+                      console.error('Erro ao sincronizar configurações pomodoro:', err)
+                    )
+                }
               }}
               onExport={handleExport}
               onImport={handleImport}

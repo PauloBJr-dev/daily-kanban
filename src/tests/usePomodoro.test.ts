@@ -345,4 +345,138 @@ describe('usePomodoro hook', () => {
     expect(saved.catPurrType).toBe('soft')
     expect(saved.catPurrVolume).toBe(0.9)
   })
+  it('dispara onActiveSessionChange e onSessionCompleted durante o ciclo de vida do foco', () => {
+    const onActiveSessionChange = vi.fn()
+    const onSessionCompleted = vi.fn()
+
+    const { result } = renderHook(() =>
+      usePomodoro({
+        onActiveSessionChange,
+        onSessionCompleted,
+      })
+    )
+
+    // Inicia foco
+    act(() => {
+      result.current.startFocus('task-123', 'Tarefa Importante')
+    })
+
+    expect(onActiveSessionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'task-123',
+        taskTitle: 'Tarefa Importante',
+        mode: 'work',
+        isRunning: true,
+        durationSeconds: 25 * 60,
+      })
+    )
+
+    // Pausa foco
+    act(() => {
+      result.current.pauseFocus()
+    })
+
+    expect(onActiveSessionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'task-123',
+        taskTitle: 'Tarefa Importante',
+        mode: 'work',
+        isRunning: false,
+        pausedTimeLeft: 25 * 60,
+      })
+    )
+
+    // Reseta timer
+    act(() => {
+      result.current.resetTimer()
+    })
+
+    expect(onActiveSessionChange).toHaveBeenCalledWith(null)
+  })
+
+  it('restaura contagem em andamento cross-device calculando tempo decorrido por timestamp', () => {
+    const now = new Date('2026-09-14T20:10:00.000Z').getTime()
+    vi.setSystemTime(now)
+
+    const startedAt = new Date('2026-09-14T20:00:00.000Z').toISOString() // 10 minutos (600s) atrás
+    const durationSeconds = 25 * 60 // 1500s total -> restam 900s (15 min)
+
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => {
+      result.current.restoreActiveSession({
+        taskId: 'task-pc',
+        taskTitle: 'Foco no Escritório',
+        mode: 'work',
+        startedAt,
+        durationSeconds,
+        isRunning: true,
+        pausedTimeLeft: null,
+      })
+    })
+
+    expect(result.current.session.isRunning).toBe(true)
+    expect(result.current.session.mode).toBe('work')
+    expect(result.current.session.taskId).toBe('task-pc')
+    expect(result.current.session.taskTitle).toBe('Foco no Escritório')
+    expect(result.current.session.timeLeft).toBe(900) // 15 minutos restantes exatos
+  })
+
+  it('restaura sessão pausada cross-device preservando pausedTimeLeft', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => {
+      result.current.restoreActiveSession({
+        taskId: 'task-paused',
+        taskTitle: 'Pausado no Notebook',
+        mode: 'work',
+        startedAt: null,
+        durationSeconds: 25 * 60,
+        isRunning: false,
+        pausedTimeLeft: 420, // 7 minutos
+      })
+    })
+
+    expect(result.current.session.isRunning).toBe(false)
+    expect(result.current.session.mode).toBe('work')
+    expect(result.current.session.taskId).toBe('task-paused')
+    expect(result.current.session.timeLeft).toBe(420)
+  })
+
+  it('completa sessão automaticamente se o tempo expirou enquanto o usuário estava longe', () => {
+    const now = new Date('2026-09-14T20:30:00.000Z').getTime()
+    vi.setSystemTime(now)
+
+    const startedAt = new Date('2026-09-14T20:00:00.000Z').toISOString() // 30 minutos atrás
+    const durationSeconds = 25 * 60 // 25 min total -> expirou há 5 min!
+
+    const onSessionCompleted = vi.fn()
+    const { result } = renderHook(() =>
+      usePomodoro({
+        onSessionCompleted,
+      })
+    )
+
+    act(() => {
+      result.current.restoreActiveSession({
+        taskId: 'task-expired',
+        taskTitle: 'Foco Finalizado em Trânsito',
+        mode: 'work',
+        startedAt,
+        durationSeconds,
+        isRunning: true,
+      })
+    })
+
+    expect(onSessionCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'task-expired',
+        taskTitle: 'Foco Finalizado em Trânsito',
+        mode: 'work',
+        durationMinutes: 25,
+      })
+    )
+    expect(result.current.session.isRunning).toBe(false)
+    expect(result.current.session.mode).toBe('break')
+  })
 })

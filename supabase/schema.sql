@@ -8,9 +8,33 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT,
     full_name TEXT,
     avatar_url TEXT,
+    preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+    active_pomodoro_session JSONB DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migração idempotente para colunas preferences e active_pomodoro_session em profiles
+DO $
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'profiles' 
+          AND column_name = 'preferences'
+    ) THEN
+        ALTER TABLE public.profiles ADD COLUMN preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'profiles' 
+          AND column_name = 'active_pomodoro_session'
+    ) THEN
+        ALTER TABLE public.profiles ADD COLUMN active_pomodoro_session JSONB DEFAULT NULL;
+    END IF;
+END $;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -174,3 +198,35 @@ CREATE POLICY "Usuários podem gerenciar suas próprias anotações"
 
 CREATE INDEX IF NOT EXISTS idx_academic_notes_user_id ON public.academic_notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_academic_notes_subject_id ON public.academic_notes(user_id, subject_id);
+
+-- 6. Histórico de Sessões Pomodoro (pomodoro_sessions)
+CREATE TABLE IF NOT EXISTS public.pomodoro_sessions (
+    id TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    task_id TEXT,
+    mode TEXT NOT NULL DEFAULT 'work',
+    duration_minutes INTEGER NOT NULL,
+    completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id, user_id)
+);
+
+ALTER TABLE public.pomodoro_sessions ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+          AND tablename = 'pomodoro_sessions' 
+          AND policyname = 'Usuários podem gerenciar suas próprias sessões pomodoro'
+    ) THEN
+        CREATE POLICY "Usuários podem gerenciar suas próprias sessões pomodoro"
+            ON public.pomodoro_sessions FOR ALL
+            USING (auth.uid() = user_id)
+            WITH CHECK (auth.uid() = user_id);
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_user_id ON public.pomodoro_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_completed_at ON public.pomodoro_sessions(user_id, completed_at);
