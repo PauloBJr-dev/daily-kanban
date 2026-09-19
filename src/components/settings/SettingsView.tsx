@@ -20,7 +20,11 @@ export interface SettingsViewProps {
   autoStartFocus?: boolean
   strictFocusMode?: boolean
   isSoundEnabled: boolean
-  onUpdateDurations: (workMinutes: number, breakMinutes: number, longBreakMinutes?: number) => void
+  onUpdateDurations: (
+    workMinutes: number,
+    breakMinutes: number,
+    longBreakMinutes?: number
+  ) => void
   onToggleSound: () => void
   onUpdateSettings?: (settings: {
     workDurationMinutes?: number

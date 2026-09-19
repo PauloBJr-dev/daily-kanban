@@ -348,14 +348,20 @@ export const AppContent: React.FC = () => {
             workMinutes:
               prefs.pomodoro.workDurationMinutes ?? Math.round(current.workDuration / 60),
             breakMinutes:
-              prefs.pomodoro.breakDurationMinutes ?? Math.round(current.breakDuration / 60),
+              prefs.pomodoro.breakDurationMinutes ??
+              Math.round(current.breakDuration / 60),
             longBreakMinutes:
-              prefs.pomodoro.longBreakDurationMinutes ?? Math.round(current.longBreakDuration / 60),
+              prefs.pomodoro.longBreakDurationMinutes ??
+              Math.round(current.longBreakDuration / 60),
             longBreakCycles: prefs.pomodoro.longBreakCycles ?? current.totalCycles ?? 4,
-            autoStartBreaks: prefs.pomodoro.autoStartBreaks ?? current.autoStartBreaks ?? true,
-            autoStartFocus: prefs.pomodoro.autoStartFocus ?? current.autoStartFocus ?? false,
-            strictFocusMode: prefs.pomodoro.strictFocusMode ?? current.strictFocusMode ?? false,
-            isSoundEnabled: prefs.pomodoro.isSoundEnabled ?? current.isSoundEnabled ?? true,
+            autoStartBreaks:
+              prefs.pomodoro.autoStartBreaks ?? current.autoStartBreaks ?? true,
+            autoStartFocus:
+              prefs.pomodoro.autoStartFocus ?? current.autoStartFocus ?? false,
+            strictFocusMode:
+              prefs.pomodoro.strictFocusMode ?? current.strictFocusMode ?? false,
+            isSoundEnabled:
+              prefs.pomodoro.isSoundEnabled ?? current.isSoundEnabled ?? true,
           })
         }
       })
