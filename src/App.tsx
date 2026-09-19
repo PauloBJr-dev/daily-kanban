@@ -14,6 +14,7 @@ import { ColumnDeleteModal } from './components/ColumnDeleteModal'
 import { ShortcutsModal } from './components/ShortcutsModal'
 import { AuthModal } from './components/AuthModal'
 import { ToastContainer } from './components/ToastContainer'
+import { ResetPasswordView } from './views/ResetPasswordView'
 import { AcademicView, type AcademicViewHandle } from './components/academic'
 import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
@@ -42,7 +43,22 @@ export const AppContent: React.FC = () => {
     isAuthModalOpen,
     openAuthModal,
     closeAuthModal,
+    isPasswordRecovery,
   } = useAuth()
+
+  // Gerenciamento de Rota SPA para redefinição de senha
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') return window.location.pathname
+    return '/'
+  })
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   const {
     columns,
@@ -107,10 +123,23 @@ export const AppContent: React.FC = () => {
 
   // Abertura automática do AuthModal na primeira visita
   useEffect(() => {
-    if (!authLoading && !user && !isGuestAcknowledged) {
+    if (
+      !authLoading &&
+      !user &&
+      !isGuestAcknowledged &&
+      currentPath !== '/reset-password' &&
+      !isPasswordRecovery
+    ) {
       openAuthModal()
     }
-  }, [authLoading, user, isGuestAcknowledged, openAuthModal])
+  }, [
+    authLoading,
+    user,
+    isGuestAcknowledged,
+    openAuthModal,
+    currentPath,
+    isPasswordRecovery,
+  ])
 
   // Pomodoro Integration
   const handleTaskMinuteLogged = useCallback(
@@ -661,6 +690,31 @@ export const AppContent: React.FC = () => {
       return sum + mins
     }, 0)
   }, [tasks])
+
+  if (currentPath === '/reset-password' || isPasswordRecovery) {
+    return (
+      <div className={isDark ? 'dark' : ''}>
+        <ResetPasswordView
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          onSuccess={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/')
+            }
+            setCurrentPath('/')
+            openAuthModal('signin')
+          }}
+          onCancel={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/')
+            }
+            setCurrentPath('/')
+          }}
+        />
+        <ToastContainer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f9fb] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-row transition-colors duration-200 selection:bg-blue-500 selection:text-white">

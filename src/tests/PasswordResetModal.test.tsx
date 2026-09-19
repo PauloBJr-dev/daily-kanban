@@ -22,10 +22,12 @@ describe('PasswordResetModal Component', () => {
   it('renderiza corretamente e envia link de recuperação com sucesso', async () => {
     const onClose = vi.fn()
     vi.spyOn(supabaseModule, 'isSupabaseConfigured').mockReturnValue(true)
-    vi.spyOn(supabaseModule.supabase.auth, 'resetPasswordForEmail').mockResolvedValue({
-      data: {},
-      error: null,
-    } as never)
+    const resetSpy = vi
+      .spyOn(supabaseModule.supabase.auth, 'resetPasswordForEmail')
+      .mockResolvedValue({
+        data: {},
+        error: null,
+      } as never)
 
     render(
       <PasswordResetModal isOpen={true} onClose={onClose} userEmail="teste@exemplo.com" />
@@ -39,6 +41,10 @@ describe('PasswordResetModal Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Link de redefinição enviado!/i)).toBeInTheDocument()
+    })
+
+    expect(resetSpy).toHaveBeenCalledWith('teste@exemplo.com', {
+      redirectTo: `${window.location.origin}/reset-password`,
     })
 
     const closeBtns = screen.getAllByRole('button', { name: /Fechar/i })

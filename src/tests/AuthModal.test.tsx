@@ -1,11 +1,12 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { AuthModal } from '../components/AuthModal'
 import * as useAuthModule from '../hooks/useAuth'
 
 describe('AuthModal Component', () => {
   const mockSignUpWithPassword = vi.fn().mockResolvedValue({ error: null })
   const mockSignInWithPassword = vi.fn().mockResolvedValue({ error: null })
+  const mockResetPasswordForEmail = vi.fn().mockResolvedValue({ error: null })
   const mockContinueAsGuest = vi.fn()
   const mockCloseAuthModal = vi.fn()
   const mockOpenAuthModal = vi.fn()
@@ -16,10 +17,14 @@ describe('AuthModal Component', () => {
     loading: false,
     isConfigured: false,
     authModalInitialTab: undefined as 'signin' | 'signup' | undefined,
+    isPasswordRecovery: false,
+    setIsPasswordRecovery: vi.fn(),
     signInWithGoogle: vi.fn().mockResolvedValue({ error: null }),
     signOut: vi.fn().mockResolvedValue({ error: null }),
     signUpWithPassword: mockSignUpWithPassword,
     signInWithPassword: mockSignInWithPassword,
+    resetPasswordForEmail: mockResetPasswordForEmail,
+    updateUserPassword: vi.fn().mockResolvedValue({ error: null }),
     continueAsGuest: mockContinueAsGuest,
     isGuestAcknowledged: true, // Permitir fechar nos testes gerais
     isAuthModalOpen: true,
@@ -31,6 +36,7 @@ describe('AuthModal Component', () => {
     vi.restoreAllMocks()
     mockSignUpWithPassword.mockClear()
     mockSignInWithPassword.mockClear()
+    mockResetPasswordForEmail.mockClear()
     mockContinueAsGuest.mockClear()
     mockCloseAuthModal.mockClear()
     mockOpenAuthModal.mockClear()
@@ -338,6 +344,59 @@ describe('AuthModal Component', () => {
       expect(tabEntrar).toHaveAttribute('aria-selected', 'true')
       expect(screen.getByRole('button', { name: /entrar na conta/i })).toBeInTheDocument()
       expect(screen.queryByLabelText('Seu Nome ou Apelido')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Fluxo Esqueceu a Senha', () => {
+    it('exibe link "Esqueceu a senha?" na aba de login e abre formulário de recuperação pré-preenchido', async () => {
+      render(<AuthModal isOpen={true} onClose={mockCloseAuthModal} />)
+
+      // Vai para a aba Entrar
+      fireEvent.click(screen.getByRole('tab', { name: 'Entrar' }))
+
+      // Digita um email na tela de login
+      fireEvent.change(screen.getByLabelText('Seu e-mail'), {
+        target: { value: 'usuario@faculdade.edu.br' },
+      })
+
+      // Clica em Esqueceu a senha?
+      const forgotBtn = screen.getByRole('button', { name: /esqueceu a senha\?/i })
+      expect(forgotBtn).toBeInTheDocument()
+      fireEvent.click(forgotBtn)
+
+      // Deve exibir o formulário de recuperação com o e-mail pré-preenchido
+      expect(screen.getByText('Recuperação de conta')).toBeInTheDocument()
+      const forgotEmailInput = screen.getByLabelText(
+        'E-mail da sua conta'
+      ) as HTMLInputElement
+      expect(forgotEmailInput.value).toBe('usuario@faculdade.edu.br')
+
+      // Clica no botão de enviar link
+      const sendResetBtn = screen.getByRole('button', {
+        name: /enviar link de recuperação/i,
+      })
+      await act(async () => {
+        fireEvent.click(sendResetBtn)
+      })
+
+      expect(mockResetPasswordForEmail).toHaveBeenCalledWith('usuario@faculdade.edu.br')
+
+      // Deve exibir confirmação de envio
+      await waitFor(() => {
+        expect(screen.getByText('Link de recuperação enviado!')).toBeInTheDocument()
+      })
+
+      // Clica em voltar para o login
+      const backToLoginBtn = screen.getByRole('button', {
+        name: /voltar para o login/i,
+      })
+      fireEvent.click(backToLoginBtn)
+
+      // Retorna para o formulário de login
+      expect(screen.getByRole('tab', { name: 'Entrar' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      )
     })
   })
 
