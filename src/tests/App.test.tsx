@@ -373,6 +373,10 @@ describe('App Integration', () => {
       loading: false,
       isConfigured: true,
       authModalInitialTab: undefined,
+      isPasswordRecovery: false,
+      setIsPasswordRecovery: vi.fn(),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+      updateUserPassword: vi.fn().mockResolvedValue({ error: null }),
       signInWithGoogle: vi.fn(),
       signOut: vi.fn(),
       signUpWithPassword: vi.fn(),
@@ -413,5 +417,36 @@ describe('App Integration', () => {
       expect(fetchPrefsSpy).toHaveBeenCalledWith('user-synced-123')
       expect(fetchActiveSessionSpy).toHaveBeenCalledWith('user-synced-123')
     })
+  })
+  it('renderiza ResetPasswordView quando rota for /reset-password ou isPasswordRecovery for true', async () => {
+    delete (window as any).location
+    window.location = new URL('http://localhost:5173/reset-password') as any
+
+    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+      user: null,
+      session: null,
+      loading: false,
+      isConfigured: true,
+      authModalInitialTab: undefined,
+      isPasswordRecovery: true,
+      setIsPasswordRecovery: vi.fn(),
+      signInWithGoogle: vi.fn().mockResolvedValue({ error: null }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+      signUpWithPassword: vi.fn().mockResolvedValue({ error: null }),
+      signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+      updateUserPassword: vi.fn().mockResolvedValue({ error: null }),
+      continueAsGuest: vi.fn(),
+      isGuestAcknowledged: true,
+      isAuthModalOpen: false,
+      openAuthModal: vi.fn(),
+      closeAuthModal: vi.fn(),
+    })
+
+    render(<App />)
+
+    expect(screen.getByText('Criar Nova Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nova Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText('Confirmar Nova Senha')).toBeInTheDocument()
   })
 })

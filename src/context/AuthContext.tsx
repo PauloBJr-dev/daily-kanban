@@ -1,4 +1,4 @@
-/* eslint-disable react/only-export-components */
+﻿/* eslint-disable react/only-export-components */
 import React, { createContext, useEffect, useState, useMemo, useCallback } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -11,6 +11,8 @@ export interface AuthContextType {
   loading: boolean
   isConfigured: boolean
   authModalInitialTab?: 'signin' | 'signup'
+  isPasswordRecovery: boolean
+  setIsPasswordRecovery: (value: boolean) => void
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<{ error: Error | null }>
   signUpWithPassword: (
@@ -22,6 +24,8 @@ export interface AuthContextType {
     email: string,
     password: string
   ) => Promise<{ error: Error | null }>
+  resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>
+  updateUserPassword: (newPassword: string) => Promise<{ error: Error | null }>
   continueAsGuest: () => void
   isGuestAcknowledged: boolean
   isAuthModalOpen: boolean
@@ -44,6 +48,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authModalInitialTab, setAuthModalInitialTab] = useState<
     'signin' | 'signup' | undefined
   >(undefined)
+
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    const hash = window.location.hash || ''
+    const search = window.location.search || ''
+    const pathname = window.location.pathname || ''
+    return (
+      hash.includes('type=recovery') ||
+      (pathname === '/reset-password' &&
+        (hash.includes('access_token') || search.includes('code')))
+    )
+  })
 
   const [isGuestAcknowledged, setIsGuestAcknowledged] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
@@ -75,8 +91,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const sanitizeUrlTokens = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const hasAccessToken = window.location.hash.includes('access_token')
-      const hasCode = window.location.search.includes('code')
+      const hash = window.location.hash || ''
+      const search = window.location.search || ''
+      const hasAccessToken = hash.includes('access_token')
+      const hasCode = search.includes('code')
       if (hasAccessToken || hasCode) {
         window.history.replaceState(null, '', window.location.pathname)
       }
@@ -119,8 +137,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Escutar mudanças de autenticação
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true)
+      }
       setSession(session)
       setUser(session?.user ?? null)
       sanitizeUrlTokens()
@@ -251,6 +272,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [isConfigured]
   )
 
+  const resetPasswordForEmail = useCallback(
+    async (email: string): Promise<{ error: Error | null }> => {
+      if (!isConfigured) {
+        return {
+          error: new Error('Serviço de autenticação não configurado neste ambiente.'),
+        }
+      }
+
+      try {
+        const redirectTo =
+          typeof window !== 'undefined'
+            ? `${window.location.origin}/reset-password`
+            : undefined
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo,
+        })
+
+        if (error) {
+          return { error: new Error(error.message) }
+        }
+
+        return { error: null }
+      } catch (err) {
+        return { error: err instanceof Error ? err : new Error(String(err)) }
+      }
+    },
+    [isConfigured]
+  )
+
+  const updateUserPassword = useCallback(
+    async (newPassword: string): Promise<{ error: Error | null }> => {
+      if (!isConfigured) {
+        return {
+          error: new Error('Serviço de autenticação não configurado neste ambiente.'),
+        }
+      }
+
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword,
+        })
+
+        if (error) {
+          return { error: new Error(error.message) }
+        }
+
+        setIsPasswordRecovery(false)
+        return { error: null }
+      } catch (err) {
+        return { error: err instanceof Error ? err : new Error(String(err)) }
+      }
+    },
+    [isConfigured]
+  )
+
   const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
     if (!isConfigured) {
       const err = new Error(
@@ -282,6 +358,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     setIsGuestAcknowledged(false)
+    setIsPasswordRecovery(false)
     storageService.clear(null)
     academicStorageService.clear(null)
 
@@ -311,10 +388,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       loading,
       isConfigured,
       authModalInitialTab,
+      isPasswordRecovery,
+      setIsPasswordRecovery,
       signInWithGoogle,
       signOut,
       signUpWithPassword,
       signInWithPassword,
+      resetPasswordForEmail,
+      updateUserPassword,
       continueAsGuest,
       isGuestAcknowledged,
       isAuthModalOpen,
@@ -327,10 +408,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       loading,
       isConfigured,
       authModalInitialTab,
+      isPasswordRecovery,
+      setIsPasswordRecovery,
       signInWithGoogle,
       signOut,
       signUpWithPassword,
       signInWithPassword,
+      resetPasswordForEmail,
+      updateUserPassword,
       continueAsGuest,
       isGuestAcknowledged,
       isAuthModalOpen,

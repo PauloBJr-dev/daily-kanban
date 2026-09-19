@@ -577,4 +577,110 @@ describe('AuthContext & useAuth', () => {
     expect(oauthSpy).toHaveBeenCalled()
     expect(okRes.error).toBeNull()
   })
+  it('resetPasswordForEmail retorna erro quando não configurado e executa com redirect para /reset-password quando configurado', async () => {
+    // Não configurado
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
+
+    const { result: unconfiguredResult } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    })
+
+    const unconfRes =
+      await unconfiguredResult.current.resetPasswordForEmail('teste@exemplo.com')
+    expect(unconfRes.error).not.toBeNull()
+    expect(unconfRes.error?.message).toContain('não configurado')
+
+    // Configurado
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://test-app.supabase.co')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'valid-anon-key-secret')
+
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    })
+
+    vi.spyOn(supabase.auth, 'onAuthStateChange').mockReturnValue({
+      data: {
+        subscription: {
+          unsubscribe: vi.fn(),
+        },
+      },
+    } as any)
+
+    const resetSpy = vi
+      .spyOn(supabase.auth, 'resetPasswordForEmail')
+      .mockResolvedValueOnce({
+        data: {},
+        error: null,
+      } as any)
+
+    const { result: configuredResult } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    })
+
+    await waitFor(() => {
+      expect(configuredResult.current.loading).toBe(false)
+    })
+
+    const confRes = await configuredResult.current.resetPasswordForEmail(
+      'aluno@faculdade.edu.br'
+    )
+    expect(resetSpy).toHaveBeenCalledWith('aluno@faculdade.edu.br', {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    expect(confRes.error).toBeNull()
+  })
+
+  it('updateUserPassword executa updateUser com nova senha e limpa isPasswordRecovery', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://test-app.supabase.co')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'valid-anon-key-secret')
+
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    })
+
+    let authChangeCallback: any
+    vi.spyOn(supabase.auth, 'onAuthStateChange').mockImplementation((cb: any) => {
+      authChangeCallback = cb
+      return {
+        data: {
+          subscription: {
+            unsubscribe: vi.fn(),
+          },
+        },
+      } as any
+    })
+
+    const updateSpy = vi.spyOn(supabase.auth, 'updateUser').mockResolvedValueOnce({
+      data: { user: mockUser },
+      error: null,
+    } as any)
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => <AuthProvider>{children}</AuthProvider>,
+    })
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    // Dispara evento de PASSWORD_RECOVERY
+    act(() => {
+      authChangeCallback('PASSWORD_RECOVERY', mockSession)
+    })
+
+    expect(result.current.isPasswordRecovery).toBe(true)
+
+    // Atualiza a senha
+    let res: any
+    await act(async () => {
+      res = await result.current.updateUserPassword('NovaSenha#2026')
+    })
+
+    expect(updateSpy).toHaveBeenCalledWith({ password: 'NovaSenha#2026' })
+    expect(res.error).toBeNull()
+    expect(result.current.isPasswordRecovery).toBe(false)
+  })
 })
