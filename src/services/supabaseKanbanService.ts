@@ -1,5 +1,10 @@
 import { supabase } from '../lib/supabase'
-import type { Column, Task, Priority } from '../types/kanban'
+import {
+  DEFAULT_COLUMN_IDS,
+  type Column,
+  type Task,
+  type Priority,
+} from '../types/kanban'
 
 export async function fetchKanbanData(
   userId: string
@@ -114,6 +119,9 @@ export async function deleteTask(taskId: string): Promise<void> {
 }
 
 export async function deleteColumn(columnId: string): Promise<void> {
+  if (DEFAULT_COLUMN_IDS.includes(columnId as any)) {
+    throw new Error('Colunas padr?o n?o podem ser exclu?das')
+  }
   // Deleção em cascata nativa do PostgreSQL (ACID: Atomicidade e Consistência)
   // A exclusão da coluna aciona a remoção em cascata de todas as tarefas associadas via fk_tasks_kanban_columns
   const { error } = await supabase.from('kanban_columns').delete().eq('id', columnId)

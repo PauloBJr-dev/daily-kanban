@@ -10,6 +10,7 @@ import { FilterBar } from './components/FilterBar'
 import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { ColumnDeleteModal } from './components/ColumnDeleteModal'
 import { ShortcutsModal } from './components/ShortcutsModal'
 import { AuthModal } from './components/AuthModal'
 import { ToastContainer } from './components/ToastContainer'
@@ -25,7 +26,12 @@ import {
 } from './services/pomodoroSessionService'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
-import type { Task, Column } from './types/kanban'
+import {
+  DEFAULT_COLUMN_IDS,
+  type Task,
+  type Column,
+  type DeleteColumnAction,
+} from './types/kanban'
 
 export const AppContent: React.FC = () => {
   const toast = useToast()
@@ -54,7 +60,7 @@ export const AppContent: React.FC = () => {
     toggleSubtask,
     addColumn,
     updateColumn,
-    deleteColumn,
+    deleteColumnWithOptions,
     reorderColumns,
     moveColumn,
     exportData,
@@ -390,6 +396,16 @@ export const AppContent: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const academicViewRef = useRef<AcademicViewHandle>(null)
 
+  const [deleteColumnModalState, setDeleteColumnModalState] = useState<{
+    isOpen: boolean
+    column: Column | null
+    taskCount: number
+  }>({
+    isOpen: false,
+    column: null,
+    taskCount: 0,
+  })
+
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean
     title: string
@@ -538,25 +554,31 @@ export const AppContent: React.FC = () => {
   const requestDeleteColumn = useCallback(
     (columnId: string) => {
       const col = columns.find((c) => c.id === columnId)
-      if (col?.isPermanent) {
+      if (!col) return
+      if (col.isPermanent || DEFAULT_COLUMN_IDS.includes(columnId as any)) {
         toast.error('Colunas padrão não podem ser excluídas')
         return
       }
       const tasksInCol = tasks.filter((t) => t.columnId === columnId).length
-      setConfirmState({
+      setDeleteColumnModalState({
         isOpen: true,
-        title: 'Excluir Coluna',
-        message: `Tem certeza que deseja excluir a coluna "${col?.title || ''}" e suas ${tasksInCol} tarefa(s)?`,
-        confirmText: 'Excluir Coluna',
-        isDanger: true,
-        requireConfirmationWord: tasksInCol > 0 ? 'EXCLUIR' : undefined,
-        onConfirm: () => {
-          deleteColumn(columnId)
-          toast.info('Coluna excluída')
-        },
+        column: col,
+        taskCount: tasksInCol,
       })
     },
-    [columns, tasks, deleteColumn, toast]
+    [columns, tasks, toast]
+  )
+
+  const handleConfirmDeleteColumn = useCallback(
+    (columnId: string, action: DeleteColumnAction) => {
+      deleteColumnWithOptions(columnId, action)
+      toast.info(
+        action === 'move_to_todo'
+          ? 'Coluna excluída e tarefas movidas para "A Fazer"'
+          : 'Coluna e tarefas excluídas'
+      )
+    },
+    [deleteColumnWithOptions, toast]
   )
 
   const handleFilterChange = useCallback(
@@ -850,6 +872,15 @@ export const AppContent: React.FC = () => {
         isDoubleConfirm={confirmState.isDoubleConfirm}
         onConfirm={confirmState.onConfirm}
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Column Deletion Security Modal */}
+      <ColumnDeleteModal
+        isOpen={deleteColumnModalState.isOpen}
+        column={deleteColumnModalState.column}
+        taskCount={deleteColumnModalState.taskCount}
+        onClose={() => setDeleteColumnModalState((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDeleteColumn}
       />
 
       {/* Authentication & Guest Notice Modal */}

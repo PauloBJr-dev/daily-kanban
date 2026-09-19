@@ -1,4 +1,4 @@
-import type { KanbanData } from '../types/kanban'
+import { DEFAULT_COLUMN_IDS, type KanbanData } from '../types/kanban'
 import { INITIAL_DATA } from './seedData'
 
 export const storageService = {
@@ -50,6 +50,10 @@ export const storageService = {
       if (!parsed.columns || !Array.isArray(parsed.tasks)) {
         return INITIAL_DATA
       }
+      parsed.columns = parsed.columns.map((col: any) => ({
+        ...col,
+        ...(DEFAULT_COLUMN_IDS.includes(col.id) ? { isPermanent: true } : {}),
+      }))
       return parsed as KanbanData
     } catch (err) {
       console.warn('Falha ao ler localStorage, utilizando dados padr?o.', err)
