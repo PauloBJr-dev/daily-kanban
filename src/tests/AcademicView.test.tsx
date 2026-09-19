@@ -174,11 +174,11 @@ describe('AcademicView', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('abre o modal de Nova Anotação ao clicar no botão correspondente', () => {
+  it('abre o modal de Nova Anotação ao clicar no card de ação rápida', () => {
     render(<AcademicView />)
 
-    const newNoteBtn = screen.getByLabelText('Criar nova anotação')
-    fireEvent.click(newNoteBtn)
+    const quickAddCard = screen.getByText('Criar anotação rápida de aula')
+    fireEvent.click(quickAddCard)
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('Nova Anotação Acadêmica')).toBeInTheDocument()
@@ -227,7 +227,7 @@ describe('AcademicView', () => {
     ).toBeInTheDocument()
   })
 
-  it('alterna entre o modo de grade e o modo studio via seletor', () => {
+  it('alterna entre o modo de grade e o modo studio ao selecionar uma nota e volta para grade', () => {
     render(<AcademicView />)
 
     // Initially in grid mode
@@ -236,9 +236,9 @@ describe('AcademicView', () => {
     })
     expect(statsSection).toBeInTheDocument()
 
-    // Switch to Studio mode
-    const studioBtn = screen.getByRole('button', { name: 'Modo Studio' })
-    fireEvent.click(studioBtn)
+    // Switch to Studio mode by clicking a note
+    const noteTitle = screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra')
+    fireEvent.click(noteTitle)
 
     // Studio is rendered (Editor and Caderno sidebar)
     expect(screen.getByLabelText('Editor do estúdio')).toBeInTheDocument()
@@ -249,8 +249,8 @@ describe('AcademicView', () => {
     ).not.toBeInTheDocument()
 
     // Switch back to Grade mode
-    const gridBtn = screen.getByRole('button', { name: 'Modo Grade' })
-    fireEvent.click(gridBtn)
+    const backBtn = screen.getByRole('button', { name: 'Voltar para Grade' })
+    fireEvent.click(backBtn)
 
     expect(
       screen.getByRole('region', { name: 'Estatísticas Acadêmicas' })
@@ -295,12 +295,12 @@ describe('AcademicView', () => {
   it('ao acionar nova anotação em Modo Studio, cria e seleciona diretamente no editor sem abrir modal', () => {
     render(<AcademicView />)
 
-    // Switch to Studio mode
-    const studioBtn = screen.getByRole('button', { name: 'Modo Studio' })
-    fireEvent.click(studioBtn)
+    // Switch to Studio mode by clicking a note
+    const noteTitle = screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra')
+    fireEvent.click(noteTitle)
 
-    // Click "Nova Anotação" in header
-    const newNoteBtn = screen.getByRole('button', { name: 'Criar nova anotação' })
+    // Click "+ Nova Nota" in Studio sidebar
+    const newNoteBtn = screen.getByRole('button', { name: '+ Nova Nota' })
     fireEvent.click(newNoteBtn)
 
     // No modal dialog opened
@@ -315,7 +315,7 @@ describe('AcademicView', () => {
     render(<AcademicView />)
 
     // Switch to Studio mode
-    fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
+    fireEvent.click(screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra'))
 
     // Caderno Acadêmico title is present
     expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
