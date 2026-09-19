@@ -48,6 +48,38 @@ export const academicStorageService = {
     }
   },
 
+  migrateGuestData(userId: string): AcademicData | null {
+    if (!userId) return null
+
+    const userData = this.load(userId)
+    if (userData.notes.length > 0) {
+      return null
+    }
+
+    const guestRaw =
+      localStorage.getItem('organy_academic_guest') ??
+      localStorage.getItem('dailyflow_academic_guest') ??
+      localStorage.getItem('organocat_academic_guest')
+    if (!guestRaw) return null
+
+    try {
+      const guestData = JSON.parse(guestRaw)
+      if (!this.validateJSON(guestData)) return null
+
+      if (
+        (guestData.notes && guestData.notes.length > 0) ||
+        (guestData.subjects && guestData.subjects.length > 0)
+      ) {
+        this.save(guestData, userId)
+        return guestData
+      }
+    } catch {
+      return null
+    }
+
+    return null
+  },
+
   save(data: AcademicData, userId?: string | null): void {
     const key = this.getStorageKey(userId)
     try {

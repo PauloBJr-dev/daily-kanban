@@ -12,9 +12,9 @@ import { TaskModal } from './components/TaskModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ColumnDeleteModal } from './components/ColumnDeleteModal'
 import { ShortcutsModal } from './components/ShortcutsModal'
-import { AuthModal } from './components/AuthModal'
 import { ToastContainer } from './components/ToastContainer'
 import { ResetPasswordView } from './views/ResetPasswordView'
+import { AuthView } from './views/AuthView'
 import { AcademicView, type AcademicViewHandle } from './components/academic'
 import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
@@ -43,6 +43,7 @@ export const AppContent: React.FC = () => {
     isAuthModalOpen,
     openAuthModal,
     closeAuthModal,
+    authModalInitialTab,
     isPasswordRecovery,
   } = useAuth()
 
@@ -716,6 +717,39 @@ export const AppContent: React.FC = () => {
     )
   }
 
+  // Visualização dedicada de Autenticação na primeira visita (sem blur e sem rolagem no fundo)
+  if (!authLoading && !user && !isGuestAcknowledged) {
+    return (
+      <div className={isDark ? 'dark' : ''}>
+        <AuthView
+          initialTab={authModalInitialTab || 'signup'}
+          showBackToBoard={false}
+          onSuccess={() => {
+            closeAuthModal()
+          }}
+        />
+        <ToastContainer />
+      </div>
+    )
+  }
+
+  // Visualização dedicada de Autenticação quando visitante clica em "Entrar ou Criar Conta"
+  if (isAuthModalOpen && !user) {
+    return (
+      <div className={isDark ? 'dark' : ''}>
+        <AuthView
+          initialTab={authModalInitialTab || 'signin'}
+          showBackToBoard={true}
+          onBackToBoard={closeAuthModal}
+          onSuccess={() => {
+            closeAuthModal()
+          }}
+        />
+        <ToastContainer />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f9fb] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-row transition-colors duration-200 selection:bg-blue-500 selection:text-white">
       {/* Skip to main content for accessibility */}
@@ -977,9 +1011,6 @@ export const AppContent: React.FC = () => {
         onClose={() => setDeleteColumnModalState((prev) => ({ ...prev, isOpen: false }))}
         onConfirm={handleConfirmDeleteColumn}
       />
-
-      {/* Authentication & Guest Notice Modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
 
       {/* Toast Notification Container */}
       <ToastContainer />

@@ -220,4 +220,94 @@ describe('academicStorageService', () => {
     expect(createObjectURLSpy).toHaveBeenCalled()
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url')
   })
+  describe('migrateGuestData', () => {
+    it('retorna null se userId for vazio ou nulo', () => {
+      expect(academicStorageService.migrateGuestData('')).toBeNull()
+      expect(academicStorageService.migrateGuestData(null as any)).toBeNull()
+    })
+
+    it('migra dados de visitante para o usuário e preserva chave de visitante (zero data loss)', () => {
+      const guestData = {
+        subjects: [{ id: 'sub-1', name: 'Cálculo', color: 'blue' }],
+        notes: [
+          {
+            id: 'note-1',
+            title: 'Limites e Derivadas',
+            content: 'Conteúdo de cálculo',
+            subjectId: 'sub-1',
+            status: 'to_review',
+            tags: ['matemática'],
+            createdAt: '2026-09-19T00:00:00Z',
+            updatedAt: '2026-09-19T00:00:00Z',
+          },
+        ],
+        version: 1,
+      }
+      localStorage.setItem('organy_academic_guest', JSON.stringify(guestData))
+
+      const result = academicStorageService.migrateGuestData('user-novo-123')
+      expect(result).not.toBeNull()
+      expect(result?.notes).toHaveLength(1)
+      expect(result?.notes[0].title).toBe('Limites e Derivadas')
+
+      // Verifica se os dados foram salvos para o usuário
+      const savedUser = academicStorageService.load('user-novo-123')
+      expect(savedUser.notes).toHaveLength(1)
+
+      // GARANTIA ZERO PERDA: Verifica se a chave de visitante continuou intacta no localStorage
+      expect(localStorage.getItem('organy_academic_guest')).toBe(
+        JSON.stringify(guestData)
+      )
+    })
+
+    it('retorna null se o usuário já possuir anotações salvas', () => {
+      const userExisting = {
+        subjects: [{ id: 'sub-2', name: 'Física', color: 'red' }],
+        notes: [
+          {
+            id: 'note-2',
+            title: 'Mecânica Quântica',
+            content: 'Nota existente',
+            subjectId: 'sub-2',
+            status: 'completed',
+            tags: [],
+            createdAt: '2026-09-19T00:00:00Z',
+            updatedAt: '2026-09-19T00:00:00Z',
+          },
+        ],
+        version: 1,
+      }
+      academicStorageService.save(userExisting as any, 'user-com-notas')
+
+      const guestData = {
+        subjects: [{ id: 'sub-1', name: 'Química', color: 'green' }],
+        notes: [
+          {
+            id: 'note-guest',
+            title: 'Nota Guest',
+            content: '',
+            subjectId: 'sub-1',
+            status: 'to_review',
+            tags: [],
+            createdAt: '',
+            updatedAt: '',
+          },
+        ],
+        version: 1,
+      }
+      localStorage.setItem('organy_academic_guest', JSON.stringify(guestData))
+
+      const result = academicStorageService.migrateGuestData('user-com-notas')
+      expect(result).toBeNull()
+
+      // Os dados do usuário permanecem os mesmos
+      const userAfter = academicStorageService.load('user-com-notas')
+      expect(userAfter.notes[0].title).toBe('Mecânica Quântica')
+    })
+
+    it('retorna null se não houver dados de visitante', () => {
+      const result = academicStorageService.migrateGuestData('user-vazio')
+      expect(result).toBeNull()
+    })
+  })
 })

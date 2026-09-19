@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { App } from '../App'
 import { academicStorageService } from '../services/academicStorageService'
 import { userPreferencesService } from '../services/userPreferencesService'
@@ -13,26 +13,43 @@ describe('App Integration', () => {
     localStorage.setItem('organy_guest_acknowledged', 'true')
   })
 
-  it('abre automaticamente o AuthModal na primeira visita quando usuário não está logado e não consentiu', async () => {
+  it('exibe a tela dedicada de autenticação AuthView na primeira visita e permite continuar como visitante', async () => {
     localStorage.removeItem('organy_guest_acknowledged')
     render(<App />)
 
-    // Modal de autenticação abre na primeira visita
-    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeInTheDocument()
-    expect(screen.getByText('O que é Armazenamento Local?')).toBeInTheDocument()
+    // Visualização dedicada de Autenticação na primeira visita (sem blur e sem rolagem no fundo)
+    expect(
+      await screen.findByText('Plataforma de Produtividade Acadêmica')
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Organy' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Criar Conta' })).toBeInTheDocument()
 
-    // Marca o checkbox e continua sem conta
-    const checkbox = screen.getByRole('checkbox', {
-      name: /estou ciente de que meus dados ficarão salvos apenas neste navegador/i,
+    // Clica em Continuar sem Conta
+    const guestBtn = screen.getByRole('button', { name: /continuar sem conta/i })
+    fireEvent.click(guestBtn)
+
+    // Abre o modal de aviso de armazenamento local
+    const dialog = await screen.findByRole('dialog', {}, { timeout: 5000 })
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByText('O que é Armazenamento Local?')).toBeInTheDocument()
+
+    // Marca o checkbox e confirma dentro do modal
+    const checkbox = within(dialog).getByRole('checkbox', {
+      name: /entendo os riscos do armazenamento local e desejo prosseguir sem login/i,
     })
     fireEvent.click(checkbox)
 
-    const continueBtn = screen.getByRole('button', { name: /continuar sem conta/i })
+    const continueBtn = within(dialog).getByRole('button', {
+      name: /continuar sem conta/i,
+    })
     fireEvent.click(continueBtn)
 
-    // Modal fecha e usuário vê o aplicativo
+    // Modal fecha e usuário vê o aplicativo e quadro kanban
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 1, name: /quadro kanban/i })
+      ).toBeInTheDocument()
     })
     expect(localStorage.getItem('organy_guest_acknowledged')).toBe('true')
   })
