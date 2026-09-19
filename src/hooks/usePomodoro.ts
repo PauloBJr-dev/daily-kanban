@@ -1,12 +1,10 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import confetti from 'canvas-confetti'
-import type { PomodoroSession, CatPurrType } from '../types/kanban'
+import type { PomodoroSession, PomodoroMode, CatPurrType } from '../types/kanban'
 import type { ActivePomodoroSession } from '../services/pomodoroSessionService'
 import {
   playWorkCompleteSound,
   playBreakCompleteSound,
-  startCatPurr,
-  stopCatPurr,
 } from '../services/soundService'
 import { notify, requestPermission } from '../services/notificationService'
 
@@ -14,14 +12,17 @@ export const POMODORO_SETTINGS_KEY = 'dailyflow_pomodoro_settings'
 
 const DEFAULT_WORK_TIME = 25 * 60 // 25 minutes
 const DEFAULT_BREAK_TIME = 5 * 60 // 5 minutes
+const DEFAULT_LONG_BREAK_TIME = 15 * 60 // 15 minutes
+const DEFAULT_TOTAL_CYCLES = 4
+const DEFAULT_AUTO_START_BREAKS = true
+const DEFAULT_AUTO_START_FOCUS = false
+const DEFAULT_STRICT_FOCUS_MODE = true
 const DEFAULT_DOCUMENT_TITLE = 'Organy - Organização e estudos'
-const DEFAULT_CAT_PURR_TYPE: CatPurrType = 'none'
-const DEFAULT_CAT_PURR_VOLUME = 0.6
 
 export interface PomodoroSessionCompletedEvent {
   taskId?: string | null
   taskTitle?: string | null
-  mode: 'work' | 'break'
+  mode: PomodoroMode
   durationMinutes: number
   completedAt: string
 }
@@ -33,21 +34,40 @@ export interface UsePomodoroOptions {
   initialActiveSession?: ActivePomodoroSession | null
 }
 
+export interface PomodoroSettingsParams {
+  workMinutes?: number
+  breakMinutes?: number
+  longBreakMinutes?: number
+  longBreakCycles?: number
+  autoStartBreaks?: boolean
+  autoStartFocus?: boolean
+  strictFocusMode?: boolean
+  isSoundEnabled?: boolean
+  catPurrType?: CatPurrType
+  catPurrVolume?: number
+}
+
 interface PomodoroSettings {
   workDuration: number
   breakDuration: number
+  longBreakDuration: number
+  totalCycles: number
+  autoStartBreaks: boolean
+  autoStartFocus: boolean
+  strictFocusMode: boolean
   isSoundEnabled: boolean
-  catPurrType: CatPurrType
-  catPurrVolume: number
 }
 
 const loadSettings = (): PomodoroSettings => {
   const defaults: PomodoroSettings = {
     workDuration: DEFAULT_WORK_TIME,
     breakDuration: DEFAULT_BREAK_TIME,
+    longBreakDuration: DEFAULT_LONG_BREAK_TIME,
+    totalCycles: DEFAULT_TOTAL_CYCLES,
+    autoStartBreaks: DEFAULT_AUTO_START_BREAKS,
+    autoStartFocus: DEFAULT_AUTO_START_FOCUS,
+    strictFocusMode: DEFAULT_STRICT_FOCUS_MODE,
     isSoundEnabled: true,
-    catPurrType: DEFAULT_CAT_PURR_TYPE,
-    catPurrVolume: DEFAULT_CAT_PURR_VOLUME,
   }
 
   if (typeof window === 'undefined') {
@@ -58,30 +78,45 @@ const loadSettings = (): PomodoroSettings => {
     const saved = localStorage.getItem(POMODORO_SETTINGS_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
-      const validPurrTypes: CatPurrType[] = ['none', 'soft', 'deep', 'rhythmic']
-      const catPurrType = validPurrTypes.includes(parsed.catPurrType)
-        ? (parsed.catPurrType as CatPurrType)
-        : DEFAULT_CAT_PURR_TYPE
-      const catPurrVolume =
-        typeof parsed.catPurrVolume === 'number' &&
-        parsed.catPurrVolume >= 0 &&
-        parsed.catPurrVolume <= 1
-          ? parsed.catPurrVolume
-          : DEFAULT_CAT_PURR_VOLUME
-
       return {
         workDuration:
           typeof parsed.workDuration === 'number' && parsed.workDuration > 0
             ? parsed.workDuration
-            : DEFAULT_WORK_TIME,
+            : typeof parsed.workDurationMinutes === 'number' && parsed.workDurationMinutes > 0
+              ? parsed.workDurationMinutes * 60
+              : DEFAULT_WORK_TIME,
         breakDuration:
           typeof parsed.breakDuration === 'number' && parsed.breakDuration > 0
             ? parsed.breakDuration
-            : DEFAULT_BREAK_TIME,
+            : typeof parsed.breakDurationMinutes === 'number' && parsed.breakDurationMinutes > 0
+              ? parsed.breakDurationMinutes * 60
+              : DEFAULT_BREAK_TIME,
+        longBreakDuration:
+          typeof parsed.longBreakDuration === 'number' && parsed.longBreakDuration > 0
+            ? parsed.longBreakDuration
+            : typeof parsed.longBreakDurationMinutes === 'number' && parsed.longBreakDurationMinutes > 0
+              ? parsed.longBreakDurationMinutes * 60
+              : DEFAULT_LONG_BREAK_TIME,
+        totalCycles:
+          typeof parsed.totalCycles === 'number' && parsed.totalCycles > 0
+            ? parsed.totalCycles
+            : typeof parsed.longBreakCycles === 'number' && parsed.longBreakCycles > 0
+              ? parsed.longBreakCycles
+              : DEFAULT_TOTAL_CYCLES,
+        autoStartBreaks:
+          typeof parsed.autoStartBreaks === 'boolean'
+            ? parsed.autoStartBreaks
+            : DEFAULT_AUTO_START_BREAKS,
+        autoStartFocus:
+          typeof parsed.autoStartFocus === 'boolean'
+            ? parsed.autoStartFocus
+            : DEFAULT_AUTO_START_FOCUS,
+        strictFocusMode:
+          typeof parsed.strictFocusMode === 'boolean'
+            ? parsed.strictFocusMode
+            : DEFAULT_STRICT_FOCUS_MODE,
         isSoundEnabled:
           typeof parsed.isSoundEnabled === 'boolean' ? parsed.isSoundEnabled : true,
-        catPurrType,
-        catPurrVolume,
       }
     }
   } catch {
@@ -108,6 +143,7 @@ export function usePomodoro(
   )
   const completedTitleRef = useRef<string | null>(null)
   const targetEndTimeRef = useRef<number | null>(null)
+  const autoTransitionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const callbacksRef = useRef(options)
   useEffect(() => {
@@ -124,9 +160,15 @@ export function usePomodoro(
     mode: 'work',
     workDuration: initialSettings.workDuration,
     breakDuration: initialSettings.breakDuration,
+    longBreakDuration: initialSettings.longBreakDuration,
+    currentCycle: 1,
+    totalCycles: initialSettings.totalCycles,
+    autoStartBreaks: initialSettings.autoStartBreaks,
+    autoStartFocus: initialSettings.autoStartFocus,
+    strictFocusMode: initialSettings.strictFocusMode,
+    isAutoTransitioning: false,
+    autoTransitionSecondsLeft: undefined,
     isSoundEnabled: initialSettings.isSoundEnabled,
-    catPurrType: initialSettings.catPurrType,
-    catPurrVolume: initialSettings.catPurrVolume,
   }))
 
   const formatTime = useCallback((seconds: number) => {
@@ -135,9 +177,33 @@ export function usePomodoro(
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }, [])
 
+  const cancelAutoTransition = useCallback(() => {
+    if (autoTransitionTimerRef.current) {
+      clearInterval(autoTransitionTimerRef.current)
+      autoTransitionTimerRef.current = null
+    }
+    setSession((prev) => {
+      if (!prev.isAutoTransitioning && prev.autoTransitionSecondsLeft === undefined) {
+        return prev
+      }
+      return {
+        ...prev,
+        isAutoTransitioning: false,
+        autoTransitionSecondsLeft: undefined,
+      }
+    })
+  }, [])
+
   // Sincronização em tempo real do título da aba do navegador
   useEffect(() => {
     if (typeof document === 'undefined') return
+
+    if (session.isAutoTransitioning && session.autoTransitionSecondsLeft !== undefined) {
+      const isNextBreak = session.mode === 'short_break' || session.mode === 'long_break' || session.mode === 'break'
+      const label = isNextBreak ? 'Iniciando Pausa...' : 'Iniciando Foco...'
+      document.title = `⏳ (${session.autoTransitionSecondsLeft}s) ${label} | Organy`
+      return
+    }
 
     if (session.isRunning) {
       completedTitleRef.current = null
@@ -149,6 +215,8 @@ export function usePomodoro(
         } else {
           document.title = `(${formatTime(session.timeLeft)}) 🎯 Foco & Estudos | Organy`
         }
+      } else if (session.mode === 'long_break') {
+        document.title = `(${formatTime(session.timeLeft)}) 🌟 Pausa Longa Merecida | Organy`
       } else {
         document.title = `(${formatTime(session.timeLeft)}) ☕ Pausa Revigorante | Organy`
       }
@@ -162,6 +230,8 @@ export function usePomodoro(
     }
   }, [
     session.isRunning,
+    session.isAutoTransitioning,
+    session.autoTransitionSecondsLeft,
     session.timeLeft,
     session.mode,
     session.taskTitle,
@@ -169,58 +239,110 @@ export function usePomodoro(
     formatTime,
   ])
 
-  // Restaura título e interrompe áudio ao desmontar o componente
+  // Restaura título e interrompe temporizadores ao desmontar o componente
   useEffect(() => {
     return () => {
-      stopCatPurr()
+      if (autoTransitionTimerRef.current) {
+        clearInterval(autoTransitionTimerRef.current)
+        autoTransitionTimerRef.current = null
+      }
       if (typeof document !== 'undefined') {
         document.title = originalTitleRef.current
       }
     }
   }, [])
 
-  // Gerenciamento acústico do ronrom de gato durante a pausa (break)
-  useEffect(() => {
-    const shouldPurr =
-      session.isRunning &&
-      session.mode === 'break' &&
-      (session.isSoundEnabled ?? true) &&
-      session.catPurrType &&
-      session.catPurrType !== 'none'
-
-    if (shouldPurr) {
-      startCatPurr(session.catPurrType!, session.catPurrVolume ?? DEFAULT_CAT_PURR_VOLUME)
-    } else {
-      stopCatPurr()
+  // Inicia a contagem regressiva de 5 segundos para transição automática
+  const triggerAutoTransition = useCallback((nextMode: PomodoroMode) => {
+    if (autoTransitionTimerRef.current) {
+      clearInterval(autoTransitionTimerRef.current)
+      autoTransitionTimerRef.current = null
     }
 
-    return () => {
-      stopCatPurr()
-    }
-  }, [
-    session.isRunning,
-    session.mode,
-    session.isSoundEnabled,
-    session.catPurrType,
-    session.catPurrVolume,
-  ])
+    const isNextBreak = nextMode === 'short_break' || nextMode === 'long_break' || nextMode === 'break'
+    const label = isNextBreak ? 'Iniciando Pausa...' : 'Iniciando Foco...'
 
-  // Função central para processar conclusão de ciclo (foco -> descanso ou descanso -> foco)
+    if (typeof document !== 'undefined') {
+      document.title = `⏳ (5s) ${label} | Organy`
+    }
+
+    setSession((prev) => ({
+      ...prev,
+      isAutoTransitioning: true,
+      autoTransitionSecondsLeft: 5,
+    }))
+
+    let seconds = 5
+    autoTransitionTimerRef.current = setInterval(() => {
+      seconds -= 1
+      if (seconds > 0) {
+        setSession((prev) => ({
+          ...prev,
+          isAutoTransitioning: true,
+          autoTransitionSecondsLeft: seconds,
+        }))
+        if (typeof document !== 'undefined') {
+          document.title = `⏳ (${seconds}s) ${label} | Organy`
+        }
+      } else {
+        if (autoTransitionTimerRef.current) {
+          clearInterval(autoTransitionTimerRef.current)
+          autoTransitionTimerRef.current = null
+        }
+        completedTitleRef.current = null
+        setSession((prev) => {
+          targetEndTimeRef.current = Date.now() + prev.timeLeft * 1000
+          const activeState: ActivePomodoroSession = {
+            taskId: prev.taskId,
+            taskTitle: prev.taskTitle,
+            mode: prev.mode,
+            startedAt: new Date().toISOString(),
+            durationSeconds: prev.timeLeft,
+            isRunning: true,
+            pausedTimeLeft: null,
+          }
+          callbacksRef.current.onActiveSessionChange?.(activeState)
+          return {
+            ...prev,
+            isAutoTransitioning: false,
+            autoTransitionSecondsLeft: undefined,
+            isRunning: true,
+          }
+        })
+      }
+    }, 1000)
+  }, [])
+
+  // Função central para processar conclusão de ciclo
   const handleCycleComplete = useCallback(() => {
     targetEndTimeRef.current = null
+
     setSession((prev) => {
       const isWorkEnding = prev.mode === 'work'
-      const nextMode = isWorkEnding ? 'break' : 'work'
-      const nextTime = nextMode === 'work' ? prev.workDuration : prev.breakDuration
 
       if (isWorkEnding) {
         if (prev.isSoundEnabled ?? true) {
           playWorkCompleteSound()
         }
-        notify('Tempo de Foco Concluído! 🎉', {
-          body: 'Excelente trabalho! Hora de fazer uma pausa de descanso.',
-          icon: '/vite.svg',
-        })
+
+        const isLongBreak = prev.currentCycle >= prev.totalCycles
+        const nextMode: PomodoroMode = isLongBreak ? 'long_break' : 'short_break'
+        const nextTime = isLongBreak ? prev.longBreakDuration : prev.breakDuration
+
+        if (isLongBreak) {
+          notify('Pausa Longa Merecida! 🌟', {
+            body: 'Você completou seu ciclo de foco. Descanse um pouco mais!',
+            icon: '/vite.svg',
+          })
+          completedTitleRef.current = '🌟 Pausa Longa Merecida! | Organy'
+        } else {
+          notify('Pausa Curta! ☕', {
+            body: 'Excelente trabalho! Hora de fazer uma pausa de descanso.',
+            icon: '/vite.svg',
+          })
+          completedTitleRef.current = '🎉 Foco Concluído! Pausa Curta | Organy'
+        }
+
         try {
           confetti({
             particleCount: 60,
@@ -230,11 +352,8 @@ export function usePomodoro(
         } catch {
           // Silencia falhas caso canvas não esteja disponível
         }
-        completedTitleRef.current = '🎉 Foco Concluído! Parabéns! | Organy'
+
         setIsUserPaused(false)
-        if (typeof document !== 'undefined') {
-          document.title = '🎉 Foco Concluído! Parabéns! | Organy'
-        }
 
         if (prev.taskId && callbacksRef.current.onTaskMinuteLogged) {
           callbacksRef.current.onTaskMinuteLogged(
@@ -250,39 +369,72 @@ export function usePomodoro(
           durationMinutes: Math.round(prev.workDuration / 60),
           completedAt: new Date().toISOString(),
         })
-      } else {
-        if (prev.isSoundEnabled ?? true) {
-          playBreakCompleteSound()
-        }
-        notify('Intervalo Finalizado! ☕', {
-          body: 'Sua pausa terminou. Pronto para mais um ciclo de foco produtivo?',
-          icon: '/vite.svg',
-        })
-        completedTitleRef.current = '⏰ Pausa Finalizada! Pronto para Estudar? | Organy'
-        setIsUserPaused(false)
-        if (typeof document !== 'undefined') {
-          document.title = '⏰ Pausa Finalizada! Pronto para Estudar? | Organy'
+
+        callbacksRef.current.onActiveSessionChange?.(null)
+
+        if (prev.autoStartBreaks) {
+          setTimeout(() => {
+            triggerAutoTransition(nextMode)
+          }, 0)
         }
 
-        callbacksRef.current.onSessionCompleted?.({
-          taskId: prev.taskId,
-          taskTitle: prev.taskTitle,
-          mode: 'break',
-          durationMinutes: Math.round(prev.breakDuration / 60),
-          completedAt: new Date().toISOString(),
-        })
+        return {
+          ...prev,
+          mode: nextMode,
+          timeLeft: nextTime,
+          isRunning: false,
+          isAutoTransitioning: prev.autoStartBreaks,
+          autoTransitionSecondsLeft: prev.autoStartBreaks ? 5 : undefined,
+        }
       }
+
+      // Intervalo finalizado (short_break, long_break ou break)
+      if (prev.isSoundEnabled ?? true) {
+        playBreakCompleteSound()
+      }
+
+      const wasLongBreak = prev.mode === 'long_break'
+      const nextCycle = wasLongBreak ? 1 : prev.currentCycle + 1
+      const nextMode: PomodoroMode = 'work'
+      const nextTime = prev.workDuration
+
+      notify('Intervalo Finalizado! 🎯', {
+        body: 'Pronto para mais um foco?',
+        icon: '/vite.svg',
+      })
+
+      completedTitleRef.current = '⏰ Intervalo Finalizado! Pronto para Estudar? | Organy'
+      setIsUserPaused(false)
+
+      callbacksRef.current.onSessionCompleted?.({
+        taskId: prev.taskId,
+        taskTitle: prev.taskTitle,
+        mode: prev.mode,
+        durationMinutes: Math.round(
+          (wasLongBreak ? prev.longBreakDuration : prev.breakDuration) / 60
+        ),
+        completedAt: new Date().toISOString(),
+      })
 
       callbacksRef.current.onActiveSessionChange?.(null)
 
+      if (prev.autoStartFocus) {
+        setTimeout(() => {
+          triggerAutoTransition('work')
+        }, 0)
+      }
+
       return {
         ...prev,
+        currentCycle: nextCycle,
         mode: nextMode,
         timeLeft: nextTime,
         isRunning: false,
+        isAutoTransitioning: prev.autoStartFocus,
+        autoTransitionSecondsLeft: prev.autoStartFocus ? 5 : undefined,
       }
     })
-  }, [])
+  }, [triggerAutoTransition])
 
   // Ticker de alta precisão baseado em Date.now() delta
   const tick = useCallback(() => {
@@ -317,7 +469,6 @@ export function usePomodoro(
       return
     }
 
-    // Inicializa targetEndTime se ainda não existir
     if (!targetEndTimeRef.current) {
       targetEndTimeRef.current = Date.now() + timeLeftRef.current * 1000
     }
@@ -390,7 +541,7 @@ export function usePomodoro(
     }
   }, [session.isRunning, tick])
 
-  // Sincronização imediata ao reativar aba do navegador ou desbloquear a tela do celular
+  // Sincronização imediata ao reativar aba do navegador ou desbloquear a tela
   useEffect(() => {
     const handleSyncOnResume = () => {
       if (session.isRunning && targetEndTimeRef.current) {
@@ -416,6 +567,7 @@ export function usePomodoro(
   }, [session.isRunning, tick])
 
   const startFocus = useCallback((taskId?: string, taskTitle?: string) => {
+    cancelAutoTransition()
     completedTitleRef.current = null
     setIsUserPaused(false)
     if (
@@ -431,7 +583,7 @@ export function usePomodoro(
       const activeState: ActivePomodoroSession = {
         taskId: taskId !== undefined ? taskId : prev.taskId,
         taskTitle: taskTitle !== undefined ? taskTitle : prev.taskTitle,
-        mode: 'work',
+        mode: prev.mode,
         startedAt: new Date().toISOString(),
         durationSeconds,
         isRunning: true,
@@ -443,31 +595,46 @@ export function usePomodoro(
         taskId: taskId ?? prev.taskId,
         taskTitle: taskTitle ?? prev.taskTitle,
         isRunning: true,
-        mode: 'work',
+        isAutoTransitioning: false,
+        autoTransitionSecondsLeft: undefined,
       }
     })
-  }, [])
+  }, [cancelAutoTransition])
 
   const pauseFocus = useCallback(() => {
+    cancelAutoTransition()
     targetEndTimeRef.current = null
     completedTitleRef.current = null
     setIsUserPaused(true)
     setSession((prev) => {
+      const duration =
+        prev.mode === 'work'
+          ? prev.workDuration
+          : prev.mode === 'long_break'
+            ? prev.longBreakDuration
+            : prev.breakDuration
+
       const activeState: ActivePomodoroSession = {
         taskId: prev.taskId,
         taskTitle: prev.taskTitle,
         mode: prev.mode,
         startedAt: null,
-        durationSeconds: prev.mode === 'work' ? prev.workDuration : prev.breakDuration,
+        durationSeconds: duration,
         isRunning: false,
         pausedTimeLeft: prev.timeLeft,
       }
       callbacksRef.current.onActiveSessionChange?.(activeState)
-      return { ...prev, isRunning: false }
+      return {
+        ...prev,
+        isRunning: false,
+        isAutoTransitioning: false,
+        autoTransitionSecondsLeft: undefined,
+      }
     })
-  }, [])
+  }, [cancelAutoTransition])
 
   const resumeFocus = useCallback(() => {
+    cancelAutoTransition()
     completedTitleRef.current = null
     setIsUserPaused(false)
     if (
@@ -490,11 +657,17 @@ export function usePomodoro(
         pausedTimeLeft: null,
       }
       callbacksRef.current.onActiveSessionChange?.(activeState)
-      return { ...prev, isRunning: true }
+      return {
+        ...prev,
+        isRunning: true,
+        isAutoTransitioning: false,
+        autoTransitionSecondsLeft: undefined,
+      }
     })
-  }, [])
+  }, [cancelAutoTransition])
 
   const resetTimer = useCallback(() => {
+    cancelAutoTransition()
     targetEndTimeRef.current = null
     completedTitleRef.current = null
     setIsUserPaused(false)
@@ -502,28 +675,54 @@ export function usePomodoro(
       document.title = originalTitleRef.current
     }
     callbacksRef.current.onActiveSessionChange?.(null)
-    setSession((prev) => ({
-      ...prev,
-      isRunning: false,
-      timeLeft: prev.mode === 'work' ? prev.workDuration : prev.breakDuration,
-    }))
-  }, [])
+    setSession((prev) => {
+      const nextTime =
+        prev.mode === 'work'
+          ? prev.workDuration
+          : prev.mode === 'long_break'
+            ? prev.longBreakDuration
+            : prev.breakDuration
 
-  const switchMode = useCallback((mode: 'work' | 'break') => {
-    targetEndTimeRef.current = null
-    completedTitleRef.current = null
-    setIsUserPaused(false)
-    if (typeof document !== 'undefined') {
-      document.title = originalTitleRef.current
-    }
-    callbacksRef.current.onActiveSessionChange?.(null)
-    setSession((prev) => ({
-      ...prev,
-      mode,
-      isRunning: false,
-      timeLeft: mode === 'work' ? prev.workDuration : prev.breakDuration,
-    }))
-  }, [])
+      return {
+        ...prev,
+        isRunning: false,
+        isAutoTransitioning: false,
+        autoTransitionSecondsLeft: undefined,
+        timeLeft: nextTime,
+      }
+    })
+  }, [cancelAutoTransition])
+
+  const switchMode = useCallback(
+    (mode: PomodoroMode) => {
+      cancelAutoTransition()
+      targetEndTimeRef.current = null
+      completedTitleRef.current = null
+      setIsUserPaused(false)
+      if (typeof document !== 'undefined') {
+        document.title = originalTitleRef.current
+      }
+      callbacksRef.current.onActiveSessionChange?.(null)
+      setSession((prev) => {
+        const nextTime =
+          mode === 'work'
+            ? prev.workDuration
+            : mode === 'long_break'
+              ? prev.longBreakDuration
+              : prev.breakDuration
+
+        return {
+          ...prev,
+          mode,
+          isRunning: false,
+          isAutoTransitioning: false,
+          autoTransitionSecondsLeft: undefined,
+          timeLeft: nextTime,
+        }
+      })
+    },
+    [cancelAutoTransition]
+  )
 
   const clearFocusedTask = useCallback(() => {
     setSession((prev) => {
@@ -573,7 +772,7 @@ export function usePomodoro(
         targetEndTimeRef.current = null
         setIsUserPaused(false)
         const isWorkEnding = persisted.mode === 'work'
-        const nextMode = isWorkEnding ? 'break' : 'work'
+        const nextMode: PomodoroMode = isWorkEnding ? 'short_break' : 'work'
 
         callbacksRef.current.onSessionCompleted?.({
           taskId: persisted.taskId,
@@ -613,40 +812,57 @@ export function usePomodoro(
     }
   }, [])
 
-  const updateDurations = useCallback((workMinutes: number, breakMinutes: number) => {
-    const newWorkDuration = Math.max(1, Math.round(workMinutes)) * 60
-    const newBreakDuration = Math.max(1, Math.round(breakMinutes)) * 60
+  const updateDurations = useCallback(
+    (workMinutes: number, breakMinutes: number, longBreakMinutes?: number) => {
+      const newWorkDuration = Math.max(1, Math.round(workMinutes)) * 60
+      const newBreakDuration = Math.max(1, Math.round(breakMinutes)) * 60
+      const newLongBreakDuration =
+        longBreakMinutes !== undefined
+          ? Math.max(1, Math.round(longBreakMinutes)) * 60
+          : undefined
 
-    setSession((prev) => {
-      const updated: PomodoroSession = {
-        ...prev,
-        workDuration: newWorkDuration,
-        breakDuration: newBreakDuration,
-        timeLeft: !prev.isRunning
+      setSession((prev) => {
+        const finalLongBreak = newLongBreakDuration ?? prev.longBreakDuration
+        const nextTime = !prev.isRunning
           ? prev.mode === 'work'
             ? newWorkDuration
-            : newBreakDuration
-          : prev.timeLeft,
-      }
+            : prev.mode === 'long_break'
+              ? finalLongBreak
+              : newBreakDuration
+          : prev.timeLeft
 
-      try {
-        localStorage.setItem(
-          POMODORO_SETTINGS_KEY,
-          JSON.stringify({
-            workDuration: newWorkDuration,
-            breakDuration: newBreakDuration,
-            isSoundEnabled: updated.isSoundEnabled ?? true,
-            catPurrType: updated.catPurrType ?? DEFAULT_CAT_PURR_TYPE,
-            catPurrVolume: updated.catPurrVolume ?? DEFAULT_CAT_PURR_VOLUME,
-          })
-        )
-      } catch {
-        // Ignora falhas de escrita
-      }
+        const updated: PomodoroSession = {
+          ...prev,
+          workDuration: newWorkDuration,
+          breakDuration: newBreakDuration,
+          longBreakDuration: finalLongBreak,
+          timeLeft: nextTime,
+        }
 
-      return updated
-    })
-  }, [])
+        try {
+          localStorage.setItem(
+            POMODORO_SETTINGS_KEY,
+            JSON.stringify({
+              workDuration: newWorkDuration,
+              breakDuration: newBreakDuration,
+              longBreakDuration: finalLongBreak,
+              totalCycles: updated.totalCycles,
+              longBreakCycles: updated.totalCycles,
+              autoStartBreaks: updated.autoStartBreaks,
+              autoStartFocus: updated.autoStartFocus,
+              strictFocusMode: updated.strictFocusMode,
+              isSoundEnabled: updated.isSoundEnabled ?? true,
+            })
+          )
+        } catch {
+          // Ignora falhas de escrita
+        }
+
+        return updated
+      })
+    },
+    []
+  )
 
   const toggleSound = useCallback(() => {
     setSession((prev) => {
@@ -657,9 +873,13 @@ export function usePomodoro(
           JSON.stringify({
             workDuration: prev.workDuration,
             breakDuration: prev.breakDuration,
+            longBreakDuration: prev.longBreakDuration,
+            totalCycles: prev.totalCycles,
+            longBreakCycles: prev.totalCycles,
+            autoStartBreaks: prev.autoStartBreaks,
+            autoStartFocus: prev.autoStartFocus,
+            strictFocusMode: prev.strictFocusMode,
             isSoundEnabled: nextSound,
-            catPurrType: prev.catPurrType ?? DEFAULT_CAT_PURR_TYPE,
-            catPurrVolume: prev.catPurrVolume ?? DEFAULT_CAT_PURR_VOLUME,
           })
         )
       } catch {
@@ -674,29 +894,80 @@ export function usePomodoro(
 
   const updateSettings = useCallback(
     (
-      workMinutes: number,
-      breakMinutes: number,
-      isSoundEnabled: boolean,
-      catPurrType: CatPurrType,
-      catPurrVolume: number
+      paramsOrWorkMinutes: PomodoroSettingsParams | number,
+      legacyBreakMinutes?: number,
+      legacyIsSoundEnabled?: boolean,
+      _legacyCatPurrType?: any,
+      _legacyCatPurrVolume?: any
     ) => {
-      const newWorkDuration = Math.max(1, Math.round(workMinutes)) * 60
-      const newBreakDuration = Math.max(1, Math.round(breakMinutes)) * 60
-      const validVolume = Math.max(0, Math.min(1, catPurrVolume))
-
       setSession((prev) => {
+        let workMins = Math.round(prev.workDuration / 60)
+        let breakMins = Math.round(prev.breakDuration / 60)
+        let longBreakMins = Math.round(prev.longBreakDuration / 60)
+        let cycles = prev.totalCycles
+        let autoBreaks = prev.autoStartBreaks
+        let autoFocus = prev.autoStartFocus
+        let strictFocus = prev.strictFocusMode
+        let sound = prev.isSoundEnabled ?? true
+
+        if (typeof paramsOrWorkMinutes === 'object' && paramsOrWorkMinutes !== null) {
+          if (paramsOrWorkMinutes.workMinutes !== undefined) {
+            workMins = Math.max(1, Math.round(paramsOrWorkMinutes.workMinutes))
+          }
+          if (paramsOrWorkMinutes.breakMinutes !== undefined) {
+            breakMins = Math.max(1, Math.round(paramsOrWorkMinutes.breakMinutes))
+          }
+          if (paramsOrWorkMinutes.longBreakMinutes !== undefined) {
+            longBreakMins = Math.max(1, Math.round(paramsOrWorkMinutes.longBreakMinutes))
+          }
+          if (paramsOrWorkMinutes.longBreakCycles !== undefined) {
+            cycles = Math.max(1, Math.round(paramsOrWorkMinutes.longBreakCycles))
+          }
+          if (paramsOrWorkMinutes.autoStartBreaks !== undefined) {
+            autoBreaks = paramsOrWorkMinutes.autoStartBreaks
+          }
+          if (paramsOrWorkMinutes.autoStartFocus !== undefined) {
+            autoFocus = paramsOrWorkMinutes.autoStartFocus
+          }
+          if (paramsOrWorkMinutes.strictFocusMode !== undefined) {
+            strictFocus = paramsOrWorkMinutes.strictFocusMode
+          }
+          if (paramsOrWorkMinutes.isSoundEnabled !== undefined) {
+            sound = paramsOrWorkMinutes.isSoundEnabled
+          }
+        } else if (typeof paramsOrWorkMinutes === 'number') {
+          workMins = Math.max(1, Math.round(paramsOrWorkMinutes))
+          if (legacyBreakMinutes !== undefined) {
+            breakMins = Math.max(1, Math.round(legacyBreakMinutes))
+          }
+          if (legacyIsSoundEnabled !== undefined) {
+            sound = legacyIsSoundEnabled
+          }
+        }
+
+        const newWorkDuration = workMins * 60
+        const newBreakDuration = breakMins * 60
+        const newLongBreakDuration = longBreakMins * 60
+
+        const nextTime = !prev.isRunning
+          ? prev.mode === 'work'
+            ? newWorkDuration
+            : prev.mode === 'long_break'
+              ? newLongBreakDuration
+              : newBreakDuration
+          : prev.timeLeft
+
         const updated: PomodoroSession = {
           ...prev,
           workDuration: newWorkDuration,
           breakDuration: newBreakDuration,
-          isSoundEnabled,
-          catPurrType,
-          catPurrVolume: validVolume,
-          timeLeft: !prev.isRunning
-            ? prev.mode === 'work'
-              ? newWorkDuration
-              : newBreakDuration
-            : prev.timeLeft,
+          longBreakDuration: newLongBreakDuration,
+          totalCycles: cycles,
+          autoStartBreaks: autoBreaks,
+          autoStartFocus: autoFocus,
+          strictFocusMode: strictFocus,
+          isSoundEnabled: sound,
+          timeLeft: nextTime,
         }
 
         try {
@@ -705,9 +976,13 @@ export function usePomodoro(
             JSON.stringify({
               workDuration: newWorkDuration,
               breakDuration: newBreakDuration,
-              isSoundEnabled,
-              catPurrType,
-              catPurrVolume: validVolume,
+              longBreakDuration: newLongBreakDuration,
+              totalCycles: cycles,
+              longBreakCycles: cycles,
+              autoStartBreaks: autoBreaks,
+              autoStartFocus: autoFocus,
+              strictFocusMode: strictFocus,
+              isSoundEnabled: sound,
             })
           )
         } catch {
