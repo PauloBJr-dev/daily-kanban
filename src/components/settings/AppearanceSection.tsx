@@ -6,13 +6,10 @@ export interface AppearanceSectionProps {
   onToggleTheme: () => void
 }
 
-type DensityMode = 'compact' | 'default' | 'comfortable'
-
 export const AppearanceSection: React.FC<AppearanceSectionProps> = ({
   isDark,
   onToggleTheme,
 }) => {
-  const [density, setDensity] = useState<DensityMode>('default')
   const [isSystemAuto, setIsSystemAuto] = useState<boolean>(false)
 
   const handleSelectLight = () => {
@@ -58,7 +55,7 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({
             Aparência &amp; Tema
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Escolha o tema visual e a densidade de informações exibidas
+            Escolha o tema visual do aplicativo
           </p>
         </div>
       </div>
@@ -177,58 +174,6 @@ export const AppearanceSection: React.FC<AppearanceSectionProps> = ({
                 <span className="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-700" />
               )}
             </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Densidade de Layout (Segmented Control) */}
-      <div className="flex flex-col gap-2 pt-2">
-        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-          Densidade de Layout
-        </label>
-        <div
-          role="radiogroup"
-          aria-label="Densidade de Layout"
-          className="inline-flex max-w-md p-1 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 rounded-xl"
-        >
-          <button
-            type="button"
-            role="radio"
-            aria-checked={density === 'compact'}
-            onClick={() => setDensity('compact')}
-            className={`flex-1 py-1.5 px-3 text-xs rounded-lg transition-all cursor-pointer ${
-              density === 'compact'
-                ? 'font-bold text-white bg-blue-600 shadow-xs'
-                : 'font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
-          >
-            Compacta
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={density === 'default'}
-            onClick={() => setDensity('default')}
-            className={`flex-1 py-1.5 px-3 text-xs rounded-lg transition-all cursor-pointer ${
-              density === 'default'
-                ? 'font-bold text-white bg-blue-600 shadow-xs'
-                : 'font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
-          >
-            Padrão
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={density === 'comfortable'}
-            onClick={() => setDensity('comfortable')}
-            className={`flex-1 py-1.5 px-3 text-xs rounded-lg transition-all cursor-pointer ${
-              density === 'comfortable'
-                ? 'font-bold text-white bg-blue-600 shadow-xs'
-                : 'font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
-          >
-            Confortável
           </button>
         </div>
       </div>

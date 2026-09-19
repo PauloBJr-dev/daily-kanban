@@ -3,7 +3,7 @@
 export interface ActivePomodoroSession {
   taskId: string | null
   taskTitle?: string | null
-  mode: 'work' | 'break'
+  mode: 'work' | 'short_break' | 'long_break' | 'break'
   startedAt: string | null // ISO date string
   durationSeconds: number
   isRunning: boolean
@@ -14,7 +14,7 @@ export interface PomodoroSessionRecord {
   id: string
   userId?: string
   taskId?: string | null
-  mode: 'work' | 'break'
+  mode: 'work' | 'short_break' | 'long_break' | 'break'
   durationMinutes: number
   completedAt: string
   createdAt?: string

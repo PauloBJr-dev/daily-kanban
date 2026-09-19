@@ -45,14 +45,6 @@ export const AcademicStats: React.FC<AcademicStatsProps> = ({
       {/* Sub-bar & Semester Context Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide uppercase bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
-              Semestre 2024.2 • Período Letivo Regular
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              14 semanas restantes
-            </span>
-          </div>
           <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
             Espaço Acadêmico
           </h2>

@@ -218,6 +218,10 @@ describe('DesignSystemAudit — Organy Design System & Governance', () => {
       const { result } = renderHook(() => usePomodoro())
 
       act(() => {
+        result.current.updateSettings({ autoStartBreaks: false })
+      })
+
+      act(() => {
         result.current.startFocus('t-4', 'Escrita do Artigo')
       })
 

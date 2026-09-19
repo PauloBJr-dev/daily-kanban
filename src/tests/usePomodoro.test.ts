@@ -125,6 +125,10 @@ describe('usePomodoro hook', () => {
     const { result } = renderHook(() => usePomodoro(onTaskMinuteLogged))
 
     act(() => {
+      result.current.updateSettings({ autoStartBreaks: false })
+    })
+
+    act(() => {
       result.current.startFocus('task-10', 'Finalizar Relatório')
     })
 
@@ -135,7 +139,7 @@ describe('usePomodoro hook', () => {
 
     expect(soundService.playWorkCompleteSound).toHaveBeenCalledTimes(1)
     expect(notificationService.notify).toHaveBeenCalledWith(
-      'Tempo de Foco Concluído! 🎉',
+      'Pausa Curta! ☕',
       expect.objectContaining({
         body: expect.stringContaining('pausa'),
       })
@@ -145,7 +149,7 @@ describe('usePomodoro hook', () => {
     expect(onTaskMinuteLogged).toHaveBeenCalledWith('task-10', 25)
 
     // Modo deve ter mudado para descanso
-    expect(result.current.session.mode).toBe('break')
+    expect(result.current.session.mode).toBe('short_break')
     expect(result.current.session.isRunning).toBe(false)
     expect(result.current.session.timeLeft).toBe(5 * 60)
   })
@@ -228,6 +232,10 @@ describe('usePomodoro hook', () => {
     const { result } = renderHook(() => usePomodoro())
 
     act(() => {
+      result.current.updateSettings({ autoStartBreaks: false })
+    })
+
+    act(() => {
       result.current.startFocus('task-1', 'Tarefa Longa')
     })
 
@@ -240,7 +248,7 @@ describe('usePomodoro hook', () => {
     expect(soundService.playWorkCompleteSound).toHaveBeenCalledTimes(1)
     expect(notificationService.notify).toHaveBeenCalledTimes(1)
     expect(document.title).toBe('🎉 Foco Concluído! Parabéns! | Organy')
-    expect(result.current.session.mode).toBe('break')
+    expect(result.current.session.mode).toBe('short_break')
     expect(result.current.session.isRunning).toBe(false)
   })
   it('atualiza o document.title com sinal visual ⚡ nos últimos 5 segundos de foco', () => {
@@ -283,67 +291,75 @@ describe('usePomodoro hook', () => {
 
     expect(notificationService.requestPermission).toHaveBeenCalled()
   })
-  it('inicia o ronrom de gato na pausa quando ativado e interrompe ao pausar ou voltar ao foco', () => {
-    localStorage.setItem(
-      POMODORO_SETTINGS_KEY,
-      JSON.stringify({
-        workDuration: 25 * 60,
-        breakDuration: 5 * 60,
-        isSoundEnabled: true,
-        catPurrType: 'rhythmic',
-        catPurrVolume: 0.75,
-      })
-    )
-
+  it('avança para modo pausa longa após atingir o número total de ciclos configurado', () => {
     const { result } = renderHook(() => usePomodoro())
 
-    // 1. Muda para pausa e inicia cron?metro
     act(() => {
-      result.current.switchMode('break')
+      result.current.updateSettings({
+        longBreakCycles: 2,
+        longBreakMinutes: 15,
+        autoStartBreaks: false,
+      })
+    })
+
+    // Ciclo 1: conclui foco
+    act(() => {
+      result.current.startFocus('t1', 'Ciclo 1')
+    })
+    act(() => {
+      vi.advanceTimersByTime(25 * 60 * 1000)
+    })
+    expect(result.current.session.mode).toBe('short_break')
+    expect(result.current.session.currentCycle).toBe(1)
+
+    // Conclui pausa curta
+    act(() => {
       result.current.resumeFocus()
     })
-
-    expect(soundService.startCatPurr).toHaveBeenCalledWith('rhythmic', 0.75)
-
-    // 2. Pausa cron?metro -> deve parar o som
     act(() => {
-      result.current.pauseFocus()
+      vi.advanceTimersByTime(5 * 60 * 1000)
     })
+    expect(result.current.session.mode).toBe('work')
+    expect(result.current.session.currentCycle).toBe(2)
 
-    expect(soundService.stopCatPurr).toHaveBeenCalled()
-
-    // 3. Retoma -> inicia novamente
+    // Ciclo 2: conclui foco -> deve ir para long_break
     act(() => {
-      result.current.resumeFocus()
+      result.current.startFocus('t2', 'Ciclo 2')
     })
-
-    expect(soundService.startCatPurr).toHaveBeenCalledWith('rhythmic', 0.75)
-
-    // 4. Alterna para foco de trabalho -> para o som
     act(() => {
-      result.current.switchMode('work')
+      vi.advanceTimersByTime(25 * 60 * 1000)
     })
-
-    expect(soundService.stopCatPurr).toHaveBeenCalled()
+    expect(result.current.session.mode).toBe('long_break')
+    expect(result.current.session.timeLeft).toBe(15 * 60)
   })
 
-  it('permite atualizar configura??es com updateSettings persistindo no localStorage', () => {
+  it('permite atualizar configurações com updateSettings persistindo no localStorage', () => {
     const { result } = renderHook(() => usePomodoro())
 
     act(() => {
-      result.current.updateSettings(50, 10, true, 'soft', 0.9)
+      result.current.updateSettings({
+        workMinutes: 50,
+        breakMinutes: 10,
+        longBreakMinutes: 20,
+        longBreakCycles: 4,
+        autoStartBreaks: true,
+        autoStartFocus: false,
+        strictFocusMode: true,
+        isSoundEnabled: true,
+      })
     })
 
     expect(result.current.session.workDuration).toBe(50 * 60)
     expect(result.current.session.breakDuration).toBe(10 * 60)
-    expect(result.current.session.catPurrType).toBe('soft')
-    expect(result.current.session.catPurrVolume).toBe(0.9)
+    expect(result.current.session.longBreakDuration).toBe(20 * 60)
+    expect(result.current.session.totalCycles).toBe(4)
+    expect(result.current.session.autoStartBreaks).toBe(true)
 
     const saved = JSON.parse(localStorage.getItem(POMODORO_SETTINGS_KEY) || '{}')
     expect(saved.workDuration).toBe(50 * 60)
     expect(saved.breakDuration).toBe(10 * 60)
-    expect(saved.catPurrType).toBe('soft')
-    expect(saved.catPurrVolume).toBe(0.9)
+    expect(saved.longBreakDuration).toBe(20 * 60)
+    expect(saved.totalCycles).toBe(4)
   })
   it('dispara onActiveSessionChange e onSessionCompleted durante o ciclo de vida do foco', () => {
     const onActiveSessionChange = vi.fn()
@@ -477,6 +493,6 @@ describe('usePomodoro hook', () => {
       })
     )
     expect(result.current.session.isRunning).toBe(false)
-    expect(result.current.session.mode).toBe('break')
+    expect(result.current.session.mode).toBe('short_break')
   })
 })

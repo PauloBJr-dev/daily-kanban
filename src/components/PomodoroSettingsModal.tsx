@@ -1,19 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import {
-  X,
-  Flame,
-  Coffee,
-  Volume2,
-  VolumeX,
-  Bell,
-  BellOff,
-  Check,
-  Sparkles,
-  Volume1,
-  Square,
-} from 'lucide-react'
-import type { CatPurrType } from '../types/kanban'
-import { soundService } from '../services/soundService'
+import { X, Flame, Coffee, Volume2, VolumeX, Bell, BellOff, Check } from 'lucide-react'
 import { notificationService } from '../services/notificationService'
 
 export interface PomodoroSettingsModalProps {
@@ -22,85 +8,39 @@ export interface PomodoroSettingsModalProps {
   currentWorkMinutes: number
   currentBreakMinutes: number
   isSoundEnabled: boolean
-  currentCatPurrType?: CatPurrType
-  currentCatPurrVolume?: number
+  currentCatPurrType?: any
+  currentCatPurrVolume?: any
   onSave: (
     workMinutes: number,
     breakMinutes: number,
     isSoundEnabled: boolean,
-    catPurrType: CatPurrType,
-    catPurrVolume: number
+    catPurrType?: any,
+    catPurrVolume?: any
   ) => void
 }
 
 const WORK_PRESETS = [15, 25, 30, 45, 50, 60]
 const BREAK_PRESETS = [3, 5, 10, 15]
 
-interface PurrOption {
-  id: CatPurrType
-  label: string
-  description: string
-  badge?: string
-}
-
-const PURR_OPTIONS: PurrOption[] = [
-  {
-    id: 'none',
-    label: 'Desativado',
-    description: 'Sem som durante a pausa',
-  },
-  {
-    id: 'soft',
-    label: 'Ronrom Suave',
-    description: 'Frequências aveludadas, calmo e contínuo',
-    badge: 'Aveludado',
-  },
-  {
-    id: 'deep',
-    label: 'Ronrom Profundo',
-    description: 'Vibração de peito encorpada e baixa (~24-28Hz)',
-    badge: '~26Hz Sub-grave',
-  },
-  {
-    id: 'rhythmic',
-    label: 'Ronrom Rítmico',
-    description: 'Modulação de inalação e exalação felina (~2s)',
-    badge: 'Respiração ~2s',
-  },
-]
-
 const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'>> = ({
   onClose,
   currentWorkMinutes,
   currentBreakMinutes,
   isSoundEnabled,
-  currentCatPurrType = 'none',
-  currentCatPurrVolume = 0.6,
   onSave,
 }) => {
   const [workMinutes, setWorkMinutes] = useState(currentWorkMinutes)
   const [breakMinutes, setBreakMinutes] = useState(currentBreakMinutes)
   const [soundEnabled, setSoundEnabled] = useState(isSoundEnabled)
-  const [catPurrType, setCatPurrType] = useState<CatPurrType>(currentCatPurrType)
-  const [catPurrVolume, setCatPurrVolume] = useState<number>(currentCatPurrVolume)
-  const [isPreviewing, setIsPreviewing] = useState<boolean>(false)
 
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(
     () => notificationService.getPermission()
   )
 
-  // Interrompe qualquer prévia ao fechar ou desmontar
-  useEffect(() => {
-    return () => {
-      soundService.stopCatPurr()
-    }
-  }, [])
-
   // Fecha ao pressionar Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        soundService.stopCatPurr()
         onClose()
       }
     }
@@ -114,106 +54,73 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
     setNotificationStatus(result)
   }
 
-  const handleTogglePreview = () => {
-    if (catPurrType === 'none') return
-
-    if (isPreviewing) {
-      soundService.stopCatPurr()
-      setIsPreviewing(false)
-    } else {
-      setIsPreviewing(true)
-      soundService.previewCatPurr(catPurrType, 3)
-      setTimeout(() => {
-        setIsPreviewing(false)
-      }, 3000)
-    }
-  }
-
-  const handleSelectPurrType = (type: CatPurrType) => {
-    if (isPreviewing) {
-      soundService.stopCatPurr()
-      setIsPreviewing(false)
-    }
-    setCatPurrType(type)
-  }
-
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
-    soundService.stopCatPurr()
     const validWork = Math.max(1, Math.min(180, Math.round(Number(workMinutes)) || 25))
     const validBreak = Math.max(1, Math.min(60, Math.round(Number(breakMinutes)) || 5))
-    onSave(validWork, validBreak, soundEnabled, catPurrType, catPurrVolume)
+    onSave(validWork, validBreak, soundEnabled)
     onClose()
   }
 
   const getNotificationButtonContent = () => {
     if (notificationStatus === 'granted') {
-      return {
-        label: 'Ativadas',
-        icon: <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
-        className:
-          'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 cursor-default',
-      }
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+          <Check className="w-3.5 h-3.5" />
+          Notificações Ativas
+        </span>
+      )
     }
     if (notificationStatus === 'denied') {
-      return {
-        label: 'Bloqueadas',
-        icon: <BellOff className="w-4 h-4 text-rose-500 dark:text-rose-400" />,
-        className:
-          'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 cursor-not-allowed',
-      }
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs text-rose-500 dark:text-rose-400 font-medium">
+          <BellOff className="w-3.5 h-3.5" />
+          Bloqueadas pelo navegador
+        </span>
+      )
     }
-    return {
-      label: 'Ativar Notificações',
-      icon: <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
-      className:
-        'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 cursor-pointer',
-    }
+    return (
+      <button
+        type="button"
+        onClick={handleRequestNotification}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+      >
+        <Bell className="w-3.5 h-3.5" />
+        Permitir Notificações
+      </button>
+    )
   }
-
-  const notifBtn = getNotificationButtonContent()
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          soundService.stopCatPurr()
-          onClose()
-        }
-      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Configurar Temporizador Pomodoro"
+      className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pomodoro-settings-title"
-        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-xl border-t sm:border border-slate-200/80 dark:border-slate-800 overflow-hidden max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-150"
-      >
-        {/* Mobile Pull Indicator */}
-        <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 sm:hidden" />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-          <h2
-            id="pomodoro-settings-title"
-            className="text-base font-semibold text-slate-900 dark:text-slate-100"
-          >
-            Configurações do Pomodoro
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Ajustar Temporizador
           </h2>
-          <button
-            type="button"
-            onClick={() => {
-              soundService.stopCatPurr()
-              onClose()
-            }}
-            aria-label="Fechar"
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Personalize a duração dos seus blocos de foco e intervalos
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar configurações"
+          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-        <form onSubmit={handleSave} className="p-6 space-y-6">
+      {/* Formulário */}
+      <form onSubmit={handleSave} className="p-6 space-y-6">
+        <div className="space-y-5">
           {/* Duração de Foco */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -305,6 +212,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
           {/* Divisor */}
           <div className="border-t border-slate-100 dark:border-slate-800" />
 
+<<<<<<< HEAD
           {/* Seção: Som ambiente de descanso (Ronrom de Gato 🐱) */}
           <div className="space-y-3.5">
             <div className="flex items-center justify-between">
@@ -424,13 +332,21 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
           <div className="border-t border-slate-100 dark:border-slate-800" />
 
           {/* Efeitos Sonoros Toggle */}
+=======
+          {/* Efeitos Sonoros */}
+>>>>>>> subagent-Frontend-UI-Specialist-self-aaecc07d
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div
                 className={`p-2 rounded-lg ${
                   soundEnabled
+<<<<<<< HEAD
                     ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400'
                     : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+=======
+                    ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400'
+                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+>>>>>>> subagent-Frontend-UI-Specialist-self-aaecc07d
                 }`}
               >
                 {soundEnabled ? (
@@ -440,62 +356,56 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                 )}
               </div>
               <div>
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200 block">
-                  Efeitos Sonoros
-                </span>
-                <span className="text-xs text-slate-400">
-                  {soundEnabled ? 'Alertas sonoros ativados' : 'Sons desativados'}
-                </span>
+                <label
+                  htmlFor="sound-toggle-btn"
+                  className="text-sm font-medium text-slate-800 dark:text-slate-200 block cursor-pointer"
+                >
+                  Sons ao concluir sessões
+                </label>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Toca um aviso sonoro harmonioso ao fim de cada ciclo
+                </p>
               </div>
             </div>
             <button
+              id="sound-toggle-btn"
               type="button"
               role="switch"
               aria-checked={soundEnabled}
-              aria-label="Ativar ou desativar efeitos sonoros"
+              aria-label="Ativar ou desativar sons do pomodoro"
               onClick={() => setSoundEnabled((prev) => !prev)}
+<<<<<<< HEAD
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
                 soundEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
+=======
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer ${
+                soundEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+>>>>>>> subagent-Frontend-UI-Specialist-self-aaecc07d
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                  soundEnabled ? 'translate-x-5' : 'translate-x-0'
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
+                  soundEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
           </div>
 
           {/* Notificações do Navegador */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                <Bell className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-sm font-medium text-slate-800 dark:text-slate-200 block">
-                  Notificações do Navegador
-                </span>
-                <span className="text-xs text-slate-400">
-                  Alertas quando a aba estiver em segundo plano
-                </span>
-              </div>
+          <div className="flex items-center justify-between pt-1">
+            <div>
+              <span className="text-sm font-medium text-slate-800 dark:text-slate-200 block">
+                Notificações na Área de Trabalho
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Receba avisos visuais mesmo se o navegador estiver em segundo plano
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={
-                notificationStatus === 'default' ? handleRequestNotification : undefined
-              }
-              disabled={
-                notificationStatus === 'denied' || notificationStatus === 'granted'
-              }
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${notifBtn.className}`}
-            >
-              {notifBtn.icon}
-              <span>{notifBtn.label}</span>
-            </button>
+            <div>{getNotificationButtonContent()}</div>
           </div>
+        </div>
 
+<<<<<<< HEAD
           {/* Botões do Rodapé */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <button
@@ -517,11 +427,40 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
           </div>
         </form>
       </div>
+=======
+        {/* Rodapé de Ações */}
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cancelar alterações"
+            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            aria-label="Salvar configurações do pomodoro"
+            className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+          >
+            Salvar
+          </button>
+        </div>
+      </form>
+>>>>>>> subagent-Frontend-UI-Specialist-self-aaecc07d
     </div>
   )
 }
 
-export const PomodoroSettingsModal: React.FC<PomodoroSettingsModalProps> = (props) => {
-  if (!props.isOpen) return null
-  return <PomodoroSettingsDialog {...props} />
+export const PomodoroSettingsModal: React.FC<PomodoroSettingsModalProps> = ({
+  isOpen,
+  ...props
+}) => {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <PomodoroSettingsDialog {...props} />
+    </div>
+  )
 }

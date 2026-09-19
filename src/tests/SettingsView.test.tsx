@@ -10,8 +10,11 @@ describe('SettingsView Component', () => {
     workMinutes: 25,
     breakMinutes: 5,
     isSoundEnabled: true,
-    catPurrType: 'soft' as const,
-    catPurrVolume: 0.6,
+    longBreakMinutes: 15,
+    longBreakCycles: 4,
+    autoStartBreaks: true,
+    autoStartFocus: false,
+    strictFocusMode: true,
     onUpdateDurations: vi.fn(),
     onToggleSound: vi.fn(),
     onUpdateSettings: vi.fn(),
@@ -19,7 +22,6 @@ describe('SettingsView Component', () => {
     onImport: vi.fn(),
     onReset: vi.fn(),
     onOpenShortcuts: vi.fn(),
-    onOpenAcademicSubjects: vi.fn(),
   }
 
   it('renderiza o cabeçalho e todas as seções de configurações', () => {
@@ -27,7 +29,8 @@ describe('SettingsView Component', () => {
 
     expect(screen.getByText('Configurações do Sistema')).toBeInTheDocument()
     expect(screen.getByText('Aparência & Tema')).toBeInTheDocument()
-    expect(screen.getByText('Temporizador Pomodoro & Sons')).toBeInTheDocument()
+    expect(screen.getByText('Temporizador Pomodoro')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Notificações' })).toBeInTheDocument()
     expect(screen.getByText('Dados & Backup')).toBeInTheDocument()
     expect(screen.getByText('Atalhos do Teclado')).toBeInTheDocument()
   })
@@ -51,7 +54,7 @@ describe('SettingsView Component', () => {
     })
     fireEvent.click(preset50Btn)
 
-    expect(onUpdateDurations).toHaveBeenCalledWith(50, 5)
+    expect(onUpdateDurations).toHaveBeenCalledWith(50, 5, 15)
   })
 
   it('chama onToggleSound ao alternar o som de notificação', () => {

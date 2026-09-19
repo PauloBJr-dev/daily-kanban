@@ -11,20 +11,16 @@ interface NavItem {
   label: string
 }
 
-export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
-  onSaveClick,
-  hasAcademicSection = false,
-}) => {
+export const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onSaveClick }) => {
   const [activeTab, setActiveTab] = useState<string>('pomodoro')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'just_saved'>('saved')
 
   const navItems: NavItem[] = [
     { id: 'pomodoro', label: 'Pomodoro' },
-    { id: 'notificacoes', label: 'Notificações & Sons' },
+    { id: 'notificacoes', label: 'Notificações' },
     { id: 'aparencia', label: 'Aparência' },
     { id: 'dados', label: 'Dados & Backup' },
     { id: 'atalhos', label: 'Atalhos' },
-    ...(hasAcademicSection ? [{ id: 'academico', label: 'Acadêmico' }] : []),
   ]
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -103,10 +99,10 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
               key={item.id}
               href={`#${item.id}`}
               onClick={(e) => handleNavClick(e, item.id)}
-              className={`px-3 py-1.5 rounded-full transition-colors whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                 isActive
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-200 font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/70'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {item.label}

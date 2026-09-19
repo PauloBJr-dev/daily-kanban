@@ -123,7 +123,6 @@ describe('App Integration', () => {
     // Métricas renderizada com os KPIs movidos
     expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()
     expect(screen.getByText('Taxa Geral de Conclusão')).toBeInTheDocument()
-    expect(screen.getByText('Painel Analítico de Produtividade')).toBeInTheDocument()
 
     // Kanban não deve estar visível
     expect(
@@ -151,9 +150,6 @@ describe('App Integration', () => {
     expect(
       screen.getAllByRole('button', { name: 'Criar nova anotação' })[0]
     ).toBeInTheDocument()
-
-    // Pill central agora é acadêmico
-    expect(screen.getByText('Espaço de Estudos e Revisões')).toBeInTheDocument()
 
     expect(localStorage.getItem('dailyflow_active_view')).toBe('academic')
   })
@@ -247,7 +243,7 @@ describe('App Integration', () => {
     ).toBeInTheDocument()
 
     // Alterna para o Modo Studio
-    fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
+    fireEvent.click(screen.getByText('Nota para Teste Zen'))
 
     // Ativa o Modo Zen
     const zenBtn = screen.getByLabelText('Modo Zen')
