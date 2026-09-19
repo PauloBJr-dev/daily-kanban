@@ -836,4 +836,248 @@ describe('useKanban', () => {
       expect(result.current.tasks[0].title).toBe('Tarefa Convidado Migrada')
     })
   })
+
+  describe('Regras Avançadas de Tempo, Proteção de Colunas e Colunas Ocultas', () => {
+    it('tarefa criada em "Em Espera" (col-review) não inicia timer (currentTimerStartedAt e currentTimerColumnId são null)', () => {
+      const { result } = renderHook(() => useKanban())
+
+      let task: Task
+      act(() => {
+        task = result.current.addTask({
+          title: 'Tarefa em Espera',
+          columnId: 'col-review',
+          priority: 'medium',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      expect(task!.timeTracked?.currentTimerStartedAt).toBeNull()
+      expect(task!.timeTracked?.currentTimerColumnId).toBeNull()
+      expect(task!.timeTracked?.inProgressSeconds).toBe(0)
+    })
+
+    it('tarefa criada em "A Fazer" (col-todo) não inicia timer', () => {
+      const { result } = renderHook(() => useKanban())
+
+      let task: Task
+      act(() => {
+        task = result.current.addTask({
+          title: 'Tarefa no Backlog',
+          columnId: 'col-todo',
+          priority: 'low',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      expect(task!.timeTracked?.currentTimerStartedAt).toBeNull()
+      expect(task!.timeTracked?.currentTimerColumnId).toBeNull()
+    })
+
+    it('tarefa criada em "Em Progresso" (col-progress) inicia timer automaticamente com startedAt e columnId', () => {
+      const { result } = renderHook(() => useKanban())
+
+      let task: Task
+      act(() => {
+        task = result.current.addTask({
+          title: 'Tarefa em Progresso Imediato',
+          columnId: 'col-progress',
+          priority: 'high',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      expect(task!.timeTracked?.currentTimerStartedAt).toBeTruthy()
+      expect(task!.timeTracked?.currentTimerColumnId).toBe('col-progress')
+    })
+
+    it('mover de "Em Progresso" para "Em Espera" pausa timer, define currentTimerStartedAt como null e acumula inProgressSeconds', () => {
+      const { result } = renderHook(() => useKanban())
+
+      let task: Task
+      act(() => {
+        task = result.current.addTask({
+          title: 'Tarefa Ativa para Pausa',
+          columnId: 'col-progress',
+          priority: 'urgent',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      // Simula passar 10 segundos no passado
+      const tenSecondsAgo = new Date(Date.now() - 10000).toISOString()
+      act(() => {
+        result.current.updateTask(task.id, {
+          timeTracked: {
+            inProgressSeconds: 0,
+            inReviewSeconds: 0,
+            currentTimerStartedAt: tenSecondsAgo,
+            currentTimerColumnId: 'col-progress',
+          },
+        })
+      })
+
+      // Move para "Em Espera"
+      act(() => {
+        result.current.moveTask(task.id, 'col-review')
+      })
+
+      const pausedTask = result.current.tasks.find((t) => t.id === task.id)!
+      expect(pausedTask.columnId).toBe('col-review')
+      expect(pausedTask.timeTracked?.currentTimerStartedAt).toBeNull()
+      expect(pausedTask.timeTracked?.currentTimerColumnId).toBeNull()
+      expect(pausedTask.timeTracked?.inProgressSeconds).toBeGreaterThanOrEqual(9)
+    })
+
+    it('mover de "Em Espera" para "Em Progresso" reativa o cronômetro', () => {
+      const { result } = renderHook(() => useKanban())
+
+      let task: Task
+      act(() => {
+        task = result.current.addTask({
+          title: 'Tarefa Espera para Progresso',
+          columnId: 'col-review',
+          priority: 'medium',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      expect(task!.timeTracked?.currentTimerStartedAt).toBeNull()
+
+      act(() => {
+        result.current.moveTask(task.id, 'col-progress')
+      })
+
+      const resumedTask = result.current.tasks.find((t) => t.id === task.id)!
+      expect(resumedTask.columnId).toBe('col-progress')
+      expect(resumedTask.timeTracked?.currentTimerStartedAt).toBeTruthy()
+      expect(resumedTask.timeTracked?.currentTimerColumnId).toBe('col-progress')
+    })
+
+    it('impede exclusão de qualquer coluna padrão de DEFAULT_COLUMN_IDS', () => {
+      const { result } = renderHook(() => useKanban())
+      const initialCount = result.current.columns.length
+
+      const defaultIds = ['col-todo', 'col-progress', 'col-review', 'col-done']
+      defaultIds.forEach((id) => {
+        act(() => {
+          result.current.deleteColumn(id)
+        })
+        expect(result.current.columns.some((c) => c.id === id)).toBe(true)
+      })
+
+      expect(result.current.columns.length).toBe(initialCount)
+    })
+
+    it('deleteColumnWithOptions com move_to_todo move todas as tarefas da coluna customizada para col-todo e remove a coluna', () => {
+      const { result } = renderHook(() => useKanban())
+
+      let customColId = ''
+      act(() => {
+        result.current.addColumn('Coluna Temporária', 'rose')
+      })
+      const customCol = result.current.columns.find(
+        (c) => c.title === 'Coluna Temporária'
+      )!
+      customColId = customCol.id
+
+      let task1: Task
+      let task2: Task
+      act(() => {
+        task1 = result.current.addTask({
+          title: 'Tarefa 1 da Coluna Custom',
+          columnId: customColId,
+          priority: 'medium',
+          tags: [],
+          subtasks: [],
+        })
+        task2 = result.current.addTask({
+          title: 'Tarefa 2 da Coluna Custom',
+          columnId: customColId,
+          priority: 'high',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      expect(result.current.tasks.filter((t) => t.columnId === customColId)).toHaveLength(
+        2
+      )
+
+      act(() => {
+        result.current.deleteColumnWithOptions(customColId, 'move_to_todo')
+      })
+
+      // Coluna foi removida
+      expect(result.current.columns.some((c) => c.id === customColId)).toBe(false)
+      // Tarefas continuam existindo mas agora estão em col-todo
+      const movedTask1 = result.current.tasks.find((t) => t.id === task1.id)!
+      const movedTask2 = result.current.tasks.find((t) => t.id === task2.id)!
+      expect(movedTask1.columnId).toBe('col-todo')
+      expect(movedTask2.columnId).toBe('col-todo')
+      expect(movedTask1.timeTracked?.currentTimerStartedAt).toBeNull()
+    })
+
+    it('deleteColumnWithOptions com delete_tasks remove a coluna e todas as suas tarefas associadas', () => {
+      const { result } = renderHook(() => useKanban())
+
+      act(() => {
+        result.current.addColumn('Coluna para Exclusão Total', 'amber')
+      })
+      const customCol = result.current.columns.find(
+        (c) => c.title === 'Coluna para Exclusão Total'
+      )!
+
+      let task: Task
+      act(() => {
+        task = result.current.addTask({
+          title: 'Tarefa Condenada',
+          columnId: customCol.id,
+          priority: 'urgent',
+          tags: [],
+          subtasks: [],
+        })
+      })
+
+      expect(result.current.tasks.some((t) => t.id === task.id)).toBe(true)
+
+      act(() => {
+        result.current.deleteColumnWithOptions(customCol.id, 'delete_tasks')
+      })
+
+      expect(result.current.columns.some((c) => c.id === customCol.id)).toBe(false)
+      expect(result.current.tasks.some((t) => t.id === task.id)).toBe(false)
+    })
+
+    it('gerencia persistência de hiddenColumnIds com hideColumn, showColumn e toggleColumnVisibility', () => {
+      const { result } = renderHook(() => useKanban())
+
+      expect(result.current.hiddenColumnIds).toEqual([])
+
+      act(() => {
+        result.current.hideColumn('col-review')
+      })
+      expect(result.current.hiddenColumnIds).toContain('col-review')
+
+      act(() => {
+        result.current.toggleColumnVisibility('col-done')
+      })
+      expect(result.current.hiddenColumnIds).toContain('col-done')
+
+      act(() => {
+        result.current.showColumn('col-review')
+      })
+      expect(result.current.hiddenColumnIds).not.toContain('col-review')
+      expect(result.current.hiddenColumnIds).toContain('col-done')
+
+      act(() => {
+        result.current.toggleColumnVisibility('col-done')
+      })
+      expect(result.current.hiddenColumnIds).not.toContain('col-done')
+    })
+  })
 })

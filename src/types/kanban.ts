@@ -27,6 +27,26 @@ export interface Task {
   }
 }
 
+export const DEFAULT_COLUMN_IDS = [
+  'col-todo',
+  'col-progress',
+  'col-review',
+  'col-done',
+] as const
+
+export type DefaultColumnId = (typeof DEFAULT_COLUMN_IDS)[number]
+
+export type DeleteColumnAction = 'delete_tasks' | 'move_to_todo'
+
+export function generateSecurityCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = ''
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}
+
 export interface Column {
   id: string
   title: string
