@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+﻿import React, { useEffect } from 'react'
 import {
   Play,
   Pause,
@@ -7,6 +7,7 @@ import {
   Minimize2,
   Flame,
   Coffee,
+  Sparkles,
 } from 'lucide-react'
 import type { PomodoroSession } from '../types/kanban'
 
@@ -14,7 +15,7 @@ export interface PomodoroFullscreenProps {
   session: PomodoroSession
   onPlayPause: () => void
   onReset: () => void
-  onSwitchMode: (mode: 'work' | 'break') => void
+  onSwitchMode: (mode: 'work' | 'short_break' | 'long_break' | 'break') => void
   onClose: () => void
   formatTime: (seconds: number) => string
 }
@@ -28,13 +29,28 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
   formatTime,
 }) => {
   const isWork = session.mode === 'work'
-  const maxDuration = isWork ? session.workDuration : session.breakDuration
+  const isLongBreak = session.mode === 'long_break'
+  const isShortBreak = session.mode === 'short_break' || session.mode === 'break'
+
+  const maxDuration = isWork
+    ? session.workDuration
+    : isLongBreak
+      ? session.longBreakDuration || 15 * 60
+      : session.breakDuration
+
   const progressPercent = Math.max(
     0,
     Math.min(100, ((maxDuration - session.timeLeft) / maxDuration) * 100)
   )
 
   const isNearEnd = session.isRunning && session.timeLeft <= 5 && session.timeLeft > 0
+
+  const currentCycle = session.currentCycle || 1
+  const totalCycles = session.totalCycles || 4
+
+  const workMinutes = Math.round(session.workDuration / 60)
+  const breakMinutes = Math.round(session.breakDuration / 60)
+  const longBreakMinutes = Math.round((session.longBreakDuration || 15 * 60) / 60)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,36 +70,152 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
       className="fixed inset-0 z-50 bg-slate-950/95 dark:bg-slate-950/98 text-white flex flex-col items-center justify-between backdrop-blur-xl p-6 sm:p-10 select-none animate-in fade-in duration-200"
     >
       {/* Top bar */}
-      <header className="w-full max-w-4xl flex items-center justify-between">
-        {/* Soft Mode Badge */}
-        <div
-          data-testid="fullscreen-mode-badge"
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold tracking-wide border backdrop-blur-md transition-all ${
-            isWork
-              ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-          }`}
-        >
-          {isWork ? (
-            <Flame className="w-4 h-4 text-rose-400" />
-          ) : (
-            <Coffee className="w-4 h-4 text-emerald-400" />
-          )}
-          <span>{isWork ? '🎯 Foco Ativo' : '☕ Pausa Revigorante'}</span>
+      <header className="w-full max-w-4xl flex flex-wrap items-center justify-between gap-4">
+        {/* Soft Mode Badge & Mode Tabs */}
+        <div className="flex items-center gap-3">
+          <div
+            data-testid="fullscreen-mode-badge"
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold tracking-wide border backdrop-blur-md transition-all ${
+              isWork
+                ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                : isLongBreak
+                  ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+            }`}
+          >
+            {isWork ? (
+              <Flame className="w-4 h-4 text-rose-400" />
+            ) : isLongBreak ? (
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+            ) : (
+              <Coffee className="w-4 h-4 text-emerald-400" />
+            )}
+            <span>
+              {isWork
+                ? '🎯 Foco Ativo'
+                : isLongBreak
+                  ? '🌟 Pausa Longa Merecida'
+                  : '☕ Pausa Revigorante'}
+            </span>
+          </div>
+
+          {/* 3 Modes Switch Buttons */}
+          <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => onSwitchMode('work')}
+              aria-label="Ativar modo de foco"
+              className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                isWork
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Foco ({workMinutes}m)
+            </button>
+            <button
+              type="button"
+              onClick={() => onSwitchMode('short_break')}
+              aria-label="Ativar pausa curta"
+              className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                isShortBreak
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Pausa Curta ({breakMinutes}m)
+            </button>
+            <button
+              type="button"
+              onClick={() => onSwitchMode('long_break')}
+              aria-label="Ativar pausa longa"
+              className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                isLongBreak
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Pausa Longa ({longBreakMinutes}m)
+            </button>
+          </div>
         </div>
 
-        {/* Discreet Minimize Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Minimizar (Esc)"
-          title="Minimizar (Esc)"
-          className="inline-flex items-center gap-2 px-4 py-2 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 cursor-pointer text-sm font-medium"
-        >
-          <Minimize2 className="w-4 h-4" />
-          <span>Minimizar (Esc)</span>
-        </button>
+        {/* Right Actions: Cycle Indicator & Minimize */}
+        <div className="flex items-center gap-3">
+          {/* Cycle Indicator */}
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-slate-300">
+            <span>
+              Ciclo {currentCycle} de {totalCycles}
+            </span>
+            <div className="flex items-center gap-1.5">
+              {Array.from({ length: totalCycles }, (_, i) => {
+                const isPast = i + 1 < currentCycle
+                const isNow = i + 1 === currentCycle
+                return (
+                  <span
+                    key={i}
+                    className={`h-2 rounded-full transition-all ${
+                      isNow
+                        ? `w-4 ${
+                            isWork
+                              ? 'bg-rose-500'
+                              : isLongBreak
+                                ? 'bg-indigo-500'
+                                : 'bg-emerald-500'
+                          }`
+                        : isPast
+                          ? 'w-2 bg-slate-400'
+                          : 'w-2 bg-white/20'
+                    }`}
+                  />
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Minimize Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Minimizar (Esc)"
+            title="Minimizar (Esc)"
+            className="inline-flex items-center gap-2 px-4 py-2 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 cursor-pointer text-sm font-medium"
+          >
+            <Minimize2 className="w-4 h-4" />
+            <span>Minimizar (Esc)</span>
+          </button>
+        </div>
       </header>
+
+      {/* Auto-transition 5s countdown alert banner */}
+      {session.isAutoTransitioning && (
+        <div className="w-full max-w-xl my-3 bg-amber-500/20 border border-amber-500/50 rounded-2xl px-5 py-3 flex items-center justify-between gap-4 animate-countdown-blink animate-pulse">
+          <div className="flex items-center gap-2 text-amber-300 font-bold text-sm sm:text-base">
+            <span>
+              ⏳ {isWork ? 'Iniciando foco' : 'Iniciando descanso'} em{' '}
+              {session.autoTransitionSecondsLeft ?? 5}s...
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onPlayPause}
+              aria-label="Iniciar imediatamente"
+              className="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-xl bg-amber-500 hover:bg-amber-600 text-white cursor-pointer transition-colors shadow-xs"
+            >
+              Iniciar agora
+            </button>
+            <button
+              type="button"
+              onClick={onReset}
+              aria-label="Cancelar transição"
+              className="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-slate-200 cursor-pointer transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Immersive Center */}
       <div className="flex-1 flex flex-col items-center justify-center text-center max-w-2xl w-full px-4 my-auto space-y-8">
@@ -104,7 +236,9 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
           <p className="text-sm text-slate-400">
             {isWork
               ? 'Mantenha a concentração e evite distrações'
-              : 'Respire fundo, relaxe os olhos e alongue-se'}
+              : isLongBreak
+                ? 'Descanse profundamente, levante-se e tome água'
+                : 'Respire fundo, relaxe os olhos e alongue-se'}
           </p>
         </div>
 
@@ -123,7 +257,11 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
             className={`text-7xl sm:text-9xl font-mono font-bold tracking-tight drop-shadow-sm select-none transition-colors inline-block ${
               isNearEnd
                 ? 'text-amber-400 animate-countdown-blink font-black'
-                : 'text-white'
+                : isLongBreak
+                  ? 'text-indigo-300'
+                  : isWork
+                    ? 'text-rose-200'
+                    : 'text-emerald-200'
             }`}
           >
             {formatTime(session.timeLeft)}
@@ -138,7 +276,9 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
               className={`h-full rounded-full transition-all duration-300 ${
                 isWork
                   ? 'bg-gradient-to-r from-rose-500 to-amber-500'
-                  : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                  : isLongBreak
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-400'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-400'
               }`}
               style={{ width: `${progressPercent}%` }}
             />
@@ -174,7 +314,11 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
           className={`p-5 min-w-[68px] min-h-[68px] flex items-center justify-center rounded-2xl font-medium transition-all active:scale-95 shadow-xl focus-visible:outline-none focus-visible:ring-4 cursor-pointer ${
             session.isRunning
               ? 'bg-amber-500 hover:bg-amber-600 text-white ring-4 ring-amber-500/20'
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white ring-4 ring-indigo-500/20'
+              : isWork
+                ? 'bg-rose-600 hover:bg-rose-700 text-white ring-4 ring-rose-500/20'
+                : isLongBreak
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white ring-4 ring-indigo-500/20'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-4 ring-emerald-500/20'
           }`}
         >
           {session.isRunning ? (
@@ -187,7 +331,7 @@ export const PomodoroFullscreen: React.FC<PomodoroFullscreenProps> = ({
         {/* Skip Cycle / Switch Mode Button */}
         <button
           type="button"
-          onClick={() => onSwitchMode(isWork ? 'break' : 'work')}
+          onClick={() => onSwitchMode(isWork ? 'short_break' : 'work')}
           aria-label={isWork ? 'Pular para pausa' : 'Pular para foco'}
           title={isWork ? 'Pular para pausa' : 'Pular para foco'}
           className="p-3.5 min-w-[52px] min-h-[52px] flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 cursor-pointer"

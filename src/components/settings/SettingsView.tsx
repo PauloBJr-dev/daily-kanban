@@ -1,6 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
-import type { CatPurrType } from '../../types/kanban'
-import { soundService } from '../../services/soundService'
+﻿import React, { useState } from 'react'
 import { userPreferencesService } from '../../services/userPreferencesService'
 import { useAuth } from '../../hooks/useAuth'
 import { SettingsHeader } from './SettingsHeader'
@@ -9,7 +7,6 @@ import { NotificationsSection } from './NotificationsSection'
 import { AppearanceSection } from './AppearanceSection'
 import { DataBackupSection } from './DataBackupSection'
 import { ShortcutsSection } from './ShortcutsSection'
-import { AcademicSection } from './AcademicSection'
 
 export interface SettingsViewProps {
   userId?: string
@@ -17,23 +14,28 @@ export interface SettingsViewProps {
   onToggleTheme: () => void
   workMinutes: number
   breakMinutes: number
+  longBreakMinutes?: number
+  longBreakCycles?: number
+  autoStartBreaks?: boolean
+  autoStartFocus?: boolean
+  strictFocusMode?: boolean
   isSoundEnabled: boolean
-  catPurrType?: CatPurrType
-  catPurrVolume?: number
-  onUpdateDurations: (workMinutes: number, breakMinutes: number) => void
+  onUpdateDurations: (workMinutes: number, breakMinutes: number, longBreakMinutes?: number) => void
   onToggleSound: () => void
   onUpdateSettings?: (settings: {
     workDurationMinutes?: number
     breakDurationMinutes?: number
+    longBreakDurationMinutes?: number
+    longBreakCycles?: number
+    autoStartBreaks?: boolean
+    autoStartFocus?: boolean
+    strictFocusMode?: boolean
     isSoundEnabled?: boolean
-    catPurrType?: CatPurrType
-    catPurrVolume?: number
   }) => void
   onExport: () => void
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void
   onReset: () => void
   onOpenShortcuts?: () => void
-  onOpenAcademicSubjects?: () => void
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -42,9 +44,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onToggleTheme,
   workMinutes: propWorkMinutes,
   breakMinutes: propBreakMinutes,
+  longBreakMinutes: propLongBreakMinutes = 15,
+  longBreakCycles: propLongBreakCycles = 4,
+  autoStartBreaks: propAutoStartBreaks = true,
+  autoStartFocus: propAutoStartFocus = false,
+  strictFocusMode: propStrictFocusMode = true,
   isSoundEnabled,
-  catPurrType: propCatPurrType = 'none',
-  catPurrVolume: propCatPurrVolume = 0.6,
   onUpdateDurations,
   onToggleSound,
   onUpdateSettings,
@@ -52,45 +57,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onImport,
   onReset,
   onOpenShortcuts,
-  onOpenAcademicSubjects,
 }) => {
   const [workMinutes, setWorkMinutes] = useState<number>(propWorkMinutes)
   const [breakMinutes, setBreakMinutes] = useState<number>(propBreakMinutes)
-  const [catPurrType, setCatPurrType] = useState<CatPurrType>(propCatPurrType)
-  const [catPurrVolume, setCatPurrVolume] = useState<number>(propCatPurrVolume)
+  const [longBreakMinutes, setLongBreakMinutes] = useState<number>(propLongBreakMinutes)
+  const [longBreakCycles, setLongBreakCycles] = useState<number>(propLongBreakCycles)
+  const [autoStartBreaks, setAutoStartBreaks] = useState<boolean>(propAutoStartBreaks)
+  const [autoStartFocus, setAutoStartFocus] = useState<boolean>(propAutoStartFocus)
+  const [strictFocusMode, setStrictFocusMode] = useState<boolean>(propStrictFocusMode)
 
   const [prevProps, setPrevProps] = useState({
     workMinutes: propWorkMinutes,
     breakMinutes: propBreakMinutes,
-    catPurrType: propCatPurrType,
-    catPurrVolume: propCatPurrVolume,
+    longBreakMinutes: propLongBreakMinutes,
+    longBreakCycles: propLongBreakCycles,
+    autoStartBreaks: propAutoStartBreaks,
+    autoStartFocus: propAutoStartFocus,
+    strictFocusMode: propStrictFocusMode,
   })
 
-  // Sincroniza estado com novas props quando alteradas externamente (Padrão oficial React 19)
   if (
     prevProps.workMinutes !== propWorkMinutes ||
     prevProps.breakMinutes !== propBreakMinutes ||
-    prevProps.catPurrType !== propCatPurrType ||
-    prevProps.catPurrVolume !== propCatPurrVolume
+    prevProps.longBreakMinutes !== propLongBreakMinutes ||
+    prevProps.longBreakCycles !== propLongBreakCycles ||
+    prevProps.autoStartBreaks !== propAutoStartBreaks ||
+    prevProps.autoStartFocus !== propAutoStartFocus ||
+    prevProps.strictFocusMode !== propStrictFocusMode
   ) {
     setPrevProps({
       workMinutes: propWorkMinutes,
       breakMinutes: propBreakMinutes,
-      catPurrType: propCatPurrType,
-      catPurrVolume: propCatPurrVolume,
+      longBreakMinutes: propLongBreakMinutes,
+      longBreakCycles: propLongBreakCycles,
+      autoStartBreaks: propAutoStartBreaks,
+      autoStartFocus: propAutoStartFocus,
+      strictFocusMode: propStrictFocusMode,
     })
     setWorkMinutes(propWorkMinutes)
     setBreakMinutes(propBreakMinutes)
-    setCatPurrType(propCatPurrType)
-    setCatPurrVolume(propCatPurrVolume)
+    setLongBreakMinutes(propLongBreakMinutes)
+    setLongBreakCycles(propLongBreakCycles)
+    setAutoStartBreaks(propAutoStartBreaks)
+    setAutoStartFocus(propAutoStartFocus)
+    setStrictFocusMode(propStrictFocusMode)
   }
-
-  // Desativa áudio contínuo ao desmontar tela
-  useEffect(() => {
-    return () => {
-      soundService.stopCatPurr()
-    }
-  }, [])
 
   const auth = useAuth(false)
   const currentUserId = propUserId || auth?.user?.id
@@ -98,7 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleWorkMinutesChange = (mins: number) => {
     const valid = Math.max(1, Math.min(180, mins))
     setWorkMinutes(valid)
-    onUpdateDurations(valid, breakMinutes)
+    onUpdateDurations(valid, breakMinutes, longBreakMinutes)
     onUpdateSettings?.({ workDurationMinutes: valid })
     userPreferencesService.saveLocalPreferences({
       pomodoro: { workDurationMinutes: valid },
@@ -115,7 +126,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleBreakMinutesChange = (mins: number) => {
     const valid = Math.max(1, Math.min(60, mins))
     setBreakMinutes(valid)
-    onUpdateDurations(workMinutes, valid)
+    onUpdateDurations(workMinutes, valid, longBreakMinutes)
     onUpdateSettings?.({ breakDurationMinutes: valid })
     userPreferencesService.saveLocalPreferences({
       pomodoro: { breakDurationMinutes: valid },
@@ -129,46 +140,95 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }
 
-  const handleSelectPurr = (type: CatPurrType) => {
-    soundService.stopCatPurr()
-    setCatPurrType(type)
-    onUpdateSettings?.({ catPurrType: type })
+  const handleLongBreakMinutesChange = (mins: number) => {
+    const valid = Math.max(1, Math.min(120, mins))
+    setLongBreakMinutes(valid)
+    onUpdateDurations(workMinutes, breakMinutes, valid)
+    onUpdateSettings?.({ longBreakDurationMinutes: valid })
     userPreferencesService.saveLocalPreferences({
-      pomodoro: { catPurrType: type },
+      pomodoro: { longBreakDurationMinutes: valid },
     })
     if (currentUserId) {
       userPreferencesService
         .syncUserPreferences(currentUserId, {
-          pomodoro: { catPurrType: type },
+          pomodoro: { longBreakDurationMinutes: valid },
         })
         .catch((err) => console.error('Erro ao sincronizar preferências:', err))
     }
   }
 
-  const handleVolumeChange = (vol: number) => {
-    const valid = Math.max(0.05, Math.min(1, vol))
-    setCatPurrVolume(valid)
-    onUpdateSettings?.({ catPurrVolume: valid })
+  const handleLongBreakCyclesChange = (cycles: number) => {
+    const valid = Math.max(1, Math.min(12, cycles))
+    setLongBreakCycles(valid)
+    onUpdateSettings?.({ longBreakCycles: valid })
     userPreferencesService.saveLocalPreferences({
-      pomodoro: { catPurrVolume: valid },
+      pomodoro: { longBreakCycles: valid },
     })
     if (currentUserId) {
       userPreferencesService
         .syncUserPreferences(currentUserId, {
-          pomodoro: { catPurrVolume: valid },
+          pomodoro: { longBreakCycles: valid },
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
+  }
+
+  const handleAutoStartBreaksChange = (enabled: boolean) => {
+    setAutoStartBreaks(enabled)
+    onUpdateSettings?.({ autoStartBreaks: enabled })
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: { autoStartBreaks: enabled },
+    })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: { autoStartBreaks: enabled },
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
+  }
+
+  const handleAutoStartFocusChange = (enabled: boolean) => {
+    setAutoStartFocus(enabled)
+    onUpdateSettings?.({ autoStartFocus: enabled })
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: { autoStartFocus: enabled },
+    })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: { autoStartFocus: enabled },
+        })
+        .catch((err) => console.error('Erro ao sincronizar preferências:', err))
+    }
+  }
+
+  const handleStrictFocusModeChange = (enabled: boolean) => {
+    setStrictFocusMode(enabled)
+    onUpdateSettings?.({ strictFocusMode: enabled })
+    userPreferencesService.saveLocalPreferences({
+      pomodoro: { strictFocusMode: enabled },
+    })
+    if (currentUserId) {
+      userPreferencesService
+        .syncUserPreferences(currentUserId, {
+          pomodoro: { strictFocusMode: enabled },
         })
         .catch((err) => console.error('Erro ao sincronizar preferências:', err))
     }
   }
 
   const handleManualSave = () => {
-    onUpdateDurations(workMinutes, breakMinutes)
+    onUpdateDurations(workMinutes, breakMinutes, longBreakMinutes)
     const settings = {
       workDurationMinutes: workMinutes,
       breakDurationMinutes: breakMinutes,
+      longBreakDurationMinutes: longBreakMinutes,
+      longBreakCycles,
+      autoStartBreaks,
+      autoStartFocus,
+      strictFocusMode,
       isSoundEnabled,
-      catPurrType,
-      catPurrVolume,
     }
     onUpdateSettings?.(settings)
     userPreferencesService.saveLocalPreferences({
@@ -186,27 +246,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-8 animate-in fade-in duration-200">
       {/* 1. Header Fiel ao Stitch com Sticky Blur & Sub-navegação */}
-      <SettingsHeader
-        onSaveClick={handleManualSave}
-        hasAcademicSection={Boolean(onOpenAcademicSubjects)}
-      />
+      <SettingsHeader onSaveClick={handleManualSave} />
 
-      {/* 2. Temporizador Pomodoro */}
+      {/* 2. Temporizador Pomodoro (com 4 cards e automações) */}
       <PomodoroSection
         workMinutes={workMinutes}
         breakMinutes={breakMinutes}
+        longBreakMinutes={longBreakMinutes}
+        longBreakCycles={longBreakCycles}
+        autoStartBreaks={autoStartBreaks}
+        autoStartFocus={autoStartFocus}
+        strictFocusMode={strictFocusMode}
         onUpdateWorkMinutes={handleWorkMinutesChange}
         onUpdateBreakMinutes={handleBreakMinutesChange}
+        onUpdateLongBreakMinutes={handleLongBreakMinutesChange}
+        onUpdateLongBreakCycles={handleLongBreakCyclesChange}
+        onToggleAutoStartBreaks={handleAutoStartBreaksChange}
+        onToggleAutoStartFocus={handleAutoStartFocusChange}
+        onToggleStrictFocusMode={handleStrictFocusModeChange}
+        onUpdateSettings={onUpdateSettings}
       />
 
-      {/* 3. Notificações e Sons */}
+      {/* 3. Notificações */}
       <NotificationsSection
         isSoundEnabled={isSoundEnabled}
         onToggleSound={onToggleSound}
-        catPurrType={catPurrType}
-        catPurrVolume={catPurrVolume}
-        onSelectPurr={handleSelectPurr}
-        onVolumeChange={handleVolumeChange}
       />
 
       {/* 4. Aparência da Interface */}
@@ -215,12 +279,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* 5. Gerenciamento de Dados & Backup */}
       <DataBackupSection onExport={onExport} onImport={onImport} onReset={onReset} />
 
-      {/* 6. Disciplinas & Matérias Acadêmicas (se habilitado) */}
-      {onOpenAcademicSubjects && (
-        <AcademicSection onOpenAcademicSubjects={onOpenAcademicSubjects} />
-      )}
-
-      {/* 7. Atalhos de Teclado */}
+      {/* 6. Atalhos de Teclado */}
       <ShortcutsSection onOpenShortcuts={onOpenShortcuts} />
     </div>
   )

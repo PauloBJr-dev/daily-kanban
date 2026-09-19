@@ -134,15 +134,16 @@ export const AppContent: React.FC = () => {
   const handleSessionCompleted = useCallback(
     (record: {
       taskId?: string | null
-      mode: 'work' | 'break'
+      mode: 'work' | 'break' | 'short_break' | 'long_break'
       durationMinutes: number
       completedAt: string
     }) => {
       if (!user) return
+      const normalizedMode = record.mode === 'work' ? 'work' : 'break'
       pomodoroSessionService
         .logCompletedSession(user.id, {
           taskId: record.taskId,
-          mode: record.mode,
+          mode: normalizedMode,
           durationMinutes: record.durationMinutes,
           completedAt: record.completedAt,
         })
@@ -340,13 +341,19 @@ export const AppContent: React.FC = () => {
         }
         if (prefs.pomodoro) {
           const current = sessionRef.current
-          updateSettings(
-            prefs.pomodoro.workDurationMinutes ?? Math.round(current.workDuration / 60),
-            prefs.pomodoro.breakDurationMinutes ?? Math.round(current.breakDuration / 60),
-            prefs.pomodoro.isSoundEnabled ?? current.isSoundEnabled ?? true,
-            prefs.pomodoro.catPurrType ?? current.catPurrType ?? 'none',
-            prefs.pomodoro.catPurrVolume ?? current.catPurrVolume ?? 0.6
-          )
+          updateSettings({
+            workMinutes:
+              prefs.pomodoro.workDurationMinutes ?? Math.round(current.workDuration / 60),
+            breakMinutes:
+              prefs.pomodoro.breakDurationMinutes ?? Math.round(current.breakDuration / 60),
+            longBreakMinutes:
+              prefs.pomodoro.longBreakDurationMinutes ?? Math.round(current.longBreakDuration / 60),
+            longBreakCycles: prefs.pomodoro.longBreakCycles ?? current.totalCycles ?? 4,
+            autoStartBreaks: prefs.pomodoro.autoStartBreaks ?? current.autoStartBreaks ?? true,
+            autoStartFocus: prefs.pomodoro.autoStartFocus ?? current.autoStartFocus ?? false,
+            strictFocusMode: prefs.pomodoro.strictFocusMode ?? current.strictFocusMode ?? false,
+            isSoundEnabled: prefs.pomodoro.isSoundEnabled ?? current.isSoundEnabled ?? true,
+          })
         }
       })
       .catch((err) => {
@@ -784,9 +791,12 @@ export const AppContent: React.FC = () => {
               onToggleTheme={toggleTheme}
               workMinutes={Math.round(session.workDuration / 60)}
               breakMinutes={Math.round(session.breakDuration / 60)}
+              longBreakMinutes={Math.round(session.longBreakDuration / 60)}
+              longBreakCycles={session.totalCycles}
+              autoStartBreaks={session.autoStartBreaks}
+              autoStartFocus={session.autoStartFocus}
+              strictFocusMode={session.strictFocusMode}
               isSoundEnabled={session.isSoundEnabled ?? true}
-              catPurrType={session.catPurrType ?? 'none'}
-              catPurrVolume={session.catPurrVolume ?? 0.6}
               onUpdateDurations={updateDurations}
               onToggleSound={toggleSound}
               onUpdateSettings={(settings) => {
@@ -794,11 +804,28 @@ export const AppContent: React.FC = () => {
                   settings.workDurationMinutes ?? Math.round(session.workDuration / 60)
                 const breakMins =
                   settings.breakDurationMinutes ?? Math.round(session.breakDuration / 60)
+                const longBreakMins =
+                  settings.longBreakDurationMinutes ??
+                  Math.round(session.longBreakDuration / 60)
+                const cycles = settings.longBreakCycles ?? session.totalCycles ?? 4
+                const autoBreaks =
+                  settings.autoStartBreaks ?? session.autoStartBreaks ?? true
+                const autoFocus =
+                  settings.autoStartFocus ?? session.autoStartFocus ?? false
+                const strictFocus =
+                  settings.strictFocusMode ?? session.strictFocusMode ?? false
                 const isSound = settings.isSoundEnabled ?? session.isSoundEnabled ?? true
-                const purrType = settings.catPurrType ?? session.catPurrType ?? 'none'
-                const purrVol = settings.catPurrVolume ?? session.catPurrVolume ?? 0.6
 
-                updateSettings(workMins, breakMins, isSound, purrType, purrVol)
+                updateSettings({
+                  workMinutes: workMins,
+                  breakMinutes: breakMins,
+                  longBreakMinutes: longBreakMins,
+                  longBreakCycles: cycles,
+                  autoStartBreaks: autoBreaks,
+                  autoStartFocus: autoFocus,
+                  strictFocusMode: strictFocus,
+                  isSoundEnabled: isSound,
+                })
 
                 if (user) {
                   userPreferencesService
@@ -806,9 +833,12 @@ export const AppContent: React.FC = () => {
                       pomodoro: {
                         workDurationMinutes: workMins,
                         breakDurationMinutes: breakMins,
+                        longBreakDurationMinutes: longBreakMins,
+                        longBreakCycles: cycles,
+                        autoStartBreaks: autoBreaks,
+                        autoStartFocus: autoFocus,
+                        strictFocusMode: strictFocus,
                         isSoundEnabled: isSound,
-                        catPurrType: purrType,
-                        catPurrVolume: purrVol,
                       },
                     })
                     .catch((err) =>
@@ -820,7 +850,6 @@ export const AppContent: React.FC = () => {
               onImport={handleImport}
               onReset={handleResetData}
               onOpenShortcuts={handleOpenShortcuts}
-              onOpenAcademicSubjects={() => handleViewChange('academic')}
             />
           )}
 

@@ -2,10 +2,7 @@
 import confetti from 'canvas-confetti'
 import type { PomodoroSession, PomodoroMode, CatPurrType } from '../types/kanban'
 import type { ActivePomodoroSession } from '../services/pomodoroSessionService'
-import {
-  playWorkCompleteSound,
-  playBreakCompleteSound,
-} from '../services/soundService'
+import { playWorkCompleteSound, playBreakCompleteSound } from '../services/soundService'
 import { notify, requestPermission } from '../services/notificationService'
 
 export const POMODORO_SETTINGS_KEY = 'dailyflow_pomodoro_settings'
@@ -82,19 +79,22 @@ const loadSettings = (): PomodoroSettings => {
         workDuration:
           typeof parsed.workDuration === 'number' && parsed.workDuration > 0
             ? parsed.workDuration
-            : typeof parsed.workDurationMinutes === 'number' && parsed.workDurationMinutes > 0
+            : typeof parsed.workDurationMinutes === 'number' &&
+                parsed.workDurationMinutes > 0
               ? parsed.workDurationMinutes * 60
               : DEFAULT_WORK_TIME,
         breakDuration:
           typeof parsed.breakDuration === 'number' && parsed.breakDuration > 0
             ? parsed.breakDuration
-            : typeof parsed.breakDurationMinutes === 'number' && parsed.breakDurationMinutes > 0
+            : typeof parsed.breakDurationMinutes === 'number' &&
+                parsed.breakDurationMinutes > 0
               ? parsed.breakDurationMinutes * 60
               : DEFAULT_BREAK_TIME,
         longBreakDuration:
           typeof parsed.longBreakDuration === 'number' && parsed.longBreakDuration > 0
             ? parsed.longBreakDuration
-            : typeof parsed.longBreakDurationMinutes === 'number' && parsed.longBreakDurationMinutes > 0
+            : typeof parsed.longBreakDurationMinutes === 'number' &&
+                parsed.longBreakDurationMinutes > 0
               ? parsed.longBreakDurationMinutes * 60
               : DEFAULT_LONG_BREAK_TIME,
         totalCycles:
@@ -199,7 +199,10 @@ export function usePomodoro(
     if (typeof document === 'undefined') return
 
     if (session.isAutoTransitioning && session.autoTransitionSecondsLeft !== undefined) {
-      const isNextBreak = session.mode === 'short_break' || session.mode === 'long_break' || session.mode === 'break'
+      const isNextBreak =
+        session.mode === 'short_break' ||
+        session.mode === 'long_break' ||
+        session.mode === 'break'
       const label = isNextBreak ? 'Iniciando Pausa...' : 'Iniciando Foco...'
       document.title = `⏳ (${session.autoTransitionSecondsLeft}s) ${label} | Organy`
       return
@@ -259,7 +262,8 @@ export function usePomodoro(
       autoTransitionTimerRef.current = null
     }
 
-    const isNextBreak = nextMode === 'short_break' || nextMode === 'long_break' || nextMode === 'break'
+    const isNextBreak =
+      nextMode === 'short_break' || nextMode === 'long_break' || nextMode === 'break'
     const label = isNextBreak ? 'Iniciando Pausa...' : 'Iniciando Foco...'
 
     if (typeof document !== 'undefined') {
@@ -340,7 +344,7 @@ export function usePomodoro(
             body: 'Excelente trabalho! Hora de fazer uma pausa de descanso.',
             icon: '/vite.svg',
           })
-          completedTitleRef.current = '🎉 Foco Concluído! Pausa Curta | Organy'
+          completedTitleRef.current = '🎉 Foco Concluído! Parabéns! | Organy'
         }
 
         try {
@@ -398,12 +402,12 @@ export function usePomodoro(
       const nextMode: PomodoroMode = 'work'
       const nextTime = prev.workDuration
 
-      notify('Intervalo Finalizado! 🎯', {
-        body: 'Pronto para mais um foco?',
+      notify('Intervalo Finalizado! ☕', {
+        body: 'Sua pausa terminou. Pronto para voltar ao foco?',
         icon: '/vite.svg',
       })
 
-      completedTitleRef.current = '⏰ Intervalo Finalizado! Pronto para Estudar? | Organy'
+      completedTitleRef.current = '⏰ Pausa Finalizada! Pronto para Estudar? | Organy'
       setIsUserPaused(false)
 
       callbacksRef.current.onSessionCompleted?.({
@@ -566,40 +570,43 @@ export function usePomodoro(
     }
   }, [session.isRunning, tick])
 
-  const startFocus = useCallback((taskId?: string, taskTitle?: string) => {
-    cancelAutoTransition()
-    completedTitleRef.current = null
-    setIsUserPaused(false)
-    if (
-      typeof window !== 'undefined' &&
-      'Notification' in window &&
-      window.Notification.permission === 'default'
-    ) {
-      requestPermission().catch(() => {})
-    }
-    setSession((prev) => {
-      const durationSeconds = prev.timeLeft
-      targetEndTimeRef.current = Date.now() + durationSeconds * 1000
-      const activeState: ActivePomodoroSession = {
-        taskId: taskId !== undefined ? taskId : prev.taskId,
-        taskTitle: taskTitle !== undefined ? taskTitle : prev.taskTitle,
-        mode: prev.mode,
-        startedAt: new Date().toISOString(),
-        durationSeconds,
-        isRunning: true,
-        pausedTimeLeft: null,
+  const startFocus = useCallback(
+    (taskId?: string, taskTitle?: string) => {
+      cancelAutoTransition()
+      completedTitleRef.current = null
+      setIsUserPaused(false)
+      if (
+        typeof window !== 'undefined' &&
+        'Notification' in window &&
+        window.Notification.permission === 'default'
+      ) {
+        requestPermission().catch(() => {})
       }
-      callbacksRef.current.onActiveSessionChange?.(activeState)
-      return {
-        ...prev,
-        taskId: taskId ?? prev.taskId,
-        taskTitle: taskTitle ?? prev.taskTitle,
-        isRunning: true,
-        isAutoTransitioning: false,
-        autoTransitionSecondsLeft: undefined,
-      }
-    })
-  }, [cancelAutoTransition])
+      setSession((prev) => {
+        const durationSeconds = prev.timeLeft
+        targetEndTimeRef.current = Date.now() + durationSeconds * 1000
+        const activeState: ActivePomodoroSession = {
+          taskId: taskId !== undefined ? taskId : prev.taskId,
+          taskTitle: taskTitle !== undefined ? taskTitle : prev.taskTitle,
+          mode: prev.mode,
+          startedAt: new Date().toISOString(),
+          durationSeconds,
+          isRunning: true,
+          pausedTimeLeft: null,
+        }
+        callbacksRef.current.onActiveSessionChange?.(activeState)
+        return {
+          ...prev,
+          taskId: taskId ?? prev.taskId,
+          taskTitle: taskTitle ?? prev.taskTitle,
+          isRunning: true,
+          isAutoTransitioning: false,
+          autoTransitionSecondsLeft: undefined,
+        }
+      })
+    },
+    [cancelAutoTransition]
+  )
 
   const pauseFocus = useCallback(() => {
     cancelAutoTransition()

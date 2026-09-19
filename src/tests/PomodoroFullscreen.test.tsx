@@ -13,6 +13,12 @@ describe('PomodoroFullscreen component', () => {
     workDuration: 25 * 60,
     breakDuration: 5 * 60,
     isSoundEnabled: true,
+    currentCycle: 1,
+    totalCycles: 4,
+    longBreakDuration: 15 * 60,
+    autoStartBreaks: true,
+    autoStartFocus: false,
+    strictFocusMode: true,
   }
 
   const formatTime = (seconds: number) => {
@@ -135,7 +141,7 @@ describe('PomodoroFullscreen component', () => {
 
     const skipBtn = screen.getByRole('button', { name: /pular para pausa/i })
     fireEvent.click(skipBtn)
-    expect(onSwitchMode).toHaveBeenCalledWith('break')
+    expect(onSwitchMode).toHaveBeenCalledWith('short_break')
   })
 
   it('dispara onClose ao clicar no botão de minimizar', () => {

@@ -1,15 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { PomodoroSettingsModal } from '../components/PomodoroSettingsModal'
 import { notificationService } from '../services/notificationService'
-import { soundService } from '../services/soundService'
-
-vi.mock('../services/soundService', () => ({
-  soundService: {
-    previewCatPurr: vi.fn(),
-    stopCatPurr: vi.fn(),
-  },
-}))
 
 describe('PomodoroSettingsModal', () => {
   const defaultProps = {
@@ -18,8 +10,6 @@ describe('PomodoroSettingsModal', () => {
     currentWorkMinutes: 25,
     currentBreakMinutes: 5,
     isSoundEnabled: true,
-    currentCatPurrType: 'none' as const,
-    currentCatPurrVolume: 0.6,
     onSave: vi.fn(),
   }
 
@@ -32,21 +22,17 @@ describe('PomodoroSettingsModal', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('renderiza o título, presets, inputs, opções de ronrom e botões quando isOpen for true', () => {
+  it('renderiza o título, presets, inputs e botões quando isOpen for true', () => {
     render(<PomodoroSettingsModal {...defaultProps} />)
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Configurações do Pomodoro')).toBeInTheDocument()
+    expect(screen.getByText('Ajustar Temporizador')).toBeInTheDocument()
     expect(screen.getByLabelText(/Duração de Foco/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Duração de Pausa/i)).toBeInTheDocument()
-    expect(screen.getByText(/Som ambiente de descanso/i)).toBeInTheDocument()
-    expect(screen.getByText('Ronrom Suave')).toBeInTheDocument()
-    expect(screen.getByText('Ronrom Profundo')).toBeInTheDocument()
-    expect(screen.getByText('Ronrom Rítmico')).toBeInTheDocument()
-    expect(screen.getByText('Efeitos Sonoros')).toBeInTheDocument()
-    expect(screen.getByText('Notificações do Navegador')).toBeInTheDocument()
+    expect(screen.getByText('Sons ao concluir sessões')).toBeInTheDocument()
+    expect(screen.getByText('Notificações na Área de Trabalho')).toBeInTheDocument()
     expect(screen.getByText('Cancelar')).toBeInTheDocument()
-    expect(screen.getByText('Salvar Configurações')).toBeInTheDocument()
+    expect(screen.getByText('Salvar')).toBeInTheDocument()
   })
 
   it('permite selecionar preset de foco e salva os novos valores', () => {
@@ -67,11 +53,11 @@ describe('PomodoroSettingsModal', () => {
     })
     fireEvent.click(preset15Btn)
 
-    // Clica em Salvar Configurações
-    const saveBtn = screen.getByText('Salvar Configurações')
+    // Clica em Salvar
+    const saveBtn = screen.getByText('Salvar')
     fireEvent.click(saveBtn)
 
-    expect(onSave).toHaveBeenCalledWith(50, 15, true, 'none', 0.6)
+    expect(onSave).toHaveBeenCalledWith(50, 15, true)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -86,9 +72,9 @@ describe('PomodoroSettingsModal', () => {
     fireEvent.change(workInput, { target: { value: '42' } })
     fireEvent.change(breakInput, { target: { value: '8' } })
 
-    fireEvent.click(screen.getByText('Salvar Configurações'))
+    fireEvent.click(screen.getByText('Salvar'))
 
-    expect(onSave).toHaveBeenCalledWith(42, 8, true, 'none', 0.6)
+    expect(onSave).toHaveBeenCalledWith(42, 8, true)
   })
 
   it('alterna o switch de efeitos sonoros', () => {
@@ -96,38 +82,14 @@ describe('PomodoroSettingsModal', () => {
 
     render(<PomodoroSettingsModal {...defaultProps} onSave={onSave} />)
 
-    const switchBtn = screen.getByRole('switch', { name: /efeitos sonoros/i })
+    const switchBtn = screen.getByRole('switch', { name: /sons do pomodoro/i })
     expect(switchBtn).toHaveAttribute('aria-checked', 'true')
 
     fireEvent.click(switchBtn)
     expect(switchBtn).toHaveAttribute('aria-checked', 'false')
 
-    fireEvent.click(screen.getByText('Salvar Configurações'))
-    expect(onSave).toHaveBeenCalledWith(25, 5, false, 'none', 0.6)
-  })
-
-  it('permite selecionar variação de ronrom de gato, ajustar volume e ouvir prévia', () => {
-    const onSave = vi.fn()
-
-    render(<PomodoroSettingsModal {...defaultProps} onSave={onSave} />)
-
-    // Clica na opção "Ronrom Profundo"
-    const deepPurrBtn = screen.getByRole('radio', { name: /Ronrom Profundo/i })
-    fireEvent.click(deepPurrBtn)
-
-    // Slider de volume aparece
-    const volumeSlider = screen.getByLabelText('Ajustar volume do ronrom')
-    expect(volumeSlider).toBeInTheDocument()
-    fireEvent.change(volumeSlider, { target: { value: '0.8' } })
-
-    // Botão de ouvir prévia
-    const previewBtn = screen.getByRole('button', { name: /ouvir prévia/i })
-    fireEvent.click(previewBtn)
-    expect(soundService.previewCatPurr).toHaveBeenCalledWith('deep', 3)
-
-    // Salva configurações
-    fireEvent.click(screen.getByText('Salvar Configurações'))
-    expect(onSave).toHaveBeenCalledWith(25, 5, true, 'deep', 0.8)
+    fireEvent.click(screen.getByText('Salvar'))
+    expect(onSave).toHaveBeenCalledWith(25, 5, false)
   })
 
   it('solicita permissão de notificação ao clicar no botão correspondente', async () => {
@@ -138,12 +100,12 @@ describe('PomodoroSettingsModal', () => {
 
     render(<PomodoroSettingsModal {...defaultProps} />)
 
-    const notifBtn = screen.getByRole('button', { name: /Ativar Notificações/i })
+    const notifBtn = screen.getByRole('button', { name: /Permitir Notificações/i })
     fireEvent.click(notifBtn)
 
     expect(requestSpy).toHaveBeenCalledTimes(1)
     await waitFor(() => {
-      expect(screen.getByText('Ativadas')).toBeInTheDocument()
+      expect(screen.getByText('Notificações Ativas')).toBeInTheDocument()
     })
   })
 
