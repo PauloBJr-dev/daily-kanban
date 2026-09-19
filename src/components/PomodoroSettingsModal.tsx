@@ -165,9 +165,9 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
     }
     return {
       label: 'Ativar Notificações',
-      icon: <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />,
+      icon: <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
       className:
-        'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 cursor-pointer',
+        'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 cursor-pointer',
     }
   }
 
@@ -232,7 +232,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                 value={workMinutes}
                 onChange={(e) => setWorkMinutes(Math.max(1, Number(e.target.value)))}
                 aria-label="Minutos de foco personalizados"
-                className="w-20 px-2.5 py-1 text-right text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                className="w-20 px-2.5 py-1 text-right text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
             {/* Presets de Foco */}
@@ -276,7 +276,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                 value={breakMinutes}
                 onChange={(e) => setBreakMinutes(Math.max(1, Number(e.target.value)))}
                 aria-label="Minutos de pausa personalizados"
-                className="w-20 px-2.5 py-1 text-right text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                className="w-20 px-2.5 py-1 text-right text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               />
             </div>
             {/* Presets de Pausa */}
@@ -340,7 +340,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                     onClick={() => handleSelectPurrType(option.id)}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                       isSelected
-                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 dark:border-indigo-500 ring-2 ring-indigo-500/20'
+                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 dark:border-blue-500 ring-2 ring-blue-500/20'
                         : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
@@ -348,7 +348,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                       <span
                         className={`text-xs font-semibold ${
                           isSelected
-                            ? 'text-indigo-900 dark:text-indigo-200'
+                            ? 'text-blue-900 dark:text-blue-200'
                             : 'text-slate-700 dark:text-slate-300'
                         }`}
                       >
@@ -373,9 +373,9 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-3 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                    <Volume1 className="w-4 h-4 text-indigo-500" />
+                    <Volume1 className="w-4 h-4 text-blue-500" />
                     <span>Volume do Ronrom:</span>
-                    <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                    <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
                       {Math.round(catPurrVolume * 100)}%
                     </span>
                   </div>
@@ -389,7 +389,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                     className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                       isPreviewing
                         ? 'bg-amber-500 text-white border-amber-500 animate-pulse'
-                        : 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
+                        : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40'
                     }`}
                   >
                     {isPreviewing ? (
@@ -399,7 +399,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+                        <Sparkles className="w-3 h-3 text-blue-500 dark:text-blue-400" />
                         <span>Ouvir Prévia</span>
                       </>
                     )}
@@ -414,7 +414,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
                   value={catPurrVolume}
                   onChange={(e) => setCatPurrVolume(Number(e.target.value))}
                   aria-label="Ajustar volume do ronrom"
-                  className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
               </div>
             )}
@@ -429,7 +429,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
               <div
                 className={`p-2 rounded-lg ${
                   soundEnabled
-                    ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400'
+                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400'
                     : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
                 }`}
               >
@@ -454,8 +454,8 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
               aria-checked={soundEnabled}
               aria-label="Ativar ou desativar efeitos sonoros"
               onClick={() => setSoundEnabled((prev) => !prev)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${
-                soundEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
+                soundEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
               }`}
             >
               <span
@@ -510,7 +510,7 @@ const PomodoroSettingsDialog: React.FC<Omit<PomodoroSettingsModalProps, 'isOpen'
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 rounded-xl shadow-xs transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-xs shadow-blue-500/20 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               Salvar Configurações
             </button>

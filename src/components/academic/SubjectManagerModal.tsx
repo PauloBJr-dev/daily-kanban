@@ -89,7 +89,6 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
       aria-modal="true"
       aria-labelledby="subject-manager-title"
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 dark:bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto"
-      onClick={onClose}
     >
       <div
         className="w-full max-w-lg my-0 sm:my-6 rounded-t-3xl sm:rounded-3xl bg-white dark:bg-slate-900 border-t sm:border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
@@ -101,7 +100,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
               <Layers className="w-5 h-5" />
             </div>
             <div>
@@ -157,7 +156,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                   className={`w-full px-3 py-2 text-xs rounded-xl border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none transition-all ${
                     nameError
                       ? 'border-rose-400 ring-2 ring-rose-400/20'
-                      : 'border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500'
+                      : 'border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
                   }`}
                 />
               </div>
@@ -176,7 +175,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                   placeholder="Ex: CC-301"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
                 />
               </div>
             </div>
@@ -201,7 +200,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                         colorConfig.bg
                       } ${
                         isSelected
-                          ? 'ring-3 ring-offset-2 ring-indigo-500 dark:ring-offset-slate-900 scale-110'
+                          ? 'ring-3 ring-offset-2 ring-blue-500 dark:ring-offset-slate-900 scale-110'
                           : 'opacity-80 hover:opacity-100 hover:scale-105'
                       }`}
                     >
@@ -216,7 +215,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
             <div className="flex justify-end pt-1">
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs shadow-indigo-200 dark:shadow-none transition-all active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs shadow-blue-500/20 dark:shadow-none transition-all active:scale-95 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar Disciplina</span>

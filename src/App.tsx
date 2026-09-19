@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Header } from './components/Header'
 import { Sidebar, type AppView } from './components/Sidebar'
 import { MetricsView } from './components/metrics'
@@ -52,6 +52,9 @@ export const AppContent: React.FC = () => {
     setFilters,
     allTags,
     stats,
+    hiddenColumnIds,
+    hideColumn,
+    showColumn,
     addTask,
     updateTask,
     deleteTask,
@@ -651,7 +654,7 @@ export const AppContent: React.FC = () => {
       {/* Skip to main content for accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-xl focus:shadow-lg focus:outline-none"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-xl focus:shadow-lg focus:outline-none"
       >
         Pular para o conteúdo
       </a>
@@ -741,6 +744,9 @@ export const AppContent: React.FC = () => {
                 <Board
                   columns={columns}
                   tasks={tasks}
+                  hiddenColumnIds={hiddenColumnIds}
+                  onHideColumn={hideColumn}
+                  onShowColumn={showColumn}
                   onNewTaskInColumn={handleOpenNewTask}
                   onEditTask={handleOpenEditTask}
                   onDeleteTask={requestDeleteTask}
