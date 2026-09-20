@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
-  BarChart2,
   Download,
   Calendar,
   Bell,
@@ -42,13 +41,9 @@ export const MetricsHeader: React.FC<MetricsHeaderProps> = ({
   return (
     <header className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3.5 mb-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full max-w-7xl mx-auto">
-        {/* Left: Page Title & Context Badge */}
+        {/* Left: Context Badge */}
         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-          <h1 className="font-headline text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>Painel de Métricas & Produtividade</span>
-          </h1>
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-slate-200/60 dark:border-slate-700 whitespace-nowrap inline-flex items-center font-label">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-slate-200/60 dark:border-slate-700 whitespace-nowrap inline-flex items-center font-label">
             Semana {currentWeek} • Semestre {currentSemester}
           </span>
         </div>

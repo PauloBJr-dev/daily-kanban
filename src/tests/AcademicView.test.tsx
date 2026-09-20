@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { AcademicView } from '../components/academic/AcademicView'
 import type { Subject } from '../types/academic'
@@ -311,28 +311,35 @@ describe('AcademicView', () => {
     expect(titleInput).toHaveValue('Nova Anotação')
   })
 
-  it('suporta o Modo Zen ocultando o cabeçalho do caderno e restaurando com Escape', () => {
+  it('suporta o Modo Zen ocultando a barra lateral do estúdio e restaurando com Escape', () => {
     render(<AcademicView />)
 
     // Switch to Studio mode
     fireEvent.click(screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra'))
 
-    // Caderno Acadêmico title is present
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    // Caderno sidebar is present
+    expect(screen.getByText('Caderno')).toBeInTheDocument()
 
     // Enter Zen Mode
     const zenBtn = screen.getByLabelText('Modo Zen')
     fireEvent.click(zenBtn)
 
-    // Header is hidden
-    expect(screen.queryByText('Caderno Acadêmico')).not.toBeInTheDocument()
-    expect(screen.queryByText('Caderno')).not.toBeInTheDocument() // Sidebar hidden in Zen mode
+    // Studio sidebar hidden in Zen mode
+    expect(screen.queryByText('Caderno')).not.toBeInTheDocument()
 
     // Exit Zen Mode with Escape
     fireEvent.keyDown(window, { key: 'Escape' })
 
-    // Header and sidebar restored
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    // Sidebar restored
     expect(screen.getByText('Caderno')).toBeInTheDocument()
+  })
+
+  it('renderiza o estado vazio discreto no card de Disciplinas Ativas quando não há disciplinas', () => {
+    localStorage.clear()
+    render(<AcademicView />)
+
+    expect(screen.getByText('Nenhuma disciplina cadastrada')).toBeInTheDocument()
+    expect(screen.queryByText('Cálc I')).not.toBeInTheDocument()
+    expect(screen.queryByText('Algoritmo Spaced Repetition')).not.toBeInTheDocument()
   })
 })

@@ -155,9 +155,11 @@ describe('App Integration', () => {
     fireEvent.click(academicBtn)
 
     // Academic View renderizada
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
     expect(
-      screen.getByText(/Organize suas matérias, conceitos de estudo/i)
+      screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Estatísticas Acadêmicas' })
     ).toBeInTheDocument()
 
     // Elementos do Kanban não devem estar visíveis
@@ -176,7 +178,9 @@ describe('App Integration', () => {
 
     const academicBtn = screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0]
     fireEvent.click(academicBtn)
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
+    ).toBeInTheDocument()
 
     const kanbanBtn = screen.getAllByRole('button', { name: 'Kanban' })[0]
     fireEvent.click(kanbanBtn)
@@ -225,7 +229,9 @@ describe('App Integration', () => {
 
     render(<App />)
 
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
+    ).toBeInTheDocument()
     expect(screen.queryByText('A Fazer')).not.toBeInTheDocument()
   })
 
