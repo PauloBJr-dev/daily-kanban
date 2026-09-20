@@ -121,6 +121,44 @@ describe('Header Component (Topbar Reformulada)', () => {
     expect(screen.queryByText('Gestão de Perfil & Dados')).not.toBeInTheDocument()
   })
 
+  it('não exibe botões de ação para Métricas, Configurações e Perfil', () => {
+    const { rerender } = render(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="metrics" />
+      </AuthProvider>
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova tarefa' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova anotação' })
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="settings" />
+      </AuthProvider>
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova tarefa' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova anotação' })
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="profile" />
+      </AuthProvider>
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova tarefa' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova anotação' })
+    ).not.toBeInTheDocument()
+  })
+
   it('chama onNewNote ao clicar em Nova Anotação no modo acadêmico', async () => {
     const onNewNote = vi.fn()
     await renderHeader({ ...defaultProps, activeView: 'academic', onNewNote })

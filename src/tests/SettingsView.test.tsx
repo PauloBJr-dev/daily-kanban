@@ -25,7 +25,9 @@ describe('SettingsView Component', () => {
   it('renderiza o cabeçalho e todas as seções de configurações', () => {
     render(<SettingsView {...defaultProps} />)
 
-    expect(screen.getByText('Configurações do Sistema')).toBeInTheDocument()
+    expect(screen.queryByText('Configurações do Sistema')).not.toBeInTheDocument()
+    expect(screen.getByText('Salvar Alterações')).toBeInTheDocument()
+    expect(screen.getByText('Pomodoro')).toBeInTheDocument()
     expect(screen.getByText('Aparência & Tema')).toBeInTheDocument()
     expect(screen.getByText('Temporizador Pomodoro & Sons')).toBeInTheDocument()
     expect(screen.getByText('Dados & Backup')).toBeInTheDocument()

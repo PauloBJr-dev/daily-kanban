@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react'
-import { Plus, BookOpen, SearchX, FilePlus, Sparkles } from 'lucide-react'
+import { Plus, SearchX, FilePlus, Sparkles } from 'lucide-react'
 import { useAcademicNotes } from '../../hooks/useAcademicNotes'
 import { useToast } from '../../hooks/useToast'
 import { AcademicStats } from './AcademicStats'
@@ -333,26 +333,6 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
 
     return (
       <div className={`space-y-6 ${className}`}>
-        {/* View Header with Title and Actions - Hidden in Zen Mode */}
-        {!isZenMode && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80 dark:border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                <BookOpen className="w-5 h-5" />
-              </span>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
-                  Caderno Acadêmico
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Organize suas matérias, conceitos de estudo, datas de prova e cronograma
-                  de revisões.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Content: Studio Mode or Grid/List Mode */}
         {layoutMode === 'studio' ? (
           <AcademicStudio
