@@ -27,9 +27,12 @@ describe('userPreferencesService', () => {
         pomodoro: {
           workDurationMinutes: 50,
           breakDurationMinutes: 10,
+          longBreakDurationMinutes: 20,
+          longBreakCycles: 4,
+          autoStartBreaks: true,
+          autoStartFocus: false,
+          strictFocusMode: true,
           isSoundEnabled: false,
-          catPurrType: 'deep',
-          catPurrVolume: 0.8,
         },
       }
 
@@ -123,6 +126,12 @@ describe('userPreferencesService', () => {
         pomodoro: {
           workDurationMinutes: 25,
           breakDurationMinutes: 5,
+          longBreakDurationMinutes: 15,
+          longBreakCycles: 4,
+          autoStartBreaks: true,
+          autoStartFocus: false,
+          strictFocusMode: true,
+          isSoundEnabled: true,
         },
       }
 
@@ -160,6 +169,12 @@ describe('userPreferencesService', () => {
             pomodoro: {
               workDurationMinutes: 45,
               breakDurationMinutes: 5,
+              longBreakDurationMinutes: 15,
+              longBreakCycles: 4,
+              autoStartBreaks: true,
+              autoStartFocus: false,
+              strictFocusMode: true,
+              isSoundEnabled: true,
             },
           },
         })
@@ -194,7 +209,7 @@ describe('userPreferencesService', () => {
   })
 
   describe('getLocalPreferences and saveLocalPreferences', () => {
-    it('salva e recupera preferências completas do localStorage', () => {
+    it('salva e recupera preferências completas de pomodoro do localStorage sem ronrom de gatos', () => {
       saveLocalPreferences({
         theme: 'dark',
         sidebarCollapsed: true,
@@ -204,9 +219,12 @@ describe('userPreferencesService', () => {
         pomodoro: {
           workDurationMinutes: 30,
           breakDurationMinutes: 6,
+          longBreakDurationMinutes: 18,
+          longBreakCycles: 3,
+          autoStartBreaks: true,
+          autoStartFocus: false,
+          strictFocusMode: true,
           isSoundEnabled: false,
-          catPurrType: 'rhythmic',
-          catPurrVolume: 0.9,
         },
       })
 
@@ -220,9 +238,12 @@ describe('userPreferencesService', () => {
       expect(loaded.pomodoro).toEqual({
         workDurationMinutes: 30,
         breakDurationMinutes: 6,
+        longBreakDurationMinutes: 18,
+        longBreakCycles: 3,
+        autoStartBreaks: true,
+        autoStartFocus: false,
+        strictFocusMode: true,
         isSoundEnabled: false,
-        catPurrType: 'rhythmic',
-        catPurrVolume: 0.9,
       })
       expect(document.documentElement.classList.contains('dark')).toBe(true)
     })

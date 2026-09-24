@@ -1,11 +1,12 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   Plus,
   PanelLeft,
+  Kanban,
   BookOpen,
   BarChart3,
-  Settings as SettingsIcon,
-  User as UserIcon,
+  Settings,
+  User,
 } from 'lucide-react'
 import { UserMenu } from './UserMenu'
 import type { AppView } from './Sidebar'
@@ -45,27 +46,34 @@ const getViewTitle = (view: AppView): string => {
   }
 }
 
+const renderViewIcon = (view: AppView) => {
+  const iconClass = 'w-5 h-5 text-slate-600 dark:text-slate-400 shrink-0'
+  switch (view) {
+    case 'academic':
+      return <BookOpen className={iconClass} />
+    case 'metrics':
+      return <BarChart3 className={iconClass} />
+    case 'settings':
+      return <Settings className={iconClass} />
+    case 'profile':
+      return <User className={iconClass} />
+    case 'kanban':
+    default:
+      return <Kanban className={iconClass} />
+  }
+}
+
 export const Header: React.FC<HeaderProps> = ({
   onNewTask,
   activeView,
   onNewNote,
   onToggleSidebar,
 }) => {
-  // Format current date in Portuguese
-  const todayFormatted = new Intl.DateTimeFormat('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  }).format(new Date())
-
-  // Capitalize first letter
-  const formattedDate = todayFormatted.charAt(0).toUpperCase() + todayFormatted.slice(1)
-
   return (
     <header className="border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl sticky top-0 z-30 transition-colors duration-200">
       <div className="w-full px-6 lg:px-8 py-2.5 sm:py-0 sm:h-16 flex items-center justify-between gap-3">
-        {/* Left: Sidebar Toggle Button + Active Screen Title (No Organy duplicate) */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Left: Sidebar Toggle Button + Module Icon + Module Title in single line */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           {/* Sidebar Toggle Button */}
           <button
             type="button"
@@ -77,58 +85,18 @@ export const Header: React.FC<HeaderProps> = ({
             <PanelLeft className="w-5 h-5" />
           </button>
 
-          <div>
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {renderViewIcon(activeView)}
             <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               {getViewTitle(activeView)}
             </h1>
-            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 hidden xs:block">
-              {formattedDate}
-            </p>
           </div>
         </div>
 
-        {/* Center Context Indicator for non-kanban views (Hidden on small screens) */}
-        {activeView !== 'kanban' && (
-          <div className="hidden md:flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-xs">
-            {activeView === 'academic' && (
-              <>
-                <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="font-medium text-slate-600 dark:text-slate-300">
-                  Espaço de Estudos e Revisões
-                </span>
-              </>
-            )}
-            {activeView === 'metrics' && (
-              <>
-                <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="font-medium text-slate-600 dark:text-slate-300">
-                  Painel Analítico de Produtividade
-                </span>
-              </>
-            )}
-            {activeView === 'settings' && (
-              <>
-                <SettingsIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="font-medium text-slate-600 dark:text-slate-300">
-                  Preferências & Personalização
-                </span>
-              </>
-            )}
-            {activeView === 'profile' && (
-              <>
-                <UserIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="font-medium text-slate-600 dark:text-slate-300">
-                  Gestão de Perfil & Dados
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Right Controls: Main Action Button first, UserMenu on far right */}
+        {/* Right Controls: Contextual Action Button, UserMenu on far right */}
         <div className="flex items-center gap-2.5 shrink-0">
-          {/* Main Action Button (Nova Tarefa or Nova Anotação) */}
-          {activeView === 'academic' ? (
+          {/* Main Action Button: Kanban -> Nova Tarefa, Academic -> Nova Anotação */}
+          {activeView === 'academic' && (
             <button
               type="button"
               onClick={onNewNote}
@@ -142,7 +110,9 @@ export const Header: React.FC<HeaderProps> = ({
                 N
               </kbd>
             </button>
-          ) : (
+          )}
+
+          {activeView === 'kanban' && (
             <button
               type="button"
               onClick={onNewTask}

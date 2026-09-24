@@ -1,5 +1,5 @@
-﻿import React, { useState } from 'react'
-import { ChevronRight, CheckCircle2, Save } from 'lucide-react'
+import React, { useState } from 'react'
+import { CheckCircle2, Save } from 'lucide-react'
 
 export interface SettingsHeaderProps {
   onSaveClick?: () => void
@@ -11,20 +11,16 @@ interface NavItem {
   label: string
 }
 
-export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
-  onSaveClick,
-  hasAcademicSection = false,
-}) => {
+export const SettingsHeader: React.FC<SettingsHeaderProps> = ({ onSaveClick }) => {
   const [activeTab, setActiveTab] = useState<string>('pomodoro')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'just_saved'>('saved')
 
   const navItems: NavItem[] = [
     { id: 'pomodoro', label: 'Pomodoro' },
-    { id: 'notificacoes', label: 'Notificações & Sons' },
+    { id: 'notificacoes', label: 'Notificações' },
     { id: 'aparencia', label: 'Aparência' },
     { id: 'dados', label: 'Dados & Backup' },
     { id: 'atalhos', label: 'Atalhos' },
-    ...(hasAcademicSection ? [{ id: 'academico', label: 'Acadêmico' }] : []),
   ]
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -48,53 +44,11 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
   }
 
   return (
-    <header className="sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 -mx-6 lg:-mx-8 -mt-6 mb-6 px-6 sm:px-8 py-4 flex flex-col gap-3 transition-colors">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Headline & Breadcrumbs */}
-        <div className="flex flex-col">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <span>DailyFlow</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-            <span className="text-blue-600 dark:text-blue-400 font-semibold">
-              Preferências do Sistema &amp; Personalização
-            </span>
-          </div>
-          <h1 className="font-headline text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-0.5">
-            Configurações do Sistema
-          </h1>
-        </div>
-
-        {/* Right Header Actions */}
-        <div className="flex items-center gap-3 self-end sm:self-auto">
-          {/* Saved Indicator */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-xs font-medium border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
-            <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-            <span>
-              {saveStatus === 'saving'
-                ? 'Salvando...'
-                : saveStatus === 'just_saved'
-                  ? 'Alterações salvas!'
-                  : 'Todas alterações salvas'}
-            </span>
-          </div>
-
-          {/* Save Button CTA */}
-          <button
-            type="button"
-            onClick={handleSave}
-            aria-label="Salvar Alterações"
-            className="bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold text-sm px-4 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-          >
-            <Save className="w-4 h-4" />
-            <span>Salvar Alterações</span>
-          </button>
-        </div>
-      </div>
-
+    <header className="sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 -mx-6 lg:-mx-8 -mt-6 mb-6 px-6 sm:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors">
       {/* Quick Anchor Tabs / Sub-nav */}
       <nav
         aria-label="Sub-navegação de configurações"
-        className="flex items-center gap-2 pt-1 border-t border-slate-200/40 dark:border-slate-800/40 overflow-x-auto text-xs font-medium no-scrollbar"
+        className="flex items-center gap-2 overflow-x-auto text-xs font-medium no-scrollbar"
       >
         {navItems.map((item) => {
           const isActive = activeTab === item.id
@@ -103,10 +57,10 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
               key={item.id}
               href={`#${item.id}`}
               onClick={(e) => handleNavClick(e, item.id)}
-              className={`px-3 py-1.5 rounded-full transition-colors whitespace-nowrap cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                 isActive
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-200 font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/70'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {item.label}
@@ -114,6 +68,32 @@ export const SettingsHeader: React.FC<SettingsHeaderProps> = ({
           )
         })}
       </nav>
+
+      {/* Right Header Actions */}
+      <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+        {/* Saved Indicator */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-xs font-medium border border-slate-200/60 dark:border-slate-700/60 shadow-2xs">
+          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <span>
+            {saveStatus === 'saving'
+              ? 'Salvando...'
+              : saveStatus === 'just_saved'
+                ? 'Alterações salvas!'
+                : 'Todas alterações salvas'}
+          </span>
+        </div>
+
+        {/* Save Button CTA */}
+        <button
+          type="button"
+          onClick={handleSave}
+          aria-label="Salvar Alterações"
+          className="bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold text-sm px-4 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+        >
+          <Save className="w-4 h-4" />
+          <span>Salvar Alterações</span>
+        </button>
+      </div>
     </header>
   )
 }

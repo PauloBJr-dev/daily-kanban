@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { App } from '../App'
 import { academicStorageService } from '../services/academicStorageService'
 import { userPreferencesService } from '../services/userPreferencesService'
@@ -13,26 +13,43 @@ describe('App Integration', () => {
     localStorage.setItem('organy_guest_acknowledged', 'true')
   })
 
-  it('abre automaticamente o AuthModal na primeira visita quando usuário não está logado e não consentiu', async () => {
+  it('exibe a tela dedicada de autenticação AuthView na primeira visita e permite continuar como visitante', async () => {
     localStorage.removeItem('organy_guest_acknowledged')
     render(<App />)
 
-    // Modal de autenticação abre na primeira visita
-    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeInTheDocument()
-    expect(screen.getByText('O que é Armazenamento Local?')).toBeInTheDocument()
+    // Visualização dedicada de Autenticação na primeira visita (sem blur e sem rolagem no fundo)
+    expect(
+      await screen.findByText('Plataforma de Produtividade Acadêmica')
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Organy' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Criar Conta' })).toBeInTheDocument()
 
-    // Marca o checkbox e continua sem conta
-    const checkbox = screen.getByRole('checkbox', {
-      name: /estou ciente de que meus dados ficarão salvos apenas neste navegador/i,
+    // Clica em Continuar sem Conta
+    const guestBtn = screen.getByRole('button', { name: /continuar sem conta/i })
+    fireEvent.click(guestBtn)
+
+    // Abre o modal de aviso de armazenamento local
+    const dialog = await screen.findByRole('dialog', {}, { timeout: 5000 })
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByText('O que é Armazenamento Local?')).toBeInTheDocument()
+
+    // Marca o checkbox e confirma dentro do modal
+    const checkbox = within(dialog).getByRole('checkbox', {
+      name: /entendo os riscos do armazenamento local e desejo prosseguir sem login/i,
     })
     fireEvent.click(checkbox)
 
-    const continueBtn = screen.getByRole('button', { name: /continuar sem conta/i })
+    const continueBtn = within(dialog).getByRole('button', {
+      name: /continuar sem conta/i,
+    })
     fireEvent.click(continueBtn)
 
-    // Modal fecha e usuário vê o aplicativo
+    // Modal fecha e usuário vê o aplicativo e quadro kanban
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 1, name: /quadro kanban/i })
+      ).toBeInTheDocument()
     })
     expect(localStorage.getItem('organy_guest_acknowledged')).toBe('true')
   })
@@ -123,7 +140,6 @@ describe('App Integration', () => {
     // Métricas renderizada com os KPIs movidos
     expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()
     expect(screen.getByText('Taxa Geral de Conclusão')).toBeInTheDocument()
-    expect(screen.getByText('Painel Analítico de Produtividade')).toBeInTheDocument()
 
     // Kanban não deve estar visível
     expect(
@@ -139,9 +155,11 @@ describe('App Integration', () => {
     fireEvent.click(academicBtn)
 
     // Academic View renderizada
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
     expect(
-      screen.getByText(/Organize suas matérias, conceitos de estudo/i)
+      screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Estatísticas Acadêmicas' })
     ).toBeInTheDocument()
 
     // Elementos do Kanban não devem estar visíveis
@@ -152,9 +170,6 @@ describe('App Integration', () => {
       screen.getAllByRole('button', { name: 'Criar nova anotação' })[0]
     ).toBeInTheDocument()
 
-    // Pill central agora é acadêmico
-    expect(screen.getByText('Espaço de Estudos e Revisões')).toBeInTheDocument()
-
     expect(localStorage.getItem('dailyflow_active_view')).toBe('academic')
   })
 
@@ -163,7 +178,9 @@ describe('App Integration', () => {
 
     const academicBtn = screen.getAllByRole('button', { name: 'Espaço Acadêmico' })[0]
     fireEvent.click(academicBtn)
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
+    ).toBeInTheDocument()
 
     const kanbanBtn = screen.getAllByRole('button', { name: 'Kanban' })[0]
     fireEvent.click(kanbanBtn)
@@ -212,7 +229,9 @@ describe('App Integration', () => {
 
     render(<App />)
 
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
+    ).toBeInTheDocument()
     expect(screen.queryByText('A Fazer')).not.toBeInTheDocument()
   })
 
@@ -247,7 +266,7 @@ describe('App Integration', () => {
     ).toBeInTheDocument()
 
     // Alterna para o Modo Studio
-    fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
+    fireEvent.click(screen.getByText('Nota para Teste Zen'))
 
     // Ativa o Modo Zen
     const zenBtn = screen.getByLabelText('Modo Zen')
@@ -373,6 +392,10 @@ describe('App Integration', () => {
       loading: false,
       isConfigured: true,
       authModalInitialTab: undefined,
+      isPasswordRecovery: false,
+      setIsPasswordRecovery: vi.fn(),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+      updateUserPassword: vi.fn().mockResolvedValue({ error: null }),
       signInWithGoogle: vi.fn(),
       signOut: vi.fn(),
       signUpWithPassword: vi.fn(),
@@ -413,5 +436,36 @@ describe('App Integration', () => {
       expect(fetchPrefsSpy).toHaveBeenCalledWith('user-synced-123')
       expect(fetchActiveSessionSpy).toHaveBeenCalledWith('user-synced-123')
     })
+  })
+  it('renderiza ResetPasswordView quando rota for /reset-password ou isPasswordRecovery for true', async () => {
+    delete (window as any).location
+    window.location = new URL('http://localhost:5173/reset-password') as any
+
+    vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
+      user: null,
+      session: null,
+      loading: false,
+      isConfigured: true,
+      authModalInitialTab: undefined,
+      isPasswordRecovery: true,
+      setIsPasswordRecovery: vi.fn(),
+      signInWithGoogle: vi.fn().mockResolvedValue({ error: null }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+      signUpWithPassword: vi.fn().mockResolvedValue({ error: null }),
+      signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+      updateUserPassword: vi.fn().mockResolvedValue({ error: null }),
+      continueAsGuest: vi.fn(),
+      isGuestAcknowledged: true,
+      isAuthModalOpen: false,
+      openAuthModal: vi.fn(),
+      closeAuthModal: vi.fn(),
+    })
+
+    render(<App />)
+
+    expect(screen.getByText('Criar Nova Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nova Senha')).toBeInTheDocument()
+    expect(screen.getByLabelText('Confirmar Nova Senha')).toBeInTheDocument()
   })
 })

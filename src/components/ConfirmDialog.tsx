@@ -115,7 +115,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       aria-labelledby="confirm-dialog-title"
       aria-describedby="confirm-dialog-description"
       className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 dark:bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={onClose}
     >
       <div
         className="w-full max-w-md rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border-t sm:border border-slate-200/80 dark:border-slate-800 shadow-2xl p-5 sm:p-6 relative animate-in slide-in-from-bottom sm:zoom-in-95 duration-150"
@@ -127,7 +126,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <button
           onClick={onClose}
           aria-label="Fechar"
-          className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         >
           <X className="w-4 h-4" />
         </button>
@@ -201,7 +200,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             {cancelText}
           </button>
@@ -215,7 +214,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 ? 'opacity-50 cursor-not-allowed bg-slate-400 dark:bg-slate-700'
                 : isDanger || isStep2
                   ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-200 dark:shadow-none focus-visible:ring-rose-500 active:scale-95'
-                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 dark:shadow-none focus-visible:ring-indigo-500 active:scale-95'
+                  : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 dark:shadow-none focus-visible:ring-blue-500 active:scale-95'
             }`}
           >
             {currentConfirmText}

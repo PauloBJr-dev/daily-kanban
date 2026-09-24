@@ -89,7 +89,9 @@ describe('Metrics Header Component', () => {
       />
     )
 
-    expect(screen.getByText('Painel de Métricas & Produtividade')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Painel de Métricas & Produtividade')
+    ).not.toBeInTheDocument()
     expect(screen.getByText(/Semana \d+ • Semestre \d/)).toBeInTheDocument()
 
     // Week selector buttons

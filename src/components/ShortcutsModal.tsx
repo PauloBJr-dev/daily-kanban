@@ -32,25 +32,25 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
       keyLabel: 'N',
       actionName: 'Nova Tarefa',
       description: 'Abre instantaneamente o formulário de criação de tarefa.',
-      icon: <Plus className="w-4 h-4 text-indigo-500" />,
+      icon: <Plus className="w-4 h-4 text-blue-500" />,
     },
     {
       keyLabel: '/',
       actionName: 'Buscar Tarefas',
       description: 'Foca a barra de busca e seleciona o texto existente.',
-      icon: <Search className="w-4 h-4 text-indigo-500" />,
+      icon: <Search className="w-4 h-4 text-blue-500" />,
     },
     {
       keyLabel: 'P',
       actionName: 'Timer Pomodoro',
       description: 'Alterna entre iniciar e pausar o cronômetro de foco.',
-      icon: <Play className="w-4 h-4 text-indigo-500" />,
+      icon: <Play className="w-4 h-4 text-blue-500" />,
     },
     {
       keyLabel: '?',
       actionName: 'Guia de Atalhos',
       description: 'Abre ou fecha este painel rápido de atalhos de teclado.',
-      icon: <Keyboard className="w-4 h-4 text-indigo-500" />,
+      icon: <Keyboard className="w-4 h-4 text-blue-500" />,
     },
     {
       keyLabel: 'Esc',
@@ -66,7 +66,6 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
       aria-modal="true"
       aria-labelledby="shortcuts-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={onClose}
     >
       <div
         className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
@@ -75,7 +74,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/60 shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900/60 shadow-xs">
               <Keyboard className="w-5 h-5" />
             </div>
             <div>
@@ -93,7 +92,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
           <button
             onClick={onClose}
             aria-label="Fechar atalhos"
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -130,7 +129,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
         {/* Informative Footer */}
         <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-500 shrink-0" />
+            <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
             <span className="text-[11px]">
               Atalhos são pausados automaticamente enquanto você digita.
             </span>
@@ -139,7 +138,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
             type="button"
             onClick={onClose}
             aria-label="Entendido, fechar ajuda"
-            className="px-3.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 cursor-pointer"
+            className="px-3.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
           >
             Entendido
           </button>

@@ -9,9 +9,12 @@ export interface UserPreferences {
   pomodoro?: {
     workDurationMinutes?: number
     breakDurationMinutes?: number
+    longBreakDurationMinutes?: number
+    longBreakCycles?: number
+    autoStartBreaks?: boolean
+    autoStartFocus?: boolean
+    strictFocusMode?: boolean
     isSoundEnabled?: boolean
-    catPurrType?: 'none' | 'soft' | 'deep' | 'rhythmic'
-    catPurrVolume?: number
   }
 }
 
@@ -120,13 +123,34 @@ export function getLocalPreferences(): UserPreferences {
               : typeof parsed.breakDurationMinutes === 'number'
                 ? parsed.breakDurationMinutes
                 : undefined,
+          longBreakDurationMinutes:
+            typeof parsed.longBreakDuration === 'number'
+              ? Math.round(parsed.longBreakDuration / 60)
+              : typeof parsed.longBreakDurationMinutes === 'number'
+                ? parsed.longBreakDurationMinutes
+                : undefined,
+          longBreakCycles:
+            typeof parsed.longBreakCycles === 'number'
+              ? parsed.longBreakCycles
+              : typeof parsed.totalCycles === 'number'
+                ? parsed.totalCycles
+                : undefined,
+          autoStartBreaks:
+            typeof parsed.autoStartBreaks === 'boolean'
+              ? parsed.autoStartBreaks
+              : undefined,
+          autoStartFocus:
+            typeof parsed.autoStartFocus === 'boolean'
+              ? parsed.autoStartFocus
+              : undefined,
+          strictFocusMode:
+            typeof parsed.strictFocusMode === 'boolean'
+              ? parsed.strictFocusMode
+              : undefined,
           isSoundEnabled:
             typeof parsed.isSoundEnabled === 'boolean'
               ? parsed.isSoundEnabled
               : undefined,
-          catPurrType: parsed.catPurrType,
-          catPurrVolume:
-            typeof parsed.catPurrVolume === 'number' ? parsed.catPurrVolume : undefined,
         }
       } catch {
         // Ignora erro de JSON corrompido
@@ -200,13 +224,37 @@ export function saveLocalPreferences(prefs: Partial<UserPreferences>): void {
           prefs.pomodoro.breakDurationMinutes !== undefined
             ? prefs.pomodoro.breakDurationMinutes * 60
             : (currentParsed.breakDuration ?? 5 * 60),
+        longBreakDuration:
+          prefs.pomodoro.longBreakDurationMinutes !== undefined
+            ? prefs.pomodoro.longBreakDurationMinutes * 60
+            : (currentParsed.longBreakDuration ?? 15 * 60),
+        longBreakCycles:
+          prefs.pomodoro.longBreakCycles !== undefined
+            ? prefs.pomodoro.longBreakCycles
+            : (currentParsed.longBreakCycles ?? currentParsed.totalCycles ?? 4),
+        totalCycles:
+          prefs.pomodoro.longBreakCycles !== undefined
+            ? prefs.pomodoro.longBreakCycles
+            : (currentParsed.totalCycles ?? currentParsed.longBreakCycles ?? 4),
+        autoStartBreaks:
+          prefs.pomodoro.autoStartBreaks !== undefined
+            ? prefs.pomodoro.autoStartBreaks
+            : (currentParsed.autoStartBreaks ?? true),
+        autoStartFocus:
+          prefs.pomodoro.autoStartFocus !== undefined
+            ? prefs.pomodoro.autoStartFocus
+            : (currentParsed.autoStartFocus ?? false),
+        strictFocusMode:
+          prefs.pomodoro.strictFocusMode !== undefined
+            ? prefs.pomodoro.strictFocusMode
+            : (currentParsed.strictFocusMode ?? true),
         isSoundEnabled:
           prefs.pomodoro.isSoundEnabled !== undefined
             ? prefs.pomodoro.isSoundEnabled
             : (currentParsed.isSoundEnabled ?? true),
-        catPurrType: prefs.pomodoro.catPurrType ?? currentParsed.catPurrType ?? 'none',
-        catPurrVolume: prefs.pomodoro.catPurrVolume ?? currentParsed.catPurrVolume ?? 0.6,
       }
+      delete updatedPomodoro.catPurrType
+      delete updatedPomodoro.catPurrVolume
 
       localStorage.setItem('dailyflow_pomodoro_settings', JSON.stringify(updatedPomodoro))
     }

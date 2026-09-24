@@ -13,6 +13,12 @@ describe('PomodoroWidget component', () => {
     workDuration: 25 * 60,
     breakDuration: 5 * 60,
     isSoundEnabled: true,
+    currentCycle: 1,
+    totalCycles: 4,
+    longBreakDuration: 15 * 60,
+    autoStartBreaks: true,
+    autoStartFocus: false,
+    strictFocusMode: true,
   }
 
   const formatTime = (seconds: number) => {
@@ -33,7 +39,10 @@ describe('PomodoroWidget component', () => {
       />
     )
 
-    expect(screen.getByText('Bloco de Foco Diário')).toBeInTheDocument()
+    expect(screen.getByText('25m Foco')).toBeInTheDocument()
+    expect(screen.getByText('5m Pausa Curta')).toBeInTheDocument()
+    expect(screen.getByText('15m Pausa Longa')).toBeInTheDocument()
+    expect(screen.getByText(/Ciclo 1 de 4/i)).toBeInTheDocument()
     expect(screen.getByText('🎯 Escrever Testes Automatizados')).toBeInTheDocument()
     expect(screen.getByText('25:00')).toBeInTheDocument()
   })

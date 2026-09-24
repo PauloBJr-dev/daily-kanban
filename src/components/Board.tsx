@@ -1,11 +1,14 @@
-﻿import React, { useState } from 'react'
-import { Plus, X, Check } from 'lucide-react'
+import React, { useState } from 'react'
+import { Plus, X, Check, Eye } from 'lucide-react'
 import type { Column as ColumnType, Task } from '../types/kanban'
 import { Column } from './Column'
 
 interface BoardProps {
   columns: ColumnType[]
   tasks: Task[]
+  hiddenColumnIds?: string[]
+  onHideColumn?: (columnId: string) => void
+  onShowColumn?: (columnId: string) => void
   onNewTaskInColumn: (columnId: string) => void
   onEditTask: (task: Task) => void
   onDeleteTask: (taskId: string) => void
@@ -23,9 +26,43 @@ interface BoardProps {
   focusedTaskId?: string | null
 }
 
+const columnThemes: Record<
+  ColumnType['colorTheme'],
+  { dotColor: string; badgeClass: string }
+> = {
+  blue: {
+    dotColor: 'bg-blue-600',
+    badgeClass: 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
+  },
+  amber: {
+    dotColor: 'bg-amber-500',
+    badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300',
+  },
+  purple: {
+    dotColor: 'bg-purple-500',
+    badgeClass:
+      'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300',
+  },
+  emerald: {
+    dotColor: 'bg-emerald-500',
+    badgeClass: 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
+  },
+  rose: {
+    dotColor: 'bg-rose-500',
+    badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300',
+  },
+  slate: {
+    dotColor: 'bg-slate-400 dark:bg-slate-500',
+    badgeClass: 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
+  },
+}
+
 export const Board: React.FC<BoardProps> = ({
   columns,
   tasks,
+  hiddenColumnIds = [],
+  onHideColumn,
+  onShowColumn,
   onNewTaskInColumn,
   onEditTask,
   onDeleteTask,
@@ -98,10 +135,11 @@ export const Board: React.FC<BoardProps> = ({
   }
 
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null)
+  const visibleColumns = columns.filter((col) => !hiddenColumnIds.includes(col.id))
   const activeColumnId =
-    selectedColumnId && columns.some((c) => c.id === selectedColumnId)
+    selectedColumnId && visibleColumns.some((c) => c.id === selectedColumnId)
       ? selectedColumnId
-      : columns[0]?.id || ''
+      : visibleColumns[0]?.id || ''
 
   const scrollToColumn = (columnId: string) => {
     setSelectedColumnId(columnId)
@@ -118,12 +156,12 @@ export const Board: React.FC<BoardProps> = ({
       <nav
         aria-label="Navegação rápida de colunas"
         className={`grid gap-1.5 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 sm:hidden mb-3 w-full no-scrollbar ${
-          columns.length <= 3
+          visibleColumns.length <= 3
             ? 'grid-cols-3'
             : 'grid-flow-col auto-cols-[minmax(110px,1fr)] overflow-x-auto'
         }`}
       >
-        {columns.map((col) => {
+        {visibleColumns.map((col) => {
           const colTasks = tasks.filter((t) => t.columnId === col.id)
           const isActive = col.id === activeColumnId
           return (
@@ -151,6 +189,54 @@ export const Board: React.FC<BoardProps> = ({
       <div className="flex items-start gap-5 overflow-x-auto pb-6 pt-1 px-0.5 scroll-smooth snap-x snap-mandatory">
         {columns.map((column) => {
           const colTasks = tasks.filter((t) => t.columnId === column.id)
+          const isHidden = hiddenColumnIds.includes(column.id)
+
+          if (isHidden) {
+            const currentTheme = columnThemes[column.colorTheme] || columnThemes.slate
+            return (
+              <div
+                key={column.id}
+                id={`column-collapsed-${column.id}`}
+                data-testid={`column-collapsed-${column.id}`}
+                className="shrink-0 w-12 min-w-[48px] min-h-[460px] rounded-2xl bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col items-center py-4 px-1 select-none transition-all duration-200 group"
+              >
+                {/* Top: Dot indicator + Task count badge */}
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${currentTheme.dotColor}`}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${currentTheme.badgeClass}`}
+                    title={`${colTasks.length} tarefas`}
+                  >
+                    {colTasks.length}
+                  </span>
+                </div>
+
+                {/* Center: Eye button to restore */}
+                <div className="my-auto">
+                  <button
+                    type="button"
+                    onClick={() => onShowColumn && onShowColumn(column.id)}
+                    title={`Reexibir coluna ${column.title}`}
+                    aria-label={`Reexibir coluna ${column.title}`}
+                    className="p-2 rounded-xl text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-800 shadow-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Bottom: Vertical Title */}
+                <div className="mt-auto pt-4 [writing-mode:vertical-rl] rotate-180 flex items-center justify-center">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 tracking-tight whitespace-nowrap">
+                    {column.title}
+                  </span>
+                </div>
+              </div>
+            )
+          }
+
           return (
             <Column
               key={column.id}
@@ -167,6 +253,7 @@ export const Board: React.FC<BoardProps> = ({
               onMoveColumn={onMoveColumn}
               onReorderColumns={onReorderColumns}
               onUpdateColumn={onUpdateColumn}
+              onHideColumn={onHideColumn}
               focusedTaskId={focusedTaskId}
             />
           )

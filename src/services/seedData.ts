@@ -1,4 +1,11 @@
-﻿import type { Column, KanbanData, Task } from '../types/kanban'
+﻿import {
+  DEFAULT_COLUMN_IDS,
+  type Column,
+  type KanbanData,
+  type Task,
+} from '../types/kanban'
+
+export { DEFAULT_COLUMN_IDS }
 
 export const DEFAULT_COLUMNS: Column[] = [
   {

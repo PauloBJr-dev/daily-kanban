@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import {
   Plus,
   Trash2,
@@ -8,8 +8,9 @@ import {
   Check,
   X,
   GripVertical,
+  EyeOff,
 } from 'lucide-react'
-import type { Column as ColumnType, Task } from '../types/kanban'
+import { DEFAULT_COLUMN_IDS, type Column as ColumnType, type Task } from '../types/kanban'
 import { TaskCard } from './TaskCard'
 
 interface ColumnProps {
@@ -29,6 +30,7 @@ interface ColumnProps {
     columnId: string,
     updates: { title?: string; colorTheme?: ColumnType['colorTheme'] }
   ) => void
+  onHideColumn?: (columnId: string) => void
   focusedTaskId?: string | null
 }
 
@@ -46,6 +48,7 @@ export const Column: React.FC<ColumnProps> = ({
   onMoveColumn,
   onReorderColumns,
   onUpdateColumn,
+  onHideColumn,
   focusedTaskId,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false)
@@ -369,6 +372,19 @@ export const Column: React.FC<ColumnProps> = ({
               </button>
             )}
 
+            {/* Hide column button */}
+            {onHideColumn && (
+              <button
+                type="button"
+                onClick={() => onHideColumn(column.id)}
+                title={`Ocultar coluna ${column.title}`}
+                aria-label={`Ocultar coluna ${column.title}`}
+                className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 cursor-pointer"
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {/* Quick add button in header */}
             <button
               type="button"
@@ -381,17 +397,20 @@ export const Column: React.FC<ColumnProps> = ({
             </button>
 
             {/* Delete column button (only if NOT permanent and > 2 columns) */}
-            {!column.isPermanent && allColumns.length > 2 && onDeleteColumn && (
-              <button
-                type="button"
-                onClick={() => onDeleteColumn(column.id)}
-                title="Excluir coluna"
-                aria-label={`Excluir coluna ${column.title}`}
-                className="p-1 rounded text-slate-300 hover:text-rose-500 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
+            {!column.isPermanent &&
+              !DEFAULT_COLUMN_IDS.includes(column.id as any) &&
+              allColumns.length > 2 &&
+              onDeleteColumn && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteColumn(column.id)}
+                  title="Excluir coluna"
+                  aria-label={`Excluir coluna ${column.title}`}
+                  className="p-1 rounded text-slate-300 hover:text-rose-500 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
           </div>
         </div>
       )}

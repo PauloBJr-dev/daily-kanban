@@ -36,7 +36,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
       }
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/reset-password`,
       })
 
       if (resetError) {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, X, Pin, LayoutGrid, List, Layers, ArrowUpDown } from 'lucide-react'
+import { Search, X, Pin, LayoutGrid, List, Plus, ArrowUpDown } from 'lucide-react'
 import type {
   AcademicFilterState,
   AcademicNote,
@@ -101,7 +101,7 @@ export const AcademicFilterBar: React.FC<AcademicFilterBarProps> = ({
         {/* Action Controls Cluster */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Status selector chips */}
-          <div className="flex items-center bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto shadow-xs">
+          <div className="flex items-center bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden overscroll-x-contain touch-pan-x shadow-xs">
             {statusOptions.map((opt) => {
               const isActive = filters.status === opt.id
               return (
@@ -184,27 +184,16 @@ export const AcademicFilterBar: React.FC<AcademicFilterBarProps> = ({
               <List className="w-4 h-4" />
             </button>
           </div>
-
-          {/* Subject Manager Button */}
-          <button
-            type="button"
-            onClick={onOpenSubjectManager}
-            aria-label="Gerenciar disciplinas"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-xs cursor-pointer"
-          >
-            <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Disciplinas</span>
-          </button>
         </div>
       </div>
 
       {/* Discipline Pill Filter Group (Stitch design) */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+      <div className="flex items-center gap-2 pt-1 overflow-x-auto md:flex-wrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden overscroll-x-contain touch-pan-x pb-1">
         {/* "Todas as Disciplinas" pill */}
         <button
           type="button"
           onClick={() => onFilterChange({ subjectId: 'all' })}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border ${
+          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-sm flex items-center gap-1.5 border ${
             filters.subjectId === 'all'
               ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600 shadow-blue-500/20'
               : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -238,7 +227,7 @@ export const AcademicFilterBar: React.FC<AcademicFilterBarProps> = ({
                 })
               }
               aria-pressed={isSelected}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer border ${
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer border ${
                 isSelected
                   ? `${colorConfig.bgSubtle} ${colorConfig.text} ${colorConfig.border} font-semibold ring-2 ring-blue-500/20 shadow-xs`
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -259,9 +248,20 @@ export const AcademicFilterBar: React.FC<AcademicFilterBarProps> = ({
           )
         })}
 
+        {/* Discrete Plus button to manage subjects */}
+        <button
+          type="button"
+          onClick={onOpenSubjectManager}
+          aria-label="Gerenciar disciplinas"
+          title="Gerenciar disciplinas"
+          className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-colors cursor-pointer flex items-center justify-center shrink-0 shadow-xs active:scale-95"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+
         {/* Active Tag indicator with clear */}
         {filters.tag && (
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60 text-xs">
+          <div className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60 text-xs">
             <span>#{filters.tag}</span>
             <button
               type="button"
@@ -279,7 +279,7 @@ export const AcademicFilterBar: React.FC<AcademicFilterBarProps> = ({
           <button
             onClick={clearAllFilters}
             aria-label="Limpar todos os filtros"
-            className="flex items-center gap-1 px-2.5 py-1 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer ml-auto"
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50 cursor-pointer ml-auto"
           >
             <X className="w-3.5 h-3.5" />
             <span>

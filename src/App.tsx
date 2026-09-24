@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Header } from './components/Header'
 import { Sidebar, type AppView } from './components/Sidebar'
 import { MetricsView } from './components/metrics'
@@ -10,9 +10,11 @@ import { FilterBar } from './components/FilterBar'
 import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { ColumnDeleteModal } from './components/ColumnDeleteModal'
 import { ShortcutsModal } from './components/ShortcutsModal'
-import { AuthModal } from './components/AuthModal'
 import { ToastContainer } from './components/ToastContainer'
+import { ResetPasswordView } from './views/ResetPasswordView'
+import { AuthView } from './views/AuthView'
 import { AcademicView, type AcademicViewHandle } from './components/academic'
 import { useKanban } from './hooks/useKanban'
 import { usePomodoro } from './hooks/usePomodoro'
@@ -25,7 +27,12 @@ import {
 } from './services/pomodoroSessionService'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
-import type { Task, Column } from './types/kanban'
+import {
+  DEFAULT_COLUMN_IDS,
+  type Task,
+  type Column,
+  type DeleteColumnAction,
+} from './types/kanban'
 
 export const AppContent: React.FC = () => {
   const toast = useToast()
@@ -36,7 +43,23 @@ export const AppContent: React.FC = () => {
     isAuthModalOpen,
     openAuthModal,
     closeAuthModal,
+    authModalInitialTab,
+    isPasswordRecovery,
   } = useAuth()
+
+  // Gerenciamento de Rota SPA para redefinição de senha
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') return window.location.pathname
+    return '/'
+  })
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   const {
     columns,
@@ -46,6 +69,9 @@ export const AppContent: React.FC = () => {
     setFilters,
     allTags,
     stats,
+    hiddenColumnIds,
+    hideColumn,
+    showColumn,
     addTask,
     updateTask,
     deleteTask,
@@ -54,7 +80,7 @@ export const AppContent: React.FC = () => {
     toggleSubtask,
     addColumn,
     updateColumn,
-    deleteColumn,
+    deleteColumnWithOptions,
     reorderColumns,
     moveColumn,
     exportData,
@@ -98,10 +124,23 @@ export const AppContent: React.FC = () => {
 
   // Abertura automática do AuthModal na primeira visita
   useEffect(() => {
-    if (!authLoading && !user && !isGuestAcknowledged) {
+    if (
+      !authLoading &&
+      !user &&
+      !isGuestAcknowledged &&
+      currentPath !== '/reset-password' &&
+      !isPasswordRecovery
+    ) {
       openAuthModal()
     }
-  }, [authLoading, user, isGuestAcknowledged, openAuthModal])
+  }, [
+    authLoading,
+    user,
+    isGuestAcknowledged,
+    openAuthModal,
+    currentPath,
+    isPasswordRecovery,
+  ])
 
   // Pomodoro Integration
   const handleTaskMinuteLogged = useCallback(
@@ -128,15 +167,16 @@ export const AppContent: React.FC = () => {
   const handleSessionCompleted = useCallback(
     (record: {
       taskId?: string | null
-      mode: 'work' | 'break'
+      mode: 'work' | 'break' | 'short_break' | 'long_break'
       durationMinutes: number
       completedAt: string
     }) => {
       if (!user) return
+      const normalizedMode = record.mode === 'work' ? 'work' : 'break'
       pomodoroSessionService
         .logCompletedSession(user.id, {
           taskId: record.taskId,
-          mode: record.mode,
+          mode: normalizedMode,
           durationMinutes: record.durationMinutes,
           completedAt: record.completedAt,
         })
@@ -334,13 +374,25 @@ export const AppContent: React.FC = () => {
         }
         if (prefs.pomodoro) {
           const current = sessionRef.current
-          updateSettings(
-            prefs.pomodoro.workDurationMinutes ?? Math.round(current.workDuration / 60),
-            prefs.pomodoro.breakDurationMinutes ?? Math.round(current.breakDuration / 60),
-            prefs.pomodoro.isSoundEnabled ?? current.isSoundEnabled ?? true,
-            prefs.pomodoro.catPurrType ?? current.catPurrType ?? 'none',
-            prefs.pomodoro.catPurrVolume ?? current.catPurrVolume ?? 0.6
-          )
+          updateSettings({
+            workMinutes:
+              prefs.pomodoro.workDurationMinutes ?? Math.round(current.workDuration / 60),
+            breakMinutes:
+              prefs.pomodoro.breakDurationMinutes ??
+              Math.round(current.breakDuration / 60),
+            longBreakMinutes:
+              prefs.pomodoro.longBreakDurationMinutes ??
+              Math.round(current.longBreakDuration / 60),
+            longBreakCycles: prefs.pomodoro.longBreakCycles ?? current.totalCycles ?? 4,
+            autoStartBreaks:
+              prefs.pomodoro.autoStartBreaks ?? current.autoStartBreaks ?? true,
+            autoStartFocus:
+              prefs.pomodoro.autoStartFocus ?? current.autoStartFocus ?? false,
+            strictFocusMode:
+              prefs.pomodoro.strictFocusMode ?? current.strictFocusMode ?? false,
+            isSoundEnabled:
+              prefs.pomodoro.isSoundEnabled ?? current.isSoundEnabled ?? true,
+          })
         }
       })
       .catch((err) => {
@@ -389,6 +441,16 @@ export const AppContent: React.FC = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null)
   const academicViewRef = useRef<AcademicViewHandle>(null)
+
+  const [deleteColumnModalState, setDeleteColumnModalState] = useState<{
+    isOpen: boolean
+    column: Column | null
+    taskCount: number
+  }>({
+    isOpen: false,
+    column: null,
+    taskCount: 0,
+  })
 
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean
@@ -538,25 +600,31 @@ export const AppContent: React.FC = () => {
   const requestDeleteColumn = useCallback(
     (columnId: string) => {
       const col = columns.find((c) => c.id === columnId)
-      if (col?.isPermanent) {
+      if (!col) return
+      if (col.isPermanent || DEFAULT_COLUMN_IDS.includes(columnId as any)) {
         toast.error('Colunas padrão não podem ser excluídas')
         return
       }
       const tasksInCol = tasks.filter((t) => t.columnId === columnId).length
-      setConfirmState({
+      setDeleteColumnModalState({
         isOpen: true,
-        title: 'Excluir Coluna',
-        message: `Tem certeza que deseja excluir a coluna "${col?.title || ''}" e suas ${tasksInCol} tarefa(s)?`,
-        confirmText: 'Excluir Coluna',
-        isDanger: true,
-        requireConfirmationWord: tasksInCol > 0 ? 'EXCLUIR' : undefined,
-        onConfirm: () => {
-          deleteColumn(columnId)
-          toast.info('Coluna excluída')
-        },
+        column: col,
+        taskCount: tasksInCol,
       })
     },
-    [columns, tasks, deleteColumn, toast]
+    [columns, tasks, toast]
+  )
+
+  const handleConfirmDeleteColumn = useCallback(
+    (columnId: string, action: DeleteColumnAction) => {
+      deleteColumnWithOptions(columnId, action)
+      toast.info(
+        action === 'move_to_todo'
+          ? 'Coluna excluída e tarefas movidas para "A Fazer"'
+          : 'Coluna e tarefas excluídas'
+      )
+    },
+    [deleteColumnWithOptions, toast]
   )
 
   const handleFilterChange = useCallback(
@@ -624,12 +692,70 @@ export const AppContent: React.FC = () => {
     }, 0)
   }, [tasks])
 
+  if (currentPath === '/reset-password' || isPasswordRecovery) {
+    return (
+      <div className={isDark ? 'dark' : ''}>
+        <ResetPasswordView
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+          onSuccess={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/')
+            }
+            setCurrentPath('/')
+            openAuthModal('signin')
+          }}
+          onCancel={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState(null, '', '/')
+            }
+            setCurrentPath('/')
+          }}
+        />
+        <ToastContainer />
+      </div>
+    )
+  }
+
+  // Visualização dedicada de Autenticação na primeira visita (sem blur e sem rolagem no fundo)
+  if (!authLoading && !user && !isGuestAcknowledged) {
+    return (
+      <div className={isDark ? 'dark' : ''}>
+        <AuthView
+          initialTab={authModalInitialTab || 'signup'}
+          showBackToBoard={false}
+          onSuccess={() => {
+            closeAuthModal()
+          }}
+        />
+        <ToastContainer />
+      </div>
+    )
+  }
+
+  // Visualização dedicada de Autenticação quando visitante clica em "Entrar ou Criar Conta"
+  if (isAuthModalOpen && !user) {
+    return (
+      <div className={isDark ? 'dark' : ''}>
+        <AuthView
+          initialTab={authModalInitialTab || 'signin'}
+          showBackToBoard={true}
+          onBackToBoard={closeAuthModal}
+          onSuccess={() => {
+            closeAuthModal()
+          }}
+        />
+        <ToastContainer />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f9fb] dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-row transition-colors duration-200 selection:bg-blue-500 selection:text-white">
       {/* Skip to main content for accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-xl focus:shadow-lg focus:outline-none"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-xl focus:shadow-lg focus:outline-none"
       >
         Pular para o conteúdo
       </a>
@@ -719,6 +845,9 @@ export const AppContent: React.FC = () => {
                 <Board
                   columns={columns}
                   tasks={tasks}
+                  hiddenColumnIds={hiddenColumnIds}
+                  onHideColumn={hideColumn}
+                  onShowColumn={showColumn}
                   onNewTaskInColumn={handleOpenNewTask}
                   onEditTask={handleOpenEditTask}
                   onDeleteTask={requestDeleteTask}
@@ -762,9 +891,12 @@ export const AppContent: React.FC = () => {
               onToggleTheme={toggleTheme}
               workMinutes={Math.round(session.workDuration / 60)}
               breakMinutes={Math.round(session.breakDuration / 60)}
+              longBreakMinutes={Math.round(session.longBreakDuration / 60)}
+              longBreakCycles={session.totalCycles}
+              autoStartBreaks={session.autoStartBreaks}
+              autoStartFocus={session.autoStartFocus}
+              strictFocusMode={session.strictFocusMode}
               isSoundEnabled={session.isSoundEnabled ?? true}
-              catPurrType={session.catPurrType ?? 'none'}
-              catPurrVolume={session.catPurrVolume ?? 0.6}
               onUpdateDurations={updateDurations}
               onToggleSound={toggleSound}
               onUpdateSettings={(settings) => {
@@ -772,11 +904,28 @@ export const AppContent: React.FC = () => {
                   settings.workDurationMinutes ?? Math.round(session.workDuration / 60)
                 const breakMins =
                   settings.breakDurationMinutes ?? Math.round(session.breakDuration / 60)
+                const longBreakMins =
+                  settings.longBreakDurationMinutes ??
+                  Math.round(session.longBreakDuration / 60)
+                const cycles = settings.longBreakCycles ?? session.totalCycles ?? 4
+                const autoBreaks =
+                  settings.autoStartBreaks ?? session.autoStartBreaks ?? true
+                const autoFocus =
+                  settings.autoStartFocus ?? session.autoStartFocus ?? false
+                const strictFocus =
+                  settings.strictFocusMode ?? session.strictFocusMode ?? false
                 const isSound = settings.isSoundEnabled ?? session.isSoundEnabled ?? true
-                const purrType = settings.catPurrType ?? session.catPurrType ?? 'none'
-                const purrVol = settings.catPurrVolume ?? session.catPurrVolume ?? 0.6
 
-                updateSettings(workMins, breakMins, isSound, purrType, purrVol)
+                updateSettings({
+                  workMinutes: workMins,
+                  breakMinutes: breakMins,
+                  longBreakMinutes: longBreakMins,
+                  longBreakCycles: cycles,
+                  autoStartBreaks: autoBreaks,
+                  autoStartFocus: autoFocus,
+                  strictFocusMode: strictFocus,
+                  isSoundEnabled: isSound,
+                })
 
                 if (user) {
                   userPreferencesService
@@ -784,9 +933,12 @@ export const AppContent: React.FC = () => {
                       pomodoro: {
                         workDurationMinutes: workMins,
                         breakDurationMinutes: breakMins,
+                        longBreakDurationMinutes: longBreakMins,
+                        longBreakCycles: cycles,
+                        autoStartBreaks: autoBreaks,
+                        autoStartFocus: autoFocus,
+                        strictFocusMode: strictFocus,
                         isSoundEnabled: isSound,
-                        catPurrType: purrType,
-                        catPurrVolume: purrVol,
                       },
                     })
                     .catch((err) =>
@@ -798,7 +950,6 @@ export const AppContent: React.FC = () => {
               onImport={handleImport}
               onReset={handleResetData}
               onOpenShortcuts={handleOpenShortcuts}
-              onOpenAcademicSubjects={() => handleViewChange('academic')}
             />
           )}
 
@@ -852,8 +1003,14 @@ export const AppContent: React.FC = () => {
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
       />
 
-      {/* Authentication & Guest Notice Modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
+      {/* Column Deletion Security Modal */}
+      <ColumnDeleteModal
+        isOpen={deleteColumnModalState.isOpen}
+        column={deleteColumnModalState.column}
+        taskCount={deleteColumnModalState.taskCount}
+        onClose={() => setDeleteColumnModalState((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDeleteColumn}
+      />
 
       {/* Toast Notification Container */}
       <ToastContainer />

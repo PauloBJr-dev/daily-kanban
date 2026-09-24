@@ -76,20 +76,20 @@ describe('Header Component (Topbar Reformulada)', () => {
     expect(screen.getByText('Entrar / Criar Conta')).toBeInTheDocument()
   })
 
-  it('renderiza corretamente no modo Acadêmico com título da tela ativa, pill de estudos e botão Nova Anotação', async () => {
+  it('renderiza corretamente no modo Acadêmico com título da tela ativa e botão Nova Anotação', async () => {
     await renderHeader({ ...defaultProps, activeView: 'academic' })
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Espaço Acadêmico' })
     ).toBeInTheDocument()
-    expect(screen.getByText('Espaço de Estudos e Revisões')).toBeInTheDocument()
+    expect(screen.queryByText('Espaço de Estudos e Revisões')).not.toBeInTheDocument()
     expect(screen.queryByText('Progresso Diário:')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Criar nova anotação' })
     ).toBeInTheDocument()
   })
 
-  it('renderiza títulos corretos da tela ativa para Métricas, Configurações e Perfil', async () => {
+  it('renderiza títulos corretos da tela ativa para Métricas, Configurações e Perfil sem chips centrais', async () => {
     const { rerender } = render(
       <AuthProvider>
         <Header {...defaultProps} activeView="metrics" />
@@ -98,7 +98,9 @@ describe('Header Component (Topbar Reformulada)', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Métricas & Produtividade' })
     ).toBeInTheDocument()
-    expect(screen.getByText('Painel Analítico de Produtividade')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Painel Analítico de Produtividade')
+    ).not.toBeInTheDocument()
 
     rerender(
       <AuthProvider>
@@ -108,7 +110,7 @@ describe('Header Component (Topbar Reformulada)', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Configurações' })
     ).toBeInTheDocument()
-    expect(screen.getByText('Preferências & Personalização')).toBeInTheDocument()
+    expect(screen.queryByText('Preferências & Personalização')).not.toBeInTheDocument()
 
     rerender(
       <AuthProvider>
@@ -116,7 +118,45 @@ describe('Header Component (Topbar Reformulada)', () => {
       </AuthProvider>
     )
     expect(screen.getByRole('heading', { level: 1, name: 'Perfil' })).toBeInTheDocument()
-    expect(screen.getByText('Gestão de Perfil & Dados')).toBeInTheDocument()
+    expect(screen.queryByText('Gestão de Perfil & Dados')).not.toBeInTheDocument()
+  })
+
+  it('não exibe botões de ação para Métricas, Configurações e Perfil', () => {
+    const { rerender } = render(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="metrics" />
+      </AuthProvider>
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova tarefa' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova anotação' })
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="settings" />
+      </AuthProvider>
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova tarefa' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova anotação' })
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <AuthProvider>
+        <Header {...defaultProps} activeView="profile" />
+      </AuthProvider>
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova tarefa' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Criar nova anotação' })
+    ).not.toBeInTheDocument()
   })
 
   it('chama onNewNote ao clicar em Nova Anotação no modo acadêmico', async () => {

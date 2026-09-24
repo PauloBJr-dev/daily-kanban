@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { AcademicView } from '../components/academic/AcademicView'
 import type { Subject } from '../types/academic'
@@ -174,11 +174,11 @@ describe('AcademicView', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('abre o modal de Nova Anotação ao clicar no botão correspondente', () => {
+  it('abre o modal de Nova Anotação ao clicar no card de ação rápida', () => {
     render(<AcademicView />)
 
-    const newNoteBtn = screen.getByLabelText('Criar nova anotação')
-    fireEvent.click(newNoteBtn)
+    const quickAddCard = screen.getByText('Criar anotação rápida de aula')
+    fireEvent.click(quickAddCard)
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('Nova Anotação Acadêmica')).toBeInTheDocument()
@@ -227,7 +227,7 @@ describe('AcademicView', () => {
     ).toBeInTheDocument()
   })
 
-  it('alterna entre o modo de grade e o modo studio via seletor', () => {
+  it('alterna entre o modo de grade e o modo studio ao selecionar uma nota e volta para grade', () => {
     render(<AcademicView />)
 
     // Initially in grid mode
@@ -236,9 +236,9 @@ describe('AcademicView', () => {
     })
     expect(statsSection).toBeInTheDocument()
 
-    // Switch to Studio mode
-    const studioBtn = screen.getByRole('button', { name: 'Modo Studio' })
-    fireEvent.click(studioBtn)
+    // Switch to Studio mode by clicking a note
+    const noteTitle = screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra')
+    fireEvent.click(noteTitle)
 
     // Studio is rendered (Editor and Caderno sidebar)
     expect(screen.getByLabelText('Editor do estúdio')).toBeInTheDocument()
@@ -249,8 +249,8 @@ describe('AcademicView', () => {
     ).not.toBeInTheDocument()
 
     // Switch back to Grade mode
-    const gridBtn = screen.getByRole('button', { name: 'Modo Grade' })
-    fireEvent.click(gridBtn)
+    const backBtn = screen.getByRole('button', { name: 'Voltar para Grade' })
+    fireEvent.click(backBtn)
 
     expect(
       screen.getByRole('region', { name: 'Estatísticas Acadêmicas' })
@@ -295,12 +295,12 @@ describe('AcademicView', () => {
   it('ao acionar nova anotação em Modo Studio, cria e seleciona diretamente no editor sem abrir modal', () => {
     render(<AcademicView />)
 
-    // Switch to Studio mode
-    const studioBtn = screen.getByRole('button', { name: 'Modo Studio' })
-    fireEvent.click(studioBtn)
+    // Switch to Studio mode by clicking a note
+    const noteTitle = screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra')
+    fireEvent.click(noteTitle)
 
-    // Click "Nova Anotação" in header
-    const newNoteBtn = screen.getByRole('button', { name: 'Criar nova anotação' })
+    // Click "+ Nova Nota" in Studio sidebar
+    const newNoteBtn = screen.getByRole('button', { name: '+ Nova Nota' })
     fireEvent.click(newNoteBtn)
 
     // No modal dialog opened
@@ -311,28 +311,35 @@ describe('AcademicView', () => {
     expect(titleInput).toHaveValue('Nova Anotação')
   })
 
-  it('suporta o Modo Zen ocultando o cabeçalho do caderno e restaurando com Escape', () => {
+  it('suporta o Modo Zen ocultando a barra lateral do estúdio e restaurando com Escape', () => {
     render(<AcademicView />)
 
     // Switch to Studio mode
-    fireEvent.click(screen.getByRole('button', { name: 'Modo Studio' }))
+    fireEvent.click(screen.getByText('Árvores Balanceadas: AVL e Rubro-Negra'))
 
-    // Caderno Acadêmico title is present
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    // Caderno sidebar is present
+    expect(screen.getByText('Caderno')).toBeInTheDocument()
 
     // Enter Zen Mode
     const zenBtn = screen.getByLabelText('Modo Zen')
     fireEvent.click(zenBtn)
 
-    // Header is hidden
-    expect(screen.queryByText('Caderno Acadêmico')).not.toBeInTheDocument()
-    expect(screen.queryByText('Caderno')).not.toBeInTheDocument() // Sidebar hidden in Zen mode
+    // Studio sidebar hidden in Zen mode
+    expect(screen.queryByText('Caderno')).not.toBeInTheDocument()
 
     // Exit Zen Mode with Escape
     fireEvent.keyDown(window, { key: 'Escape' })
 
-    // Header and sidebar restored
-    expect(screen.getByText('Caderno Acadêmico')).toBeInTheDocument()
+    // Sidebar restored
     expect(screen.getByText('Caderno')).toBeInTheDocument()
+  })
+
+  it('renderiza o estado vazio discreto no card de Disciplinas Ativas quando não há disciplinas', () => {
+    localStorage.clear()
+    render(<AcademicView />)
+
+    expect(screen.getByText('Nenhuma disciplina cadastrada')).toBeInTheDocument()
+    expect(screen.queryByText('Cálc I')).not.toBeInTheDocument()
+    expect(screen.queryByText('Algoritmo Spaced Repetition')).not.toBeInTheDocument()
   })
 })

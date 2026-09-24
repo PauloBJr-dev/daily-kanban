@@ -104,6 +104,10 @@ describe('DesignSystemAudit — Organy Design System & Governance', () => {
         isConfigured: true,
         isAuthModalOpen: false,
         authModalInitialTab: 'signin',
+        isPasswordRecovery: false,
+        setIsPasswordRecovery: vi.fn(),
+        resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+        updateUserPassword: vi.fn().mockResolvedValue({ error: null }),
         openAuthModal: vi.fn(),
         closeAuthModal: vi.fn(),
         signInWithGoogle: vi.fn(),
@@ -216,6 +220,10 @@ describe('DesignSystemAudit — Organy Design System & Governance', () => {
     it('Variação 7: Conclusão de foco exibe "🎉 Foco Concluído! Parabéns! | Organy"', () => {
       vi.useFakeTimers()
       const { result } = renderHook(() => usePomodoro())
+
+      act(() => {
+        result.current.updateSettings({ autoStartBreaks: false })
+      })
 
       act(() => {
         result.current.startFocus('t-4', 'Escrita do Artigo')

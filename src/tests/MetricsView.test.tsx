@@ -44,7 +44,10 @@ describe('MetricsView Component', () => {
   it('renderiza o cabeçalho analítico e os 4 cartões de KPIs principais', () => {
     render(<MetricsView tasks={mockTasks} focusTimeMinutes={50} />)
 
-    expect(screen.getByText('Painel de Métricas & Produtividade')).toBeInTheDocument()
+    expect(screen.getByText(/Semana \d+ • Semestre \d/)).toBeInTheDocument()
+    expect(
+      screen.queryByText('Painel de Métricas & Produtividade')
+    ).not.toBeInTheDocument()
 
     // 4 KPI Cards
     expect(screen.getByText('Metas de Hoje')).toBeInTheDocument()

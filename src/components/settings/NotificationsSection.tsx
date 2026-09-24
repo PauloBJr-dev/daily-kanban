@@ -3,7 +3,6 @@ import {
   Volume2,
   Volume1,
   VolumeX,
-  Music,
   BellRing,
   Activity,
   Play,
@@ -11,68 +10,22 @@ import {
   CheckCircle2,
   Bell,
   BellOff,
-  Square,
-  Sparkles,
 } from 'lucide-react'
-import type { CatPurrType } from '../../types/kanban'
-import { soundService } from '../../services/soundService'
 import { notificationService } from '../../services/notificationService'
 import { playCompletionSound, type CompletionSoundType } from './soundHelper'
 
 export interface NotificationsSectionProps {
   isSoundEnabled: boolean
   onToggleSound: () => void
-  catPurrType: CatPurrType
-  catPurrVolume: number
-  onSelectPurr: (type: CatPurrType) => void
-  onVolumeChange: (vol: number) => void
 }
-
-interface PurrOption {
-  id: CatPurrType
-  label: string
-  description: string
-  badge?: string
-}
-
-const PURR_OPTIONS: PurrOption[] = [
-  {
-    id: 'none',
-    label: 'Desativado',
-    description: 'Sem som de fundo durante a pausa',
-  },
-  {
-    id: 'soft',
-    label: 'Ronrom Suave',
-    description: 'Vibração aveludada, calma e contínua (~25Hz)',
-    badge: 'Aveludado',
-  },
-  {
-    id: 'deep',
-    label: 'Ronrom Profundo',
-    description: 'Vibração corporal baixa com sub-grave (~26Hz)',
-    badge: '~26Hz Sub-grave',
-  },
-  {
-    id: 'rhythmic',
-    label: 'Ronrom Rítmico',
-    description: 'Modulação de respiração felina a cada ~2.2s',
-    badge: 'Respiração ~2.2s',
-  },
-]
 
 export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
   isSoundEnabled,
   onToggleSound,
-  catPurrType,
-  catPurrVolume,
-  onSelectPurr,
-  onVolumeChange,
 }) => {
   const [selectedRingtone, setSelectedRingtone] = useState<CompletionSoundType>('marimba')
   const [isPlayingTest, setIsPlayingTest] = useState<boolean>(false)
   const [alertVolume, setAlertVolume] = useState<number>(75)
-  const [isPreviewingPurr, setIsPreviewingPurr] = useState<boolean>(false)
 
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(
     () => notificationService.getPermission()
@@ -92,21 +45,6 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
     setNotificationStatus(result)
   }
 
-  const handleTogglePurrPreview = () => {
-    if (catPurrType === 'none') return
-
-    if (isPreviewingPurr) {
-      soundService.stopCatPurr()
-      setIsPreviewingPurr(false)
-    } else {
-      setIsPreviewingPurr(true)
-      soundService.previewCatPurr(catPurrType, 3)
-      setTimeout(() => {
-        setIsPreviewingPurr(false)
-      }, 3000)
-    }
-  }
-
   return (
     <section
       id="notificacoes"
@@ -123,7 +61,7 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
             id="settings-notifications-title"
             className="font-headline text-lg font-bold text-slate-900 dark:text-slate-100"
           >
-            Notificações e Sons
+            Notificações
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Configure alertas de início, fim de ciclos e volume dos avisos sonoros
@@ -161,14 +99,14 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  <Music className="w-4 h-4" />
+                  <Volume2 className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     Marimba Acústica
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Suave, rítmico e reconfortante
+                    Acorde orgânico, claro e brilhante
                   </span>
                 </div>
               </div>
@@ -179,7 +117,7 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
               )}
             </div>
 
-            {/* Opção 2: Sino Tibetano Suave */}
+            {/* Opção 2: Sino Tibetano */}
             <div
               role="button"
               tabIndex={0}
@@ -381,117 +319,6 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Som de Ronrom de Gato (Descanso Zen) */}
-      <div className="space-y-3.5 pt-4 border-t border-slate-200/60 dark:border-slate-800/60">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl" aria-hidden="true">
-            🐱
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Som de Ronronar de Gato (Descanso Zen)
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Sintetizado acusticamente para desacelerar e relaxar durante a pausa
-            </p>
-          </div>
-        </div>
-
-        <div
-          role="radiogroup"
-          aria-label="Variações de ronrom de gato"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5"
-        >
-          {PURR_OPTIONS.map((option) => {
-            const isSelected = catPurrType === option.id
-            return (
-              <button
-                key={option.id}
-                type="button"
-                role="radio"
-                aria-checked={isSelected}
-                onClick={() => onSelectPurr(option.id)}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
-                  isSelected
-                    ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 dark:border-blue-500 ring-2 ring-blue-500/20'
-                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span
-                    className={`text-xs font-semibold ${
-                      isSelected
-                        ? 'text-blue-900 dark:text-blue-200'
-                        : 'text-slate-800 dark:text-slate-200'
-                    }`}
-                  >
-                    {option.label}
-                  </span>
-                  {option.badge && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono">
-                      {option.badge}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                  {option.description}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        {catPurrType !== 'none' && (
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-3 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                <Volume1 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Volume do Ronrom:</span>
-                <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
-                  {Math.round(catPurrVolume * 100)}%
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleTogglePurrPreview}
-                aria-label={
-                  isPreviewingPurr ? 'Parar teste de som' : 'Ouvir teste de som'
-                }
-                className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                  isPreviewingPurr
-                    ? 'bg-amber-500 text-white border-amber-500 animate-pulse'
-                    : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40'
-                }`}
-              >
-                {isPreviewingPurr ? (
-                  <>
-                    <Square className="w-3 h-3 fill-current" />
-                    <span>Ouvindo (3s)...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                    <span>Testar Som</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <input
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.05"
-              value={catPurrVolume}
-              onChange={(e) => onVolumeChange(Number(e.target.value))}
-              aria-label="Ajustar volume do ronrom"
-              className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-          </div>
-        )}
       </div>
     </section>
   )

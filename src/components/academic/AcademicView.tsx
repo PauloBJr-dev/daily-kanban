@@ -1,16 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react'
-import {
-  Plus,
-  Download,
-  Upload,
-  RotateCcw,
-  BookOpen,
-  SearchX,
-  FilePlus,
-  Sparkles,
-  LayoutGrid,
-  PanelsTopLeft,
-} from 'lucide-react'
+import { Plus, SearchX, FilePlus, Sparkles } from 'lucide-react'
 import { useAcademicNotes } from '../../hooks/useAcademicNotes'
 import { useToast } from '../../hooks/useToast'
 import { AcademicStats } from './AcademicStats'
@@ -65,8 +54,6 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       togglePinNote,
       addSubject,
       deleteSubject,
-      exportAcademicData,
-      importAcademicData,
       resetToSeed,
     } = useAcademicNotes()
 
@@ -152,7 +139,6 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
 
     // Ref for search input and file upload
     const searchInputRef = useRef<HTMLInputElement>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Confirmation dialog state
     const [confirmState, setConfirmState] = useState<{
@@ -338,52 +324,6 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
       [deleteSubject, toast]
     )
 
-    const handleExportAcademicData = useCallback(() => {
-      exportAcademicData()
-      toast.success('Backup JSON exportado com sucesso')
-    }, [exportAcademicData, toast])
-
-    const requestResetData = useCallback(() => {
-      setConfirmState({
-        isOpen: true,
-        title: 'Restaurar Dados Padrão Acadêmicos',
-        message:
-          'Todas as anotações e disciplinas atuais serão substituídas pelo conjunto de demonstração acadêmico inicial.',
-        confirmText: 'Restaurar',
-        isDanger: false,
-        requireConfirmationWord: 'RESTAURAR',
-        onConfirm: () => {
-          resetToSeed()
-          toast.info('Dados de demonstração restaurados')
-        },
-      })
-    }, [resetToSeed, toast])
-
-    // Import JSON handler
-    const handleImport = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-        const reader = new FileReader()
-        reader.onload = (event) => {
-          try {
-            const parsed = JSON.parse(event.target?.result as string)
-            const success = importAcademicData(parsed)
-            if (success) {
-              toast.success('Dados importados com sucesso')
-            } else {
-              toast.error('Arquivo JSON acadêmico inválido ou incompatível.')
-            }
-          } catch {
-            toast.error('Erro ao processar o arquivo JSON.')
-          }
-        }
-        reader.readAsText(file)
-        e.target.value = ''
-      },
-      [importAcademicData, toast]
-    )
-
     const hasActiveFilters =
       filters.searchQuery !== '' ||
       filters.subjectId !== 'all' ||
@@ -393,127 +333,6 @@ export const AcademicView = React.forwardRef<AcademicViewHandle, AcademicViewPro
 
     return (
       <div className={`space-y-6 ${className}`}>
-        {/* View Header with Title and Actions - Hidden in Zen Mode */}
-        {!isZenMode && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80 dark:border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                <BookOpen className="w-5 h-5" />
-              </span>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 font-sans">
-                  Caderno Acadêmico
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Organize suas matérias, conceitos de estudo, datas de prova e cronograma
-                  de revisões.
-                </p>
-              </div>
-            </div>
-
-            {/* Global Action Buttons */}
-            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-              {/* Layout Mode Selector: [ ⊞ Grade ] [ ◫ Studio ] */}
-              <div
-                role="group"
-                aria-label="Modo de exibição acadêmico"
-                className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/60 shadow-xs"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleLayoutModeChange('grid')}
-                  aria-label="Modo Grade"
-                  aria-pressed={layoutMode === 'grid'}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                    layoutMode === 'grid'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span>Grade</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleLayoutModeChange('studio')}
-                  aria-label="Modo Studio"
-                  aria-pressed={layoutMode === 'studio'}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                    layoutMode === 'studio'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <PanelsTopLeft className="w-3.5 h-3.5" />
-                  <span>Studio</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
-                {/* Export JSON */}
-                <button
-                  type="button"
-                  onClick={handleExportAcademicData}
-                  aria-label="Exportar anotações acadêmicas em JSON"
-                  title="Exportar dados (JSON)"
-                  className="hidden sm:flex p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-
-                {/* Import JSON */}
-                <label
-                  aria-label="Importar anotações acadêmicas via arquivo JSON"
-                  title="Importar dados (JSON)"
-                  className="hidden sm:flex p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
-                >
-                  <Upload className="w-4 h-4" />
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json"
-                    onChange={handleImport}
-                    className="hidden"
-                  />
-                </label>
-
-                {/* Reset to seed */}
-                <button
-                  type="button"
-                  onClick={requestResetData}
-                  aria-label="Restaurar dados acadêmicos iniciais"
-                  title="Restaurar dados padrão"
-                  className="hidden sm:flex p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-
-                {/* Gerenciar Disciplinas Button (Stitch Action) */}
-                <button
-                  type="button"
-                  onClick={() => setIsSubjectModalOpen(true)}
-                  aria-label="Gerenciar disciplinas no cabeçalho"
-                  className="hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-xs cursor-pointer"
-                >
-                  Disciplinas
-                </button>
-
-                {/* Nova Anotação CTA Stitch */}
-                <button
-                  type="button"
-                  onClick={() => handleOpenNewNote()}
-                  aria-label="Criar nova anotação"
-                  className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-xs shadow-blue-500/20 transition-all cursor-pointer shrink-0"
-                >
-                  <Plus className="w-4 h-4 shrink-0" />
-                  <span className="hidden xs:inline">Nova Anotação</span>
-                  <span className="xs:hidden">Nova</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Content: Studio Mode or Grid/List Mode */}
         {layoutMode === 'studio' ? (
           <AcademicStudio

@@ -27,6 +27,26 @@ export interface Task {
   }
 }
 
+export const DEFAULT_COLUMN_IDS = [
+  'col-todo',
+  'col-progress',
+  'col-review',
+  'col-done',
+] as const
+
+export type DefaultColumnId = (typeof DEFAULT_COLUMN_IDS)[number]
+
+export type DeleteColumnAction = 'delete_tasks' | 'move_to_todo'
+
+export function generateSecurityCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = ''
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}
+
 export interface Column {
   id: string
   title: string
@@ -53,6 +73,12 @@ export interface FilterState {
   weekScope: WeekScope
 }
 
+export type PomodoroMode = 'work' | 'short_break' | 'long_break' | 'break'
+
+/**
+ * @deprecated CatPurrType foi descontinuado com a remo??o total do som de ronronar de gatos.
+ * Mantido como alias de compatibilidade transit?ria at? migra??o completa da UI.
+ */
 export type CatPurrType = 'none' | 'soft' | 'deep' | 'rhythmic'
 
 export interface PomodoroSession {
@@ -60,10 +86,20 @@ export interface PomodoroSession {
   taskTitle?: string
   timeLeft: number // in seconds
   isRunning: boolean
-  mode: 'work' | 'break'
+  mode: 'work' | 'short_break' | 'long_break' | 'break'
   workDuration: number // in seconds (default 25 * 60)
   breakDuration: number // in seconds (default 5 * 60)
+  currentCycle: number // 1-indexed (ex: 1, 2, 3...)
+  totalCycles: number // padr?o 4
+  longBreakDuration: number // em segundos, padr?o 15 * 60
+  autoStartBreaks: boolean // padr?o true
+  autoStartFocus: boolean // padr?o false
+  strictFocusMode: boolean // padr?o true
+  isAutoTransitioning?: boolean
+  autoTransitionSecondsLeft?: number
   isSoundEnabled?: boolean
+  /** @deprecated Removido na nova arquitetura de ciclos Pomodoro */
   catPurrType?: CatPurrType
-  catPurrVolume?: number // 0 to 1 (default 0.6)
+  /** @deprecated Removido na nova arquitetura de ciclos Pomodoro */
+  catPurrVolume?: number
 }

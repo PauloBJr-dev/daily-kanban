@@ -1,6 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import confetti from 'canvas-confetti'
-import type { Column, FilterState, KanbanData, Subtask, Task } from '../types/kanban'
+import {
+  DEFAULT_COLUMN_IDS,
+  type Column,
+  type DeleteColumnAction,
+  type FilterState,
+  type KanbanData,
+  type Subtask,
+  type Task,
+} from '../types/kanban'
+
+export { DEFAULT_COLUMN_IDS, type DeleteColumnAction }
 import { storageService } from '../services/storageService'
 import { INITIAL_DATA, DEFAULT_COLUMNS } from '../services/seedData'
 import { useAuth } from './useAuth'
@@ -60,8 +70,10 @@ export const isReviewColumn = (colId: string) =>
   colId.toLowerCase().includes('review') ||
   colId.toLowerCase().includes('espera')
 
-export const isTrackedColumn = (colId: string) =>
-  isProgressColumn(colId) || isReviewColumn(colId)
+export const isTrackedColumn = (colId: string) => isProgressColumn(colId)
+
+export const getHiddenColumnsStorageKey = (userId?: string | null): string =>
+  `dailyflow_hidden_columns_${userId ?? 'guest'}`
 
 export function hasCustomColumns(columns: Column[]): boolean {
   if (!columns || columns.length !== DEFAULT_COLUMNS.length) return true
@@ -109,6 +121,80 @@ export function useKanban() {
         ownerId: userId,
         data: typeof updater === 'function' ? updater(prev.data) : updater,
       }))
+    },
+    [userId]
+  )
+
+  // Hidden Columns State & Persistence
+  const [hiddenColumnIds, setHiddenColumnIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const raw = localStorage.getItem(getHiddenColumnsStorageKey(userId))
+      if (!raw) return []
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  })
+
+  const [prevHiddenUserId, setPrevHiddenUserId] = useState<string | null>(userId)
+  if (prevHiddenUserId !== userId) {
+    setPrevHiddenUserId(userId)
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(getHiddenColumnsStorageKey(userId))
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          setHiddenColumnIds(Array.isArray(parsed) ? parsed : [])
+        } else {
+          setHiddenColumnIds([])
+        }
+      } catch {
+        setHiddenColumnIds([])
+      }
+    }
+  }
+
+  const hideColumn = useCallback(
+    (columnId: string) => {
+      setHiddenColumnIds((prev) => {
+        if (prev.includes(columnId)) return prev
+        const next = [...prev, columnId]
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(getHiddenColumnsStorageKey(userId), JSON.stringify(next))
+        }
+        return next
+      })
+    },
+    [userId]
+  )
+
+  const showColumn = useCallback(
+    (columnId: string) => {
+      setHiddenColumnIds((prev) => {
+        if (!prev.includes(columnId)) return prev
+        const next = prev.filter((id) => id !== columnId)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(getHiddenColumnsStorageKey(userId), JSON.stringify(next))
+        }
+        return next
+      })
+    },
+    [userId]
+  )
+
+  const toggleColumnVisibility = useCallback(
+    (columnId: string) => {
+      setHiddenColumnIds((prev) => {
+        const next = prev.includes(columnId)
+          ? prev.filter((id) => id !== columnId)
+          : [...prev, columnId]
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(getHiddenColumnsStorageKey(userId), JSON.stringify(next))
+        }
+        return next
+      })
     },
     [userId]
   )
@@ -504,18 +590,66 @@ export function useKanban() {
     [userId, setData]
   )
 
-  const deleteColumn = useCallback(
-    (columnId: string) => {
+  const deleteColumnWithOptions = useCallback(
+    (columnId: string, action: DeleteColumnAction = 'delete_tasks') => {
       setData((prev) => {
         const col = prev.columns.find((c) => c.id === columnId)
         if (!col) return prev
-        if (
-          col.isPermanent ||
-          ['col-todo', 'col-progress', 'col-review', 'col-done'].includes(columnId)
-        ) {
+        if (col.isPermanent || DEFAULT_COLUMN_IDS.includes(columnId as any)) {
           return prev
         }
         if (prev.columns.length <= 1) return prev
+
+        const now = new Date().toISOString()
+        let nextTasks: Task[] = []
+
+        if (action === 'move_to_todo') {
+          nextTasks = prev.tasks.map((task) => {
+            if (task.columnId !== columnId) return task
+
+            let inProgressSeconds = task.timeTracked?.inProgressSeconds || 0
+            if (
+              task.timeTracked?.currentTimerStartedAt &&
+              task.timeTracked?.currentTimerColumnId &&
+              isProgressColumn(task.timeTracked.currentTimerColumnId)
+            ) {
+              const startedAtMs = new Date(
+                task.timeTracked.currentTimerStartedAt
+              ).getTime()
+              if (!isNaN(startedAtMs)) {
+                inProgressSeconds += Math.max(
+                  0,
+                  Math.floor((Date.now() - startedAtMs) / 1000)
+                )
+              }
+            }
+
+            const updatedTask: Task = {
+              ...task,
+              columnId: 'col-todo',
+              updatedAt: now,
+              timeTracked: {
+                inProgressSeconds,
+                inReviewSeconds: task.timeTracked?.inReviewSeconds || 0,
+                currentTimerStartedAt: null,
+                currentTimerColumnId: null,
+              },
+            }
+
+            if (userId) {
+              supabaseKanbanService.syncTask(userId, updatedTask).catch((err) => {
+                console.error(
+                  'Erro ao sincronizar tarefa movida para col-todo no Supabase:',
+                  err
+                )
+              })
+            }
+
+            return updatedTask
+          })
+        } else {
+          nextTasks = prev.tasks.filter((t) => t.columnId !== columnId)
+        }
 
         if (userId) {
           supabaseKanbanService.deleteColumn(columnId).catch((err) => {
@@ -526,11 +660,18 @@ export function useKanban() {
         return {
           ...prev,
           columns: prev.columns.filter((c) => c.id !== columnId),
-          tasks: prev.tasks.filter((t) => t.columnId !== columnId),
+          tasks: nextTasks,
         }
       })
     },
     [userId, setData]
+  )
+
+  const deleteColumn = useCallback(
+    (columnId: string) => {
+      deleteColumnWithOptions(columnId, 'delete_tasks')
+    },
+    [deleteColumnWithOptions]
   )
 
   const updateColumn = useCallback(
@@ -786,9 +927,14 @@ export function useKanban() {
     toggleSubtask,
     addSubtask,
     removeSubtask,
+    hiddenColumnIds,
+    hideColumn,
+    showColumn,
+    toggleColumnVisibility,
     addColumn,
     updateColumn,
     deleteColumn,
+    deleteColumnWithOptions,
     reorderColumns,
     moveColumn,
     exportData,
